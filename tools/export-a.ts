@@ -37,6 +37,12 @@ function startFFmpeg(w: number, h: number, outFile: string) {
 }
 
 async function runPathA() {
+  if (process.env.ALLOW_CHROME !== '1') {
+    log('Chrome отключён: export:a:chrome запущен без ALLOW_CHROME=1.');
+    log('Используйте npm run export:b (Node + @napi-rs/canvas + ffmpeg, без браузера).');
+    log('Для пути A (puppeteer + Chrome) задайте ALLOW_CHROME=1.');
+    process.exit(0);
+  }
   fs.mkdirSync(OUT_DIR, { recursive: true });
   log('PATH A — puppeteer + vite preview + image2pipe(PNG)');
   log('build...');
