@@ -1,1 +1,159 @@
-console.log('Этап 0: каркас');
+import { renderFrame, createRenderCache, type SceneV1, type RenderEnv, validateScene } from '../engine/index.ts';
+import demoScene from '../scenes/whale-demo.json';
+import whaleCatalog from '../catalog/whale.json';
+import type { CatalogAsset } from '../engine/schema.ts';
+
+const cv = document.getElementById('cv') as HTMLCanvasElement | null;
+const ctx = cv?.getContext('2d') as CanvasRenderingContext2D | null;
+const errBox = document.getElementById('err') as HTMLElement | null;
+const errList = document.getElementById('errList') as HTMLUListElement | null;
+const timeText = document.getElementById('time') as HTMLElement | null;
+const scrub = document.getElementById('scrub') as HTMLInputElement | null;
+const playBtn = document.getElementById('play') as HTMLButtonElement | null;
+const aspectH = document.getElementById('aspectH') as HTMLButtonElement | null;
+const aspectV = document.getElementById('aspectV') as HTMLButtonElement | null;
+const jsonArea = document.getElementById('json') as HTMLTextAreaElement | null;
+const applyBtn = document.getElementById('apply') as HTMLButtonElement | null;
+const resetBtn = document.getElementById('reset') as HTMLButtonElement | null;
+const selftestPre = document.getElementById('selftest') as HTMLElement | null;
+
+let scene: SceneV1 = demoScene as unknown as SceneV1;
+let catalog: Record<string, CatalogAsset> = { whale: whaleCatalog as unknown as CatalogAsset };
+let t = 0;
+let duration = 12;
+let playing = true;
+let vertical = false;
+let lastTs = 0;
+let rafId: number | null = null;
+let cache = createRenderCache();
+
+const size = { w: 1280, h: 720 };
+
+function setAspect(a: 'h' | 'v') {
+  vertical = a === 'v';
+  size.w = vertical ? 720 : 1280;
+  size.h = vertical ? 1280 : 720;
+  if (cv) { cv.width = size.w; cv.height = size.h; cv.className = vertical ? 'v' : 'h'; }
+  if (aspectH) aspectH.classList.toggle('on', !vertical);
+  if (aspectV) aspectV.classList.toggle('on', vertical);
+  frame();
+}
+
+function showErrors(errors: { path: string; message: string }[] | null) {
+  if (errBox) errBox.hidden = !errors;
+  if (errList) {
+    errList.innerHTML = '';
+    if (errors) for (const e of errors) {
+      const li = document.createElement('li');
+      li.textContent = `${e.path}: ${e.message}`;
+      errList.appendChild(li);
+    }
+  }
+}
+
+function frame() {
+  if (!ctx) return;
+  const errors = validateScene(scene, { catalogIds: Object.keys(catalog) });
+  showErrors(errors.ok ? null : errors.errors);
+  if (!errors.ok) return;
+  renderFrame(ctx, scene, t, size, { createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }, catalog, cache });
+  if (scrub) scrub.value = (t / duration).toFixed(2);
+  if (timeText) timeText.textContent = `${t.toFixed(1)} / ${duration.toFixed(1)} с`;
+}
+
+function loop(ts: number) {
+  if (!playing) { lastTs = ts; rafId = requestAnimationFrame(loop); return; }
+  t = (t + (ts - lastTs) / 1000) % duration;
+  lastTs = ts;
+  frame();
+  rafId = requestAnimationFrame(loop);
+}
+
+function setPlaying(p: boolean) {
+  playing = p;
+  if (playBtn) playBtn.textContent = p ? 'Пауза' : 'Играть';
+  if (playing && rafId === null) { lastTs = performance.now(); rafId = requestAnimationFrame(loop); }
+}
+
+function setT(tt: number) {
+  setPlaying(false);
+  t = Math.max(0, Math.min(tt, duration));
+  frame();
+}
+
+(window as any).__editor = { setT, setAspect: (a: 'h' | 'v') => setAspect(a) };
+
+if (scrub) scrub.oninput = (e) => {
+  const target = e.target as HTMLInputElement | null;
+  setPlaying(false);
+  t = Number(target?.value ?? 0) * duration;
+  frame();
+};
+if (playBtn) playBtn.onclick = () => setPlaying(!playing);
+if (aspectH) aspectH.onclick = () => setAspect('h');
+if (aspectV) aspectV.onclick = () => setAspect('v');
+
+function applyJSON() {
+  if (!jsonArea) return;
+  try {
+    const parsed = JSON.parse(jsonArea.value);
+    const res = validateScene(parsed, { catalogIds: Object.keys(catalog) });
+    if (!res.ok) { showErrors(res.errors); return; }
+    scene = parsed as SceneV1;
+    duration = scene.duration;
+    t = Math.min(t, duration);
+    showErrors(null);
+    jsonArea.value = JSON.stringify(scene, null, 2);
+    frame();
+  } catch (e: any) {
+    showErrors([{ path: '', message: e.message || 'Неверный JSON' }]);
+  }
+}
+
+if (applyBtn) applyBtn.onclick = applyJSON;
+if (resetBtn) resetBtn.onclick = () => {
+  scene = demoScene as unknown as SceneV1;
+  duration = scene.duration;
+  t = Math.min(t, duration);
+  if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
+  showErrors(null);
+  frame();
+};
+
+if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
+
+// boot
+setAspect('h');
+frame();
+rafId = requestAnimationFrame(loop);
+
+// Selftest
+if (location.search.includes('selftest') && ctx) {
+  const pre = selftestPre || (() => { const el = document.createElement('pre'); el.id = 'selftest'; document.body.appendChild(el); return el; })();
+  function renderToCanvas(w: number, h: number, sc: SceneV1, tt: number): ImageData {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d')!;
+    renderFrame(g, sc, tt, { w, h }, { createCanvas: (w2, h2) => { const c2 = document.createElement('canvas'); c2.width = w2; c2.height = h2; return c2; }, catalog, cache });
+    return g.getImageData(0, 0, w, h);
+  }
+  function equal(a: ImageData, b: ImageData): boolean {
+    if (a.data.length !== b.data.length) return false;
+    for (let i = 0; i < a.data.length; i++) if (a.data[i] !== b.data[i]) return false;
+    return true;
+  }
+  let fail = '';
+  for (const item of [['16:9', 1280, 720], ['9:16', 720, 1280]] as [string, number, number][]) {
+    const [label, w, h] = item;
+    const a1 = renderToCanvas(w, h, scene, 0);
+    const a2 = renderToCanvas(w, h, scene, 0);
+    if (!equal(a1, a2)) { fail = `${label} t=0 невоспроизводим`; break; }
+    const t6 = renderToCanvas(w, h, scene, 6);
+    const t6b = renderToCanvas(w, h, scene, 6);
+    if (!equal(t6, t6b)) { fail = `${label} t=6 невоспроизводим`; break; }
+    const a0again = renderToCanvas(w, h, scene, 0);
+    if (!equal(a0again, a1)) { fail = `${label} состояние между кадрами`; break; }
+  }
+  pre.hidden = false;
+  pre.textContent = fail ? `SELFTEST: FAIL: ${fail}` : 'SELFTEST: PASS';
+}

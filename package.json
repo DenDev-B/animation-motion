@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check:schema": "node tools/check-schema.ts"
+    "check:schema": "node tools/check-schema.ts",
+    "check:render": "node tools/check-render.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

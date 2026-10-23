@@ -8,6 +8,8 @@
 - `npm run build` — сборка в `dist/`
 - `npm run preview` — предпросмотр сборки
 - `npm run typecheck` — проверка типов TypeScript
+- `npm run check:schema` — валидация JSON-сцены и схемы
+- `npm run check:render` — самопроверка воспроизводимости кадров (Chrome headless)
 
 ## Структура
 
