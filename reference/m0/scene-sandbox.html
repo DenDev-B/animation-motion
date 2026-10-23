@@ -1,0 +1,449 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Песочница сцен</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: three-column editor (catalog+layers | stage+timeline | properties+code); stacks on phones. */
+:root{
+  --bg:#f3efe9; --panel:#fbf8f4; --line:#ddd5ca; --fg:#25202b; --muted:#6f6676;
+  --accent:#b8531f; --accent-fg:#fff; --sel:#e9dccd; --field:#fff; --stage:#1a1522;
+  --font:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14111a; --panel:#1c1824; --line:#322b3f; --fg:#ece6f2; --muted:#9a90a8;
+  --accent:#f0a35e; --accent-fg:#1b1208; --sel:#2c2438; --field:#120f18; --stage:#0d0b12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14111a; --panel:#1c1824; --line:#322b3f; --fg:#ece6f2; --muted:#9a90a8;
+  --accent:#f0a35e; --accent-fg:#1b1208; --sel:#2c2438; --field:#120f18; --stage:#0d0b12; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--font);padding-block:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{display:grid;grid-template-columns:270px minmax(0,1fr) 330px;gap:12px;align-items:start;max-width:1700px;margin:0 auto}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+h1{font-size:15px;margin:0 0 2px;letter-spacing:.01em}
+h2{font-size:11px;font-weight:700;margin:0 0 8px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.sub{color:var(--muted);font-size:12px;margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--field);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.row:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input,select,textarea{background:var(--field);border:1px solid var(--line);border-radius:6px;padding:4px 7px;min-width:0;width:100%}
+textarea{font-family:var(--mono);font-size:12px;line-height:1.4;resize:vertical}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.tree{display:flex;flex-direction:column;gap:2px;max-height:46vh;overflow:auto}
+.row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer;min-width:0}
+.row:hover{background:var(--sel)} .row.sel{background:var(--sel);box-shadow:inset 2px 0 0 var(--accent)}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.layer{font-weight:700;margin-top:4px} .row.obj{padding-left:20px}
+.row .d{color:var(--muted);font:11px var(--mono)}
+.eye{border:0;background:none;padding:0 2px;color:var(--muted);font-size:13px;line-height:1}
+.stagewrap{background:var(--stage);border-radius:8px;display:flex;justify-content:center;padding:8px;min-width:0}
+canvas{display:block;border-radius:4px;touch-action:none;background:#000}
+canvas.h{width:100%;height:auto} canvas.v{height:min(72vh,760px);width:auto;max-width:100%}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar input[type=range]{flex:1;min-width:120px;width:auto;padding:0;accent-color:var(--accent)}
+.time{font:12px var(--mono);min-width:92px;text-align:right}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0}.seg button.on{background:var(--accent);color:var(--accent-fg);font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}
+label.f{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--muted)}
+label.f.wide{grid-column:1/-1}
+.tabs{display:flex;gap:4px;margin-bottom:8px}
+.tabs button.on{background:var(--sel);border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+#json{min-height:340px}
+.msg{font-size:12px;color:var(--accent);min-height:16px;margin-top:4px}
+.msg.err{color:#d2403a}
+@media (max-width:1100px){.app{grid-template-columns:minmax(0,1fr)}.col.stage{order:-1}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <div class="col">
+    <div class="box">
+      <h1>Песочница сцен</h1>
+      <p class="sub">M0: кит в облаках над городом. Весь кадр считается кодом, цвета берутся из палитры.</p>
+    </div>
+    <div class="box">
+      <h2>Каталог</h2>
+      <div class="btns" id="catalog"></div>
+      <div style="margin-top:8px"><label class="f">Импорт SVG в каталог<input type="file" id="svgfile" accept=".svg,image/svg+xml"></label></div>
+      <p class="hint">Импорт берёт path, rect, circle, ellipse, polygon. Группы с transform пока не учитываются.</p>
+    </div>
+    <div class="box">
+      <h2>Слои и объекты</h2>
+      <div class="tree" id="tree"></div>
+      <div class="btns" style="margin-top:8px"><button id="addLayer">+ слой</button><button id="upBtn" title="Выше в списке (дальше от камеры)">↑</button><button id="downBtn" title="Ниже в списке (ближе к камере)">↓</button><button id="dupBtn">Копия</button><button id="delBtn">Удалить</button></div>
+      <p class="hint">Первый слой в списке самый дальний. Объект можно тянуть мышью по кадру.</p>
+    </div>
+  </div>
+
+  <div class="col stage">
+    <div class="stagewrap"><canvas id="cv" class="h" width="1280" height="720"></canvas></div>
+    <div class="box">
+      <div class="bar">
+        <button id="play" class="primary" style="min-width:84px">Пауза</button>
+        <input type="range" id="scrub" min="0" max="1" step="0.01" value="0" aria-label="Время">
+        <span class="time" id="time">0.0 / 12.0 с</span>
+      </div>
+      <div class="bar" style="margin-top:8px">
+        <span class="seg" id="aspect"><button data-a="h" class="on">16:9</button><button data-a="v">9:16</button></span>
+        <span class="seg" id="presets"><button data-p="dusk" class="on">Закат</button><button data-p="night">Ночь</button><button data-p="dawn">Рассвет</button></span>
+        <label class="f" style="flex-direction:row;align-items:center;gap:6px">Длина, с<input id="dur" type="number" min="2" max="120" step="1" style="width:64px"></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="box">
+      <div class="tabs"><button data-tab="props" class="on">Свойства</button><button data-tab="code">Код сцены</button></div>
+      <div id="tab-props"></div>
+      <div id="tab-code" hidden>
+        <textarea id="json" spellcheck="false" aria-label="JSON сцены"></textarea>
+        <div class="btns" style="margin-top:8px"><button id="apply" class="primary">Применить</button><button id="copyAI">Скопировать для ИИ</button><button id="reset">Сбросить к демо</button></div>
+        <div class="msg" id="msg"></div>
+        <p class="hint">Скопируйте для ИИ, попросите изменить сцену, вставьте ответ сюда и нажмите «Применить». Ключ и лимиты не нужны.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const clamp = (x,a=0,b=1) => Math.min(b,Math.max(a,x));
+const lerp = (a,b,k) => a+(b-a)*k;
+const EASE = {lin:x=>x, sine:x=>-(Math.cos(Math.PI*x)-1)/2, inOut:x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, out:x=>1-Math.pow(1-x,3)};
+function rng(seed){ let s=seed|0; return ()=>{ s=(s+0x6d2b79f5)|0; let t=Math.imul(s^(s>>>15),1|s); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+const h2r = h => { h=String(h).replace('#',''); if(h.length===3) h=[...h].map(c=>c+c).join(''); const n=parseInt(h.slice(0,6),16)||0; return [n>>16,(n>>8)&255,n&255]; };
+const rgba = (h,a) => { const c=h2r(h); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
+const mixc = (a,b,k) => { const x=h2r(a), y=h2r(b); return `rgb(${x.map((v,i)=>Math.round(lerp(v,y[i],k))).join(',')})`; };
+
+/* ---------- palettes (one style, three moods) ---------- */
+const PRESETS = {
+  dusk:{sky:['#2b2350','#6e4272','#c9686a','#f4a860'],sun:'#ffd9a0',haze:'#c98a90',far:'#8a6590',mid:'#53396a',near:'#1f1733',whale:'#232842',belly:'#3a4166',rim:'#ffc58c',cloudLight:'#ffd5a6',cloudShadow:'#a4638a',window:'#ffd27a'},
+  night:{sky:['#070a1c','#141a3d','#2c3566','#5a5f96'],sun:'#cfd8ff',haze:'#4a5390',far:'#2b3260',mid:'#1a2048',near:'#0b0e24',whale:'#10142e',belly:'#1d2448',rim:'#9fb4ff',cloudLight:'#7d86c4',cloudShadow:'#2e3566',window:'#ffe08a'},
+  dawn:{sky:['#3b4f86','#8b8fb8','#f2b3a0','#ffe0b2'],sun:'#fff1cf',haze:'#e8b9b0',far:'#a58fb0',mid:'#6d5b8c',near:'#2c2347',whale:'#2e3552',belly:'#48507a',rim:'#ffe3b8',cloudLight:'#fff0d6',cloudShadow:'#b98aa8',window:'#ffd9a0'}
+};
+
+/* ---------- built-in catalog: whale silhouette, parts are named layers ---------- */
+const BUILTIN = {
+  whale:{name:'Кит',bounds:[-320,-100,270,130],parts:[
+    {id:'tail',name:'Хвост',off:[-236,0],fill:'whale',rim:[-70,-10],anim:[{type:'swing',amp:0.32,period:2.4,phase:0}],
+     d:'M 6 -5 C -8 -24 -34 -50 -70 -60 C -66 -40 -52 -22 -34 -6 L -30 0 L -34 6 C -52 22 -66 40 -70 60 C -34 50 -8 24 6 5 Z'},
+    {id:'body',name:'Тело',fill:'whale',rim:[-72,-20],
+     d:'M 258 12 C 250 -10 215 -30 170 -42 C 120 -56 70 -64 10 -62 C -50 -60 -100 -48 -140 -32 C -180 -18 -215 -8 -240 -6 L -240 8 C -215 12 -180 22 -140 36 C -100 50 -40 66 20 68 C 90 70 160 62 215 46 C 245 36 262 26 258 12 Z'},
+    {id:'dorsal',name:'Спинной плавник',fill:'whale',rim:[-85,-55],d:'M -70 -55 C -60 -80 -44 -88 -30 -56 Z'},
+    {id:'belly',name:'Брюхо',fill:'belly',d:'M 232 38 C 170 58 100 62 20 62 C -40 60 -100 46 -150 28 C -100 40 -40 50 20 52 C 100 54 170 50 232 38 Z'},
+    {id:'mouth',name:'Линия рта',type:'line',stroke:{color:'belly',w:2.5},d:'M 257 14 C 235 22 200 26 165 22'},
+    {id:'eye',name:'Глаз',type:'circle',cx:205,cy:6,r:3.6,fill:'rim'},
+    {id:'flipper',name:'Грудной плавник',off:[70,46],fill:'whale',rim:[0,18],anim:[{type:'swing',amp:0.16,period:2.4,phase:0.75}],
+     d:'M -4 -4 C 28 22 52 66 44 124 C 24 96 -8 56 -26 12 Z'}
+  ]}
+};
+
+/* ---------- scene ---------- */
+let uidN = 0; const uid = p => p + (++uidN).toString(36) + Math.random().toString(36).slice(2,5);
+function demo(){
+  const L = (name,depth,objects)=>({id:uid('L'),name,depth,visible:true,objects:objects.map(o=>({id:uid('o'),...o}))});
+  const cloud=(name,x,y,w,h,seed,extra={})=>({name,kind:'cloud',x,y,params:{w,h,seed,puffs:9,lit:'cloudLight',shade:'cloudShadow',...(extra.params||{})},anim:extra.anim||[],alpha:extra.alpha});
+  return {
+    version:1,title:'Кит в облаках',duration:12,
+    palette:{...PRESETS.dusk},style:{grain:0.07,vignette:0.55,preset:'dusk'},
+    camera:{verticalFit:0.52,keys:[{t:0,x:-90,y:0,zoom:1},{t:12,x:90,y:-14,zoom:1.12}]},
+    assets:{},
+    layers:[
+      L('Небо',0,[{name:'Градиент неба',kind:'sky'}]),
+      L('Свет',0.05,[{name:'Солнце',kind:'glow',x:430,y:170,params:{r:560,color:'sun',a:0.85}}]),
+      L('Облака дальние',0.2,[
+        cloud('Облако д1',-520,200,520,150,3,{params:{haze:0.45},alpha:0.7,anim:[{type:'drift',vx:5,vy:0}]}),
+        cloud('Облако д2',60,170,640,170,8,{params:{haze:0.45},alpha:0.7,anim:[{type:'drift',vx:4,vy:0}]}),
+        cloud('Облако д3',620,215,520,140,12,{params:{haze:0.45},alpha:0.7,anim:[{type:'drift',vx:6,vy:0}]})]),
+      L('Город дальний',0.35,[{name:'Дома дальние',kind:'skyline',x:0,y:300,color:'far',params:{w:3200,minH:60,maxH:230,seed:5,lit:0,windows:false,haze:0.35}}]),
+      L('Облака средние',0.6,[
+        cloud('Облако с1',-420,40,560,170,21,{anim:[{type:'drift',vx:9,vy:0}]}),
+        cloud('Облако с2',520,90,620,180,34,{anim:[{type:'drift',vx:7,vy:0}]})]),
+      L('Город средний',0.7,[{name:'Дома средние',kind:'skyline',x:0,y:390,color:'mid',params:{w:3600,minH:90,maxH:330,seed:9,lit:0.10,windows:true,haze:0.12}}]),
+      L('Кит',1,[{name:'Кит',kind:'asset',asset:'whale',x:0,y:-70,s:1.45,
+        anim:[{type:'move',from:[-190,0],to:[190,24],t0:0,t1:12,ease:'sine'},{type:'bob',amp:9,period:4,phase:0},{type:'swing',amp:0.035,period:4,phase:0.2}]}]),
+      L('Город ближний',1.25,[{name:'Дома ближние',kind:'skyline',x:0,y:610,color:'near',params:{w:3800,minH:170,maxH:430,seed:14,lit:0.05,windows:true,haze:0}}]),
+      L('Облака ближние',1.45,[
+        cloud('Облако б1',-430,640,900,230,45,{params:{lit:'mid',shade:'near'},alpha:0.95,anim:[{type:'drift',vx:14,vy:0}]}),
+        cloud('Облако б2',560,660,820,220,52,{params:{lit:'mid',shade:'near'},alpha:0.95,anim:[{type:'drift',vx:11,vy:0}]})])
+    ]};
+}
+
+let scene, sel = {layer:null,obj:null}, tNow = 0, playing = true, vertical = false;
+const KEY = 'sceneSandbox.v1';
+function load(){ try{ const s=localStorage.getItem(KEY); if(s){ const o=JSON.parse(s); if(o&&o.layers) return o; } }catch(e){} return demo(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(scene)); }catch(e){} }
+const col = v => (scene.palette && scene.palette[v]) || v || '#888888';
+const assetOf = id => (scene.assets&&scene.assets[id]) || BUILTIN[id];
+function findObj(id){ for(const l of scene.layers){ const i=l.objects.findIndex(o=>o.id===id); if(i>=0) return {l,i,o:l.objects[i]}; } return null; }
+const findLayer = id => scene.layers.find(l=>l.id===id);
+
+/* ---------- animation evaluation (pure function of t) ---------- */
+function evalObj(o,t){
+  let x=o.x||0,y=o.y||0,rot=(o.rot||0)*Math.PI/180,s=o.s??1,a=o.alpha??1;
+  for(const an of (o.anim||[])){
+    const per=an.period||4, ph=an.phase||0;
+    switch(an.type){
+      case 'move':{ const t0=an.t0||0,t1=an.t1??scene.duration; const k=(EASE[an.ease||'sine']||EASE.sine)(clamp((t-t0)/Math.max(.001,t1-t0))); x+=lerp(an.from[0],an.to[0],k); y+=lerp(an.from[1],an.to[1],k); break; }
+      case 'drift': x+=(an.vx||0)*t; y+=(an.vy||0)*t; break;
+      case 'bob': y+=(an.amp||0)*Math.sin((t/per+ph)*2*Math.PI); break;
+      case 'swing': rot+=(an.amp||0)*Math.sin((t/per+ph)*2*Math.PI); break;
+      case 'pulse': s*=1+(an.amp||0)*Math.sin((t/per+ph)*2*Math.PI); break;
+      case 'fade':{ const t0=an.t0||0,t1=an.t1??scene.duration; a*=lerp(an.from,an.to,clamp((t-t0)/Math.max(.001,t1-t0))); break; }
+    }
+  }
+  return {x,y,rot,s,a};
+}
+function camAt(t){
+  const k=scene.camera.keys; if(!k||!k.length) return {x:0,y:0,zoom:1};
+  if(t<=k[0].t) return k[0];
+  for(let i=1;i<k.length;i++) if(t<=k[i].t){ const e=EASE.sine(clamp((t-k[i-1].t)/Math.max(.001,k[i].t-k[i-1].t))); return {x:lerp(k[i-1].x,k[i].x,e),y:lerp(k[i-1].y,k[i].y,e),zoom:lerp(k[i-1].zoom,k[i].zoom,e)}; }
+  return k[k.length-1];
+}
+
+/* ---------- procedural kinds ---------- */
+const p2d = {}; const path2 = d => p2d[d] || (p2d[d]=new Path2D(d));
+const cloudCache = {};
+function cloudSprite(p){
+  const key=JSON.stringify([p,scene.palette]); if(cloudCache[key]) return cloudCache[key];
+  const S=2,w=p.w||400,h=p.h||140,n=p.puffs||9,r=rng(p.seed||1);
+  const lit=mixc(col(p.lit||'cloudLight'),col('haze'),p.haze||0), sh=mixc(col(p.shade||'cloudShadow'),col('haze'),p.haze||0);
+  const c=document.createElement('canvas'); c.width=Math.ceil(w*S); c.height=Math.ceil(h*S); const g=c.getContext('2d');
+  g.scale(S,S); g.translate(w/2,h);
+  const cs=[]; for(let i=0;i<n;i++){ const u=i/(n-1), rad=h*(.26+.34*Math.pow(Math.sin(Math.PI*u),.8)*(.6+.4*r())); cs.push([lerp(-.4,.4,u)*w+(r()-.5)*w*.05,-rad*.72,rad]); }
+  cs.push([(r()-.5)*w*.2,-h*.52,h*.46]);
+  g.fillStyle=sh; for(const q of cs){ g.beginPath(); g.arc(q[0],q[1],q[2],0,7); g.fill(); }
+  g.globalCompositeOperation='source-atop'; g.fillStyle=lit;
+  for(const q of cs){ g.beginPath(); g.arc(q[0],q[1]-h*.11,q[2]*.9,0,7); g.fill(); }
+  g.globalCompositeOperation='destination-out'; g.fillRect(-w,0,w*2,h*2);
+  return cloudCache[key]=c;
+}
+const skyCache = {};
+function skylineGeo(p){
+  const key=JSON.stringify(p); if(skyCache[key]) return skyCache[key];
+  const r=rng(p.seed||1), W=p.w||2400, B=[], WN=[]; let x=-W/2;
+  while(x<W/2){
+    const w=lerp(p.minW||44,p.maxW||110,r()), h=lerp(p.minH||80,p.maxH||300,Math.pow(r(),1.25));
+    const b={x,w,h,step:r()<.25?{w:w*lerp(.4,.7,r()),h:h*lerp(.08,.2,r())}:null,ant:r()<.15?lerp(18,60,r()):0}; B.push(b);
+    if(p.windows!==false&&p.lit>0){ const cols=Math.floor((w-8)/14), rows=Math.floor((h-24)/18);
+      for(let cI=0;cI<cols;cI++) for(let rI=0;rI<rows;rI++) if(r()<p.lit) WN.push([x+7+cI*14,-h+14+rI*18]); }
+    x+=w+lerp(0,10,r());
+  }
+  return skyCache[key]={B,WN,W};
+}
+
+/* ---------- drawing ---------- */
+const boxes = {};   // id -> screen-space corners, for selection and hit-testing
+function boundsOf(o){
+  switch(o.kind){
+    case 'asset':{ const a=assetOf(o.asset); return a?a.bounds:null; }
+    case 'cloud':{ const p=o.params||{}; return [-(p.w||400)/2,-(p.h||140),(p.w||400)/2,0]; }
+    case 'skyline':{ const p=o.params||{}; return [-(p.w||2400)/2,-(p.maxH||300),(p.w||2400)/2,0]; }
+    case 'glow':{ const r=(o.params&&o.params.r)||300; return [-r,-r,r,r]; }
+  } return null;
+}
+function drawAsset(g,o,a,t){
+  for(const part of a.parts){
+    g.save(); if(part.off) g.translate(part.off[0],part.off[1]);
+    const pa=(o.partAnim&&o.partAnim[part.id])||part.anim||[]; let rot=0;
+    for(const an of pa) if(an.type==='swing') rot+=(an.amp||0)*Math.sin((t/(an.period||4)+(an.phase||0))*2*Math.PI);
+    if(rot) g.rotate(rot);
+    const fill=col(o.color||part.fill);
+    if(part.type==='circle'){ g.fillStyle=fill; g.beginPath(); g.arc(part.cx,part.cy,part.r,0,7); g.fill(); }
+    else if(part.type==='line'){ g.strokeStyle=col(part.stroke.color); g.lineWidth=part.stroke.w; g.lineCap='round'; g.stroke(path2(part.d)); }
+    else{ const P=path2(part.d); if(part.fill!=='none'){ g.fillStyle=fill; g.fill(P); }
+      if(part.stroke){ g.strokeStyle=col(part.stroke.color); g.lineWidth=part.stroke.w; g.stroke(P); }
+      if(part.rim&&scene.palette.rim){ g.save(); g.clip(P); const gr=g.createLinearGradient(0,part.rim[0],0,part.rim[1]); gr.addColorStop(0,rgba(scene.palette.rim,.9)); gr.addColorStop(1,rgba(scene.palette.rim,0)); g.fillStyle=gr; g.fillRect(-700,part.rim[0]-4,1400,part.rim[1]-part.rim[0]+4); g.restore(); } }
+    g.restore();
+  }
+}
+let noiseTile=null;
+function getNoise(){ if(noiseTile) return noiseTile; const c=document.createElement('canvas'); c.width=c.height=160; const g=c.getContext('2d'),im=g.createImageData(160,160),r=rng(77);
+  for(let i=0;i<im.data.length;i+=4){ const v=r()*255; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=255; } g.putImageData(im,0,0); return noiseTile=c; }
+
+function draw(g,W,H,t,showSel){
+  const K=H/1000, cam=camAt(t), isV=H>W, zoom=cam.zoom*(isV?(scene.camera.verticalFit||.52):1), pal=scene.palette;
+  g.setTransform(1,0,0,1,0,0); g.globalAlpha=1; g.globalCompositeOperation='source-over';
+  g.fillStyle='#000'; g.fillRect(0,0,W,H);
+  for(const k in boxes) delete boxes[k];
+  for(const L of scene.layers){
+    if(L.visible===false) continue;
+    const d=L.depth, z=1+(zoom-1)*d, base=[K*z,0,0,K*z,W/2-cam.x*d*K*z,H/2-cam.y*d*K*z];
+    for(const o of L.objects){
+      if(o.visible===false) continue;
+      if(o.kind==='sky'){ g.setTransform(1,0,0,1,0,0); const sk=pal.sky||['#000','#222'], gr=g.createLinearGradient(0,0,0,H);
+        sk.forEach((c,i)=>gr.addColorStop(Math.min(.98,i/(sk.length-1)*.88),c)); gr.addColorStop(1,sk[sk.length-1]); g.fillStyle=gr; g.fillRect(0,0,W,H); continue; }
+      const m=evalObj(o,t); g.setTransform(...base); g.translate(m.x,m.y); g.rotate(m.rot); g.scale(m.s*(o.flip?-1:1),m.s); g.globalAlpha=clamp(m.a);
+      const M=g.getTransform(), bb=boundsOf(o);
+      if(bb) boxes[o.id]=[[bb[0],bb[1]],[bb[2],bb[1]],[bb[2],bb[3]],[bb[0],bb[3]]].map(p=>{const q=M.transformPoint(new DOMPoint(p[0],p[1])); return [q.x,q.y];});
+      const p=o.params||{};
+      if(o.kind==='glow'){ const r=p.r||300, gr=g.createRadialGradient(0,0,0,0,0,r), c=col(p.color||'sun'); gr.addColorStop(0,rgba(c,p.a??.8)); gr.addColorStop(.35,rgba(c,(p.a??.8)*.32)); gr.addColorStop(1,rgba(c,0)); g.globalCompositeOperation='lighter'; g.fillStyle=gr; g.beginPath(); g.arc(0,0,r,0,7); g.fill(); g.globalCompositeOperation='source-over'; }
+      else if(o.kind==='cloud'){ const sp=cloudSprite(p); g.drawImage(sp,-(p.w||400)/2,-(p.h||140),p.w||400,p.h||140); }
+      else if(o.kind==='skyline'){ const geo=skylineGeo(p); g.fillStyle=mixc(col(o.color||'near'),col('haze'),p.haze||0); g.fillRect(-geo.W/2,-2,geo.W,1500);
+        for(const b of geo.B){ g.fillRect(b.x,-b.h,b.w,b.h+1500); if(b.step) g.fillRect(b.x+(b.w-b.step.w)/2,-b.h-b.step.h,b.step.w,b.step.h+2); if(b.ant){ g.fillRect(b.x+b.w/2-1,-b.h-b.ant,2,b.ant+2); } }
+        if(geo.WN.length){ g.fillStyle=rgba(pal.window||'#ffd27a',.85); for(const w of geo.WN) g.fillRect(w[0],w[1],6,8); } }
+      else if(o.kind==='asset'){ const a=assetOf(o.asset); if(a) drawAsset(g,o,a,t); }
+    }
+  }
+  g.setTransform(1,0,0,1,0,0); g.globalAlpha=1; g.globalCompositeOperation='source-over';
+  const st=scene.style||{};
+  if(st.grain){ g.globalAlpha=st.grain; g.globalCompositeOperation='overlay'; const n=getNoise(), f=Math.floor(t*12), ox=(f*37)%160, oy=(f*91)%160, sc=Math.max(1,H/540);
+    g.save(); g.scale(sc,sc); for(let x=-ox;x<W/sc;x+=160) for(let y=-oy;y<H/sc;y+=160) g.drawImage(n,x,y); g.restore(); g.globalAlpha=1; g.globalCompositeOperation='source-over'; }
+  if(st.vignette){ const gr=g.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75); gr.addColorStop(0,'rgba(0,0,0,0)'); gr.addColorStop(1,`rgba(8,4,16,${st.vignette})`); g.fillStyle=gr; g.fillRect(0,0,W,H); }
+  if(showSel&&sel.obj&&boxes[sel.obj]){ const q=boxes[sel.obj]; g.save(); g.setLineDash([8,6]); g.lineWidth=Math.max(1.5,H/500); g.strokeStyle='#ffb66e'; g.beginPath(); q.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); g.closePath(); g.stroke(); g.restore(); }
+}
+
+/* ---------- canvas, transport ---------- */
+const cv=$('#cv'), ctx=cv.getContext('2d');
+function setAspect(v){ vertical=v; cv.width=v?720:1280; cv.height=v?1280:720; cv.className=v?'v':'h';
+  document.querySelectorAll('#aspect button').forEach(b=>b.classList.toggle('on',(b.dataset.a==='v')===v)); frame(); }
+function frame(){ draw(ctx,cv.width,cv.height,tNow,true); $('#scrub').value=tNow/scene.duration; $('#time').textContent=`${tNow.toFixed(1)} / ${scene.duration.toFixed(1)} с`; }
+let lastTs=0;
+function loop(ts){ if(playing){ tNow=(tNow+(ts-lastTs)/1000)%scene.duration; frame(); } lastTs=ts; requestAnimationFrame(loop); }
+function setPlaying(p){ playing=p; $('#play').textContent=p?'Пауза':'Играть'; }
+$('#play').onclick=()=>setPlaying(!playing);
+$('#scrub').oninput=e=>{ setPlaying(false); tNow=+e.target.value*scene.duration; frame(); };
+$('#aspect').onclick=e=>{ const b=e.target.closest('button'); if(b) setAspect(b.dataset.a==='v'); };
+$('#presets').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; scene.palette={...PRESETS[b.dataset.p]}; scene.style.preset=b.dataset.p; commit(); };
+$('#dur').onchange=e=>{ scene.duration=clamp(+e.target.value||12,2,120); tNow=Math.min(tNow,scene.duration); commit(); };
+
+/* pointer: pick and drag objects */
+let drag=null;
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect(), px=(e.clientX-r.left)*cv.width/r.width, py=(e.clientY-r.top)*cv.height/r.height;
+  const order=[]; for(const L of scene.layers) if(L.visible!==false) for(const o of L.objects) order.push([L,o]); order.reverse();
+  for(const [L,o] of order){ const q=boxes[o.id]; if(q&&inPoly(px,py,q)){ sel={layer:L.id,obj:o.id}; setPlaying(false);
+      const z=(1+(camAt(tNow).zoom*(vertical?(scene.camera.verticalFit||.52):1)-1)*L.depth)*cv.height/1000; drag={o,px,py,x0:o.x||0,y0:o.y||0,z,k:cv.width/r.width}; cv.setPointerCapture(e.pointerId); refreshUI(); frame(); return; } }
+  sel={layer:null,obj:null}; refreshUI(); frame();
+});
+cv.addEventListener('pointermove',e=>{ if(!drag) return; const r=cv.getBoundingClientRect(), px=(e.clientX-r.left)*cv.width/r.width, py=(e.clientY-r.top)*cv.height/r.height;
+  drag.o.x=Math.round(drag.x0+(px-drag.px)/drag.z); drag.o.y=Math.round(drag.y0+(py-drag.py)/drag.z); frame(); renderProps(); });
+cv.addEventListener('pointerup',()=>{ if(drag){ drag=null; commit(true); } });
+function inPoly(x,y,q){ let c=false; for(let i=0,j=q.length-1;i<q.length;j=i++){ if(((q[i][1]>y)!==(q[j][1]>y))&&(x<(q[j][0]-q[i][0])*(y-q[i][1])/(q[j][1]-q[i][1])+q[i][0])) c=!c; } return c; }
+
+/* ---------- UI: catalog, tree, properties ---------- */
+const CATALOG=[
+  {label:'Кит',make:()=>({name:'Кит',kind:'asset',asset:'whale',x:0,y:-70,s:1.4,anim:[{type:'bob',amp:9,period:4,phase:0}]})},
+  {label:'Облако',make:()=>({name:'Облако',kind:'cloud',x:0,y:80,params:{w:520,h:150,seed:Math.floor(Math.random()*99),puffs:9,lit:'cloudLight',shade:'cloudShadow'},anim:[{type:'drift',vx:8,vy:0}]})},
+  {label:'Город',make:()=>({name:'Дома',kind:'skyline',x:0,y:400,color:'mid',params:{w:3200,minH:90,maxH:320,seed:Math.floor(Math.random()*99),lit:0.1,windows:true,haze:0.1}})},
+  {label:'Свет',make:()=>({name:'Свет',kind:'glow',x:0,y:0,params:{r:420,color:'sun',a:0.7}})}
+];
+function targetLayer(){ return findLayer(sel.layer)||scene.layers[Math.max(0,scene.layers.length-1)]; }
+function addObject(o){ const L=targetLayer(); const n={id:uid('o'),...o}; L.objects.push(n); sel={layer:L.id,obj:n.id}; commit(); }
+function buildCatalog(){ const box=$('#catalog'); box.innerHTML=''; CATALOG.forEach(c=>{ const b=document.createElement('button'); b.textContent='+ '+c.label; b.onclick=()=>addObject(c.make()); box.appendChild(b); });
+  Object.keys(scene.assets||{}).forEach(id=>{ const a=scene.assets[id]; const b=document.createElement('button'); b.textContent='+ '+a.name; b.onclick=()=>addObject({name:a.name,kind:'asset',asset:id,x:0,y:0,s:+(420/Math.max(1,a.bounds[2]-a.bounds[0])).toFixed(2)}); box.appendChild(b); }); }
+
+function refreshTree(){
+  const T=$('#tree'); T.innerHTML='';
+  scene.layers.forEach(L=>{
+    const r=document.createElement('div'); r.className='row layer'+(sel.layer===L.id&&!sel.obj?' sel':''); r.tabIndex=0;
+    r.innerHTML=`<button class="eye" title="Показать или скрыть">${L.visible===false?'○':'●'}</button><span class="nm"></span><span class="d">${L.depth}</span>`; r.querySelector('.nm').textContent=L.name;
+    r.querySelector('.eye').onclick=e=>{ e.stopPropagation(); L.visible=L.visible===false; commit(); };
+    r.onclick=()=>{ sel={layer:L.id,obj:null}; refreshUI(); frame(); }; T.appendChild(r);
+    L.objects.forEach(o=>{ const q=document.createElement('div'); q.className='row obj'+(sel.obj===o.id?' sel':''); q.tabIndex=0;
+      q.innerHTML=`<button class="eye" title="Показать или скрыть">${o.visible===false?'○':'●'}</button><span class="nm"></span><span class="d">${o.kind}</span>`; q.querySelector('.nm').textContent=o.name;
+      q.querySelector('.eye').onclick=e=>{ e.stopPropagation(); o.visible=o.visible===false; commit(); };
+      q.onclick=()=>{ sel={layer:L.id,obj:o.id}; refreshUI(); frame(); }; T.appendChild(q); });
+  });
+}
+const num=(id,label,v,step)=>`<label class="f">${label}<input id="${id}" type="number" step="${step||1}" value="${v}"></label>`;
+function renderProps(){
+  const P=$('#tab-props'); if(P.contains(document.activeElement)&&document.activeElement.tagName==='TEXTAREA') return;
+  const f=sel.obj&&findObj(sel.obj);
+  if(f){ const o=f.o;
+    P.innerHTML=`<h2>Объект</h2><div class="grid2">
+      <label class="f wide">Имя<input id="p_name" value=""></label>
+      ${num('p_x','X',Math.round(o.x||0),5)}${num('p_y','Y',Math.round(o.y||0),5)}
+      ${num('p_s','Масштаб',o.s??1,0.05)}${num('p_rot','Поворот, °',o.rot||0,1)}
+      ${num('p_alpha','Прозрачность',o.alpha??1,0.05)}
+      <label class="f">Цвет (слот или #hex)<input id="p_color" list="slots" value=""></label>
+      <datalist id="slots">${Object.keys(scene.palette).filter(k=>typeof scene.palette[k]==='string').map(k=>`<option value="${k}">`).join('')}</datalist>
+      <label class="f wide">Параметры (JSON)<textarea id="p_params" rows="3" spellcheck="false"></textarea></label>
+      <label class="f wide">Анимация (JSON)<textarea id="p_anim" rows="5" spellcheck="false"></textarea></label>
+      ${o.kind==='asset'?'<label class="f wide">Анимация частей (JSON)<textarea id="p_pa" rows="3" spellcheck="false"></textarea></label>':''}
+    </div><p class="hint">Слой: ${f.l.name}. Части кита: ${o.kind==='asset'&&assetOf(o.asset)?assetOf(o.asset).parts.map(p=>p.name).join(', '):'нет'}.</p>`;
+    $('#p_name').value=o.name; $('#p_color').value=o.color||''; $('#p_params').value=JSON.stringify(o.params||{}); $('#p_anim').value=JSON.stringify(o.anim||[],null,1);
+    if($('#p_pa')) $('#p_pa').value=JSON.stringify(o.partAnim||{});
+    const set=(id,fn)=>$(id).addEventListener('change',e=>{ try{ fn(e.target.value); commit(true); }catch(err){ flash('Ошибка JSON: '+err.message,true); } });
+    set('#p_name',v=>o.name=v||o.name); set('#p_x',v=>o.x=+v); set('#p_y',v=>o.y=+v); set('#p_s',v=>o.s=+v); set('#p_rot',v=>o.rot=+v); set('#p_alpha',v=>o.alpha=+v);
+    set('#p_color',v=>{ if(v) o.color=v; else delete o.color; });
+    set('#p_params',v=>o.params=JSON.parse(v||'{}')); set('#p_anim',v=>o.anim=JSON.parse(v||'[]')); if($('#p_pa')) set('#p_pa',v=>o.partAnim=JSON.parse(v||'{}'));
+    return; }
+  const L=findLayer(sel.layer);
+  if(L){ P.innerHTML=`<h2>Слой</h2><div class="grid2"><label class="f wide">Имя<input id="l_name"></label>${num('l_depth','Глубина (0 фон, 1 действие, >1 передний)',L.depth,0.05)}</div>
+    <p class="hint">Глубина задаёт параллакс: чем меньше, тем слабее слой сдвигается за камерой.</p>`;
+    $('#l_name').value=L.name; $('#l_name').onchange=e=>{ L.name=e.target.value||L.name; commit(true); }; $('#l_depth').onchange=e=>{ L.depth=+e.target.value; commit(true); }; return; }
+  P.innerHTML='<h2>Свойства</h2><p class="hint">Выберите слой или объект в списке, либо щёлкните по объекту в кадре.</p>';
+}
+function refreshUI(){ buildCatalog(); refreshTree(); renderProps(); $('#dur').value=scene.duration; document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',b.dataset.p===(scene.style&&scene.style.preset))); if(document.activeElement!==$('#json')) $('#json').value=JSON.stringify(scene,null,1); }
+function commit(keepProps){ save(); if(keepProps){ refreshTree(); $('#json').value=JSON.stringify(scene,null,1); } else refreshUI(); frame(); }
+function flash(t,err){ const m=$('#msg'); m.textContent=t; m.className='msg'+(err?' err':''); }
+
+/* tree actions */
+function moveSel(dir){
+  if(sel.obj){ const f=findObj(sel.obj); const j=f.i+dir; if(j<0||j>=f.l.objects.length) return; const a=f.l.objects; [a[f.i],a[j]]=[a[j],a[f.i]]; }
+  else if(sel.layer){ const i=scene.layers.findIndex(l=>l.id===sel.layer), j=i+dir; if(j<0||j>=scene.layers.length) return; const a=scene.layers; [a[i],a[j]]=[a[j],a[i]]; }
+  commit(); }
+$('#upBtn').onclick=()=>moveSel(-1); $('#downBtn').onclick=()=>moveSel(1);
+$('#addLayer').onclick=()=>{ const L={id:uid('L'),name:'Новый слой',depth:1,visible:true,objects:[]}; scene.layers.push(L); sel={layer:L.id,obj:null}; commit(); };
+$('#dupBtn').onclick=()=>{ const f=sel.obj&&findObj(sel.obj); if(!f) return; const c=JSON.parse(JSON.stringify(f.o)); c.id=uid('o'); c.name+=' копия'; c.x=(c.x||0)+60; f.l.objects.splice(f.i+1,0,c); sel.obj=c.id; commit(); };
+$('#delBtn').onclick=()=>{ if(sel.obj){ const f=findObj(sel.obj); f.l.objects.splice(f.i,1); sel.obj=null; } else if(sel.layer){ scene.layers=scene.layers.filter(l=>l.id!==sel.layer); sel={layer:null,obj:null}; } commit(); };
+
+/* tabs, code, AI */
+document.querySelector('.tabs').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b)); $('#tab-props').hidden=b.dataset.tab!=='props'; $('#tab-code').hidden=b.dataset.tab!=='code'; };
+function normalize(s){ if(!s||!Array.isArray(s.layers)) throw new Error('нет массива layers'); s.palette=s.palette||{...PRESETS.dusk}; s.style=s.style||{}; s.camera=s.camera||{verticalFit:.52,keys:[{t:0,x:0,y:0,zoom:1}]}; s.assets=s.assets||{}; s.duration=+s.duration||12;
+  s.layers.forEach(l=>{ l.id=l.id||uid('L'); l.name=l.name||'Слой'; l.depth=l.depth??1; l.objects=l.objects||[]; l.objects.forEach(o=>{ o.id=o.id||uid('o'); o.name=o.name||o.kind; }); }); return s; }
+$('#apply').onclick=()=>{ try{ scene=normalize(JSON.parse($('#json').value)); sel={layer:null,obj:null}; tNow=Math.min(tNow,scene.duration); Object.keys(cloudCache).forEach(k=>delete cloudCache[k]); commit(); flash('Сцена применена.'); }catch(e){ flash('Не удалось применить: '+e.message,true); } };
+$('#reset').onclick=()=>{ scene=demo(); sel={layer:null,obj:null}; commit(); flash('Демо-сцена восстановлена.'); };
+const AI_HEAD=`Ты редактируешь сцену 2D/2.5D-анимации. Моя задача: <впиши, что изменить или создать>.
+Верни только полный JSON сцены, без пояснений.
+Правила формата:
+- Мир: высота кадра 1000 единиц, центр (0,0), ось y вниз. Слои рисуются по порядку: первый самый дальний.
+- layer.depth: 0 не следует за камерой, 1 плоскость действия, больше 1 передний план. У слоёв и объектов уникальные id и понятные имена (name).
+- Цвета: имена из palette (sky[], sun, haze, far, mid, near, whale, belly, rim, cloudLight, cloudShadow, window) или #hex.
+- kind: sky | glow{r,color,a} | cloud{w,h,seed,puffs,lit,shade,haze} | skyline{w,minH,maxH,seed,lit,windows,haze} (x,y = середина основания) | asset{asset:"whale" или id из assets}.
+- Объект: {id,name,kind,x,y,s,rot,alpha,color,params,anim,partAnim}.
+- anim[]: {type:"move",from:[dx,dy],to:[dx,dy],t0,t1,ease:"sine|inOut|out|lin"} (смещения от x,y) | {type:"drift",vx,vy} | {type:"bob",amp,period,phase} | {type:"swing",amp(рад),period,phase} | {type:"pulse",amp,period} | {type:"fade",from,to,t0,t1}.
+- partAnim: {идЧасти:[{type:"swing",...}]} для asset. Части кита: tail, body, dorsal, belly, mouth, eye, flipper.
+- camera.keys: [{t,x,y,zoom}]. Не используй случайность: у облаков и домов задан params.seed.
+
+Текущая сцена:
+`;
+$('#copyAI').onclick=async()=>{ const txt=AI_HEAD+JSON.stringify(scene);
+  try{ await navigator.clipboard.writeText(txt); flash('Скопировано. Вставьте в любой ИИ, ответ вставьте сюда и нажмите «Применить».'); }
+  catch(e){ $('#json').value=txt; $('#json').focus(); $('#json').select(); flash('Буфер недоступен: текст выделен выше, скопируйте вручную (Ctrl+C).',true); } };
+
+/* SVG import into the catalog */
+$('#svgfile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return;
+  try{ const doc=new DOMParser().parseFromString(await f.text(),'image/svg+xml'), svg=doc.documentElement; if(svg.nodeName!=='svg') throw new Error('это не SVG');
+    let vb=(svg.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number); if(vb.length!==4||vb.some(isNaN)) vb=[0,0,parseFloat(svg.getAttribute('width'))||100,parseFloat(svg.getAttribute('height'))||100];
+    const cx=vb[0]+vb[2]/2, cy=vb[1]+vb[3]/2, parts=[]; let n=0;
+    svg.querySelectorAll('path,rect,circle,ellipse,polygon,polyline').forEach(el=>{ if(parts.length>=300) return; const tag=el.tagName.toLowerCase(), A=a=>parseFloat(el.getAttribute(a))||0; let d='';
+      if(tag==='path') d=el.getAttribute('d')||''; else if(tag==='rect'){ const x=A('x'),y=A('y'),w=A('width'),h=A('height'); d=`M${x} ${y}h${w}v${h}h${-w}Z`; }
+      else if(tag==='circle'){ const x=A('cx'),y=A('cy'),r=A('r'); d=`M${x-r} ${y}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`; }
+      else if(tag==='ellipse'){ const x=A('cx'),y=A('cy'),rx=A('rx'),ry=A('ry'); d=`M${x-rx} ${y}a${rx} ${ry} 0 1 0 ${2*rx} 0a${rx} ${ry} 0 1 0 ${-2*rx} 0Z`; }
+      else{ const pts=(el.getAttribute('points')||'').trim().split(/[\s,]+/).map(Number); for(let i=0;i+1<pts.length;i+=2) d+=(i?'L':'M')+pts[i]+' '+pts[i+1]; d+='Z'; }
+      if(!d) return; let fill=el.getAttribute('fill')||(el.getAttribute('style')||'').match(/fill:\s*([^;]+)/)?.[1]||'#000000'; if(fill==='none') return; if(!/^#[0-9a-f]{3,8}$/i.test(fill)) fill='#8a8a8a'; fill=fill.slice(0,7);
+      n++; parts.push({id:el.id||('part'+n),name:el.id||(tag+' '+n),off:[-cx,-cy],fill,d}); });
+    if(!parts.length) throw new Error('не нашлось фигур');
+    const id='svg'+Math.random().toString(36).slice(2,6), name=f.name.replace(/\.svg$/i,'');
+    scene.assets[id]={name,bounds:[-vb[2]/2,-vb[3]/2,vb[2]/2,vb[3]/2],parts}; commit(); addObject({name,kind:'asset',asset:id,x:0,y:0,s:+(420/vb[2]).toFixed(2)}); flash(`Импортировано: ${name}, частей ${parts.length}.`);
+  }catch(err){ flash('Импорт не удался: '+err.message,true); } e.target.value=''; };
+
+/* boot */
+scene=normalize(load()); sel={layer:null,obj:null};
+refreshUI(); setAspect(false); setPlaying(true);
+window.__sandbox={get scene(){return scene;},setT(t){ setPlaying(false); tNow=t; frame(); },setAspect};
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>

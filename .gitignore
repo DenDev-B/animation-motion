@@ -1,0 +1,7 @@
+node_modules/
+dist/
+out/
+*.log
+docs/*.zip
+docs/*.plugin
+docs/*_files/
