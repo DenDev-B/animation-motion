@@ -10,6 +10,7 @@
 - `npm run typecheck` — проверка типов TypeScript
 - `npm run check:schema` — валидация JSON-сцены и схемы
 - `npm run check:render` — самопроверка воспроизводимости кадров (Chrome headless)
+- `npm run compare:frames` — сверка кадров нового рендера с эталоном M0 (Chrome headless, пиксели, out/compare/)
 
 ## Структура
 

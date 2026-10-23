@@ -8,11 +8,17 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check:schema": "node tools/check-schema.ts",
-    "check:render": "node tools/check-render.ts"
+    "check:render": "node tools/check-render.ts",
+    "compare:frames": "node tools/compare-frames.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.10.7",
+    "@types/pixelmatch": "^5.2.6",
+    "@types/pngjs": "^6.0.5",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^25.16.0",
     "typescript": "^5.7.3",
-    "vite": "^6.0.5",
-    "@types/node": "^22.10.7"
+    "vite": "^6.0.5"
   }
 }
