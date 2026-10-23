@@ -1,10 +1,16 @@
-import puppeteer, { type Page, type Browser } from 'puppeteer-core';
+import puppeteer, { type Page } from 'puppeteer-core';
 import fs from 'fs';
 import path from 'path';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
 import http from 'http';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
+import { createCanvas, Path2D } from '@napi-rs/canvas';
+import { renderFrame, createRenderCache, type SceneV1, type CatalogAsset } from '../engine/index.ts';
+(globalThis as any).Path2D = Path2D;
+import { spawnPreview, waitForServer, launchSafeChrome, assertPortFree } from './browser.ts';
+import { fileURLToPath } from 'url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = 4174;
 const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
@@ -19,20 +25,6 @@ const MIN_CHANGE_PCT = 1;
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 function log(m: string) { process.stdout.write(m + '\n'); }
-
-async function waitForServer(port: number, retries = 40) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await new Promise((resolve, reject) => {
-        const req = http.get(`http://localhost:${port}/`, (res) => { res.resume(); if (res.statusCode === 200) resolve(res); else reject(new Error(String(res.statusCode))); });
-        req.on('error', reject);
-        req.setTimeout(1000, () => { req.destroy(); reject(new Error('timeout')); });
-      });
-      return true;
-    } catch { await sleep(250); }
-  }
-  return false;
-}
 
 function savePng(file: string, w: number, h: number, data: Buffer): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -59,7 +51,7 @@ function nearestNeighbor(src: Buffer, sw: number, sh: number, dw: number, dh: nu
   return out;
 }
 
-interface Frame { aspect: Aspect; t: number; w: number; h: number; data: Buffer; }
+interface Frame { source: string; aspect: Aspect; t: number; w: number; h: number; data: Buffer; }
 
 interface CmpResult {
   diffPixels: number;
@@ -115,13 +107,13 @@ async function captureM0(page: Page, aspect: Aspect, t: number): Promise<Frame> 
     return Array.from(id.data);
   }, t);
   const { w, h } = SIZE[aspect];
-  return { aspect, t, w, h, data: Buffer.from(new Uint8ClampedArray(data)) };
+  return { source: 'M0', aspect, t, w, h, data: Buffer.from(new Uint8ClampedArray(data)) };
 }
 
 async function captureNew(page: Page, aspect: Aspect, t: number): Promise<Frame> {
   await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => (window as any).__editor !== undefined);
-  await page.evaluate((a: Aspect) => (window as any).__editor.setAspect(a), aspect);
+  await page.evaluate((a: string) => (window as any).__editor.setAspect(a), aspect);
   const data = await page.evaluate((t: number) => {
     (window as any).__editor.setT(t);
     const cv = document.querySelector('#cv') as HTMLCanvasElement;
@@ -130,13 +122,21 @@ async function captureNew(page: Page, aspect: Aspect, t: number): Promise<Frame>
     return Array.from(id.data);
   }, t);
   const { w, h } = SIZE[aspect];
-  return { aspect, t, w, h, data: Buffer.from(new Uint8ClampedArray(data)) };
+  return { source: 'NEW', aspect, t, w, h, data: Buffer.from(new Uint8ClampedArray(data)) };
+}
+
+async function captureNode(aspect: Aspect, t: number, scene: SceneV1, catalog: Record<string, CatalogAsset>, cache: ReturnType<typeof createRenderCache>): Promise<Frame> {
+  const { w, h } = SIZE[aspect];
+  const canvas = createCanvas(w, h);
+  const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
+  renderFrame(ctx, scene, t, { w, h }, { createCanvas: ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement, catalog, cache });
+  const id = ctx.getImageData(0, 0, w, h);
+  return { source: 'NODE', aspect, t, w, h, data: Buffer.from(new Uint8ClampedArray(id.data)) };
 }
 
 interface ResultRow {
-  aspect: Aspect; t: number; diffPixels: number; total: number; percent: number;
-  maxDelta: number; bbox: { x0: number; y0: number; x1: number; y1: number } | null;
-  pixelmatch: number; verdict: string;
+  aspect: Aspect; t: number; sourceA: string; sourceB: string; diffPixels: number; total: number; percent: number;
+  maxDelta: number; bbox: { x0: number; y0: number; x1: number; y1: number } | null; pixelmatch: number; verdict: string;
 }
 
 async function main() {
@@ -144,29 +144,25 @@ async function main() {
   log('build');
   execSync('npm.cmd run build', { stdio: 'inherit' });
   log('preview spawn');
-  const preview = spawn('cmd', ['/c', 'npm.cmd', 'run', 'preview', '--', '--port', String(PORT)], { stdio: ['ignore', 'pipe', 'pipe'] });
+  await assertPortFree(PORT);
+  const preview = spawnPreview(PORT);
   let previewOut = '';
-  preview.stdout.on('data', (d) => { previewOut += d; });
-  preview.stderr.on('data', (d) => { previewOut += d; });
+  if (preview.proc.stdout) preview.proc.stdout.on('data', (d) => { previewOut += d; });
+  if (preview.proc.stderr) preview.proc.stderr.on('data', (d) => { previewOut += d; });
 
   let exitCode = 1;
   const extraChecks: Array<{ name: string; ok: boolean; message: string }> = [];
   try {
-    if (!(await waitForServer(PORT))) {
+    if (!(await waitForServer(PORT, `http://localhost:${PORT}/`))) {
       log('preview NOT up');
       console.log(previewOut);
-      preview.kill();
+      preview.cleanup();
       process.exit(1);
     }
     log('server up');
 
-    const browser = await puppeteer.launch({
-      executablePath: CHROME_PATH,
-      headless: 'new' as any,
-      args: ['--disable-gpu', '--force-device-scale-factor=1', '--allow-file-access-from-files'],
-    });
-
-    const page = await browser.newPage();
+    const chrome = await launchSafeChrome(['--allow-file-access-from-files']);
+    const page = await chrome.browser.newPage();
     const results: ResultRow[] = [];
     let etalonStable = true;
 
@@ -177,7 +173,6 @@ async function main() {
     etalonStable = noise.diffPixels === 0;
     log(`etalon self-noise t=6 (9:16): differing=${noise.diffPixels} maxDelta=${noise.maxDelta} -> ${etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН'}`);
 
-    // защита от пустого совпадения: цвета у эталона
     for (const f of [m0v_t6_a, m0v_t0_b, m0v_t6_b]) {
       const uc = uniqueColors(f.data);
       const ok = uc >= MIN_UNIQUE_COLORS;
@@ -186,22 +181,26 @@ async function main() {
     }
 
     const newFrames: Record<string, Frame> = {};
+    const m0Frames: Record<string, Frame> = {};
     for (const aspect of ASPECTS) {
       for (const t of TS) {
         const m0 = await captureM0(page, aspect, t);
+        m0Frames[`${aspect}-t${t}`] = m0;
         const New = await captureNew(page, aspect, t);
         newFrames[`${aspect}-t${t}`] = New;
         const cmp = compare(m0, New);
         const total = m0.w * m0.h;
         const percent = (cmp.diffPixels / total) * 100;
         const verdict = cmp.diffPixels === 0 ? 'EXACT' : 'DIFF';
-        results.push({ aspect, t: m0.t, diffPixels: cmp.diffPixels, total, percent, maxDelta: cmp.maxDelta, bbox: cmp.bbox, pixelmatch: cmp.pixelmatch, verdict });
+        results.push({ aspect, t: m0.t, sourceA: 'M0', sourceB: 'NEW', diffPixels: cmp.diffPixels, total, percent, maxDelta: cmp.maxDelta, bbox: cmp.bbox, pixelmatch: cmp.pixelmatch, verdict });
         await savePng(path.join(OUT_DIR, `m0-${aspect}-t${t}.png`), m0.w, m0.h, m0.data);
         await savePng(path.join(OUT_DIR, `new-${aspect}-t${t}.png`), New.w, New.h, New.data);
         await savePng(path.join(OUT_DIR, `diff-${aspect}-t${t}.png`), m0.w, m0.h, cmp.diffBuf);
         log(`${aspect.toUpperCase()} t=${t}: diff=${cmp.diffPixels}/${total} (${percent.toFixed(2)}%) maxDelta=${cmp.maxDelta} pixelmatch=${cmp.pixelmatch} verdict=${verdict}`);
       }
     }
+
+    await chrome.cleanup();
 
     // защита от пустого совпадения: цвета у нового рендера
     for (const key of Object.keys(newFrames)) {
@@ -212,7 +211,7 @@ async function main() {
       if (!ok) log(`FAIL: NEW ${f.aspect.toUpperCase()} t=${f.t}: ${uc} уникальных цветов < ${MIN_UNIQUE_COLORS}`);
     }
 
-    // защита от пустого совпадения: t=0 и t=6 нового рендера различаются > 1% в каждом формате
+    // защита: t=0 и t=6 нового рендера различаются > 1% в каждом формате
     for (const aspect of ASPECTS) {
       const f0 = newFrames[`${aspect}-t0`];
       const f6 = newFrames[`${aspect}-t6`];
@@ -223,22 +222,44 @@ async function main() {
       if (!ok) log(`FAIL: NEW ${aspect.toUpperCase()} t=0 vs t=6: ${pct.toFixed(2)}% изменений ≤ ${MIN_CHANGE_PCT}%`);
     }
 
-    await browser.close();
+    // === Часть 3: NODE vs M0 (без браузера, информативно) ===
+    const scene = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'whale-demo.json'), 'utf8')) as unknown as SceneV1;
+    const catalogJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalog', 'whale.json'), 'utf8')) as unknown as CatalogAsset;
+    const catalog: Record<string, CatalogAsset> = { whale: catalogJson };
+    const nodeCache = createRenderCache();
+    log('\nNODE vs M0:');
+    for (const aspect of ASPECTS) {
+      for (const t of TS) {
+        const m0 = m0Frames[`${aspect}-t${t}`];
+        const nodeFrame = await captureNode(aspect, t, scene, catalog, nodeCache);
+        const cmp = compare(m0, nodeFrame);
+        const total = m0.w * m0.h;
+        const percent = (cmp.diffPixels / total) * 100;
+        const verdict = cmp.diffPixels === 0 ? 'EXACT' : 'DIFF';
+        results.push({ aspect, t: nodeFrame.t, sourceA: 'M0', sourceB: 'NODE', diffPixels: cmp.diffPixels, total, percent, maxDelta: cmp.maxDelta, bbox: cmp.bbox, pixelmatch: cmp.pixelmatch, verdict });
+        log(`NODE ${aspect.toUpperCase()} t=${t}: diff=${cmp.diffPixels}/${total} (${percent.toFixed(2)}%) maxDelta=${cmp.maxDelta} pixelmatch=${cmp.pixelmatch} verdict=${verdict}`);
+        const uc = uniqueColors(nodeFrame.data);
+        const ok = uc >= MIN_UNIQUE_COLORS;
+        extraChecks.push({ name: `NODE ${aspect.toUpperCase()} t=${t} уникальных цветов`, ok, message: `${uc} цветов (требуется ≥ ${MIN_UNIQUE_COLORS})` });
+        if (!ok) log(`FAIL: NODE ${aspect.toUpperCase()} t=${t}: ${uc} уникальных цветов < ${MIN_UNIQUE_COLORS}`);
+      }
+    }
 
-    // sheet.png
+    // sheet.png: только пары M0 vs NEW (6 строк × 3 колонки)
+    const m0newResults = results.filter((r) => r.sourceA === 'M0' && r.sourceB === 'NEW');
     const cellH = 180;
     const colW = 320;
     const rowGap = 6;
     const colGap = 40;
     const sheetW = 3 * colW + 2 * colGap;
-    const sheetH = results.length * cellH + (results.length - 1) * rowGap;
+    const sheetH = m0newResults.length * cellH + (m0newResults.length - 1) * rowGap;
     const sheet = Buffer.alloc(sheetW * sheetH * 4, 0);
     function pngToRGBA(buf: Buffer): { w: number; h: number; data: Buffer } {
       const png = PNG.sync.read(buf);
       return { w: png.width, h: png.height, data: Buffer.from(png.data) };
     }
     let ri = 0;
-    for (const r of results) {
+    for (const r of m0newResults) {
       const cells = [
         path.join(OUT_DIR, `m0-${r.aspect}-t${r.t}.png`),
         path.join(OUT_DIR, `new-${r.aspect}-t${r.t}.png`),
@@ -265,9 +286,9 @@ async function main() {
     const report = { etalonStable, etalonNote: etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН', extraChecks, results };
     fs.writeFileSync(path.join(OUT_DIR, 'report.json'), JSON.stringify(report, null, 2));
 
-    log('\nformat  t  diffPixels  percent   maxDelta  pixelmatch  verdict');
+    log('\nformat  t  A->B     diffPixels  percent   maxDelta  pixelmatch  verdict');
     for (const r of results) {
-      log(`${r.aspect.toUpperCase().padEnd(5)} ${String(r.t).padEnd(2)} ${String(r.diffPixels).padEnd(10)} ${r.percent.toFixed(2).padEnd(9)} ${String(r.maxDelta).padEnd(10)} ${String(r.pixelmatch).padEnd(11)} ${r.verdict}`);
+      log(`${r.aspect.toUpperCase().padEnd(5)} ${String(r.t).padEnd(2)} ${r.sourceA}->${r.sourceB.padEnd(5)} ${String(r.diffPixels).padEnd(10)} ${r.percent.toFixed(2).padEnd(9)} ${String(r.maxDelta).padEnd(10)} ${String(r.pixelmatch).padEnd(11)} ${r.verdict}`);
     }
     log('\nпроверки защиты от пустого кадра:');
     for (const c of extraChecks) {
@@ -275,9 +296,9 @@ async function main() {
     }
     log(`etalon self-noise: ${etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН'}`);
 
-    const allExact = results.every((r) => r.verdict === 'EXACT');
+    const m0newExact = m0newResults.every((r) => r.verdict === 'EXACT');
     const allExtra = extraChecks.every((c) => c.ok);
-    if (allExact && etalonStable && allExtra) {
+    if (m0newExact && etalonStable && allExtra) {
       log('OVERALL: PASS');
       exitCode = 0;
     } else {
@@ -285,7 +306,7 @@ async function main() {
       exitCode = 1;
     }
   } finally {
-    try { preview.kill(); } catch {}
+    try { preview.cleanup(); } catch {}
   }
   process.exit(exitCode);
 }

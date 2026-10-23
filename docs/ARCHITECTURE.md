@@ -43,6 +43,12 @@ JSON-сцена (`scenes/*.json`) + каталог (`catalog/*.json`) → `rende
 | `npm run check:render` | Кадр воспроизводится побайтно (t=0 дважды, t=6, возврат к t=0) — нет скрытого состояния между кадрами | Совпадение с эталоном M0, красота картинки |
 | `npm run compare:frames` | Кадры нового рендера побайтно совпадают с M0 (t=0,6,12 × 16:9/9:16); кадры не пустые, время влияет на картинку | То, что картинка «красивая» или соответствует замыслу |
 
+## Экспорт MP4
+
+- Путь B (основной): `tools/export.ts` — `engine.renderFrame` + `@napi-rs/canvas`, сырые RGBA в stdin ffmpeg (`-f rawvideo -pix_fmt rgba`), кодирование `libx264 -pix_fmt yuv420p -preset veryfast -crf 18 -movflags +faststart`, один холст и один буфер на весь экспорт, бэкпрешер через `stdin.drain`. CLI: `npm run export <scene.json> --format h|v [--size WxH] [--fps 30] [--range A:B] [--out ...]`.
+- Путь A (запасной): `tools/export-a.ts` — puppeteer-core + vite preview, `image2pipe(PNG)` в ffmpeg._MEDЛЕННЫЙ_ (~70–93 мс/кадр на этом железе).
+- Путь C (WebCodecs): не исследован (идея #1 в docs/IDEAS.md).
+
 ## Что реально есть в коде (факты, без выдумок)
 
 - `engine/index.ts` экспортирует `renderFrame`, `createRenderCache`, типы схемы и `validateScene`.

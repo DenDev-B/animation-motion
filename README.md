@@ -11,6 +11,7 @@
 - `npm run check:schema` — валидация JSON-сцены и схемы
 - `npm run check:render` — самопроверка воспроизводимости кадров (Chrome headless)
 - `npm run compare:frames` — сверка кадров нового рендера с эталоном M0 (Chrome headless, пиксели, out/compare/)
+- `npm run export <scene.json> --format h|v [--size WxH] [--fps 30] [--range A:B] [--out ...] [--crf 18] [--preset veryfast]` — экспорт MP4 по пути B (engine/ + @napi-rs/canvas + ffmpeg rawvideo)
 
 ## Структура
 
