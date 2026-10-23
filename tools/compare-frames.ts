@@ -14,6 +14,8 @@ const TS = [0, 6, 12] as const;
 const ASPECTS = ['h', 'v'] as const;
 type Aspect = typeof ASPECTS[number];
 const SIZE: Record<Aspect, { w: number; h: number }> = { h: { w: 1280, h: 720 }, v: { w: 720, h: 1280 } };
+const MIN_UNIQUE_COLORS = 256;
+const MIN_CHANGE_PCT = 1;
 
 function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 function log(m: string) { process.stdout.write(m + '\n'); }
@@ -91,6 +93,11 @@ function compare(a: Frame, b: Frame): CmpResult {
   return { diffPixels, maxDelta, bbox, pixelmatch: pm, diffBuf: diffOut };
 }
 
+function uniqueColors(data: Buffer): number {
+  const u32 = new Uint32Array(data.buffer, data.byteOffset, data.length / 4);
+  return new Set(u32).size;
+}
+
 async function captureM0(page: Page, aspect: Aspect, t: number): Promise<Frame> {
   await page.goto('file://' + M0_PATH, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => (window as any).__sandbox !== undefined);
@@ -126,6 +133,12 @@ async function captureNew(page: Page, aspect: Aspect, t: number): Promise<Frame>
   return { aspect, t, w, h, data: Buffer.from(new Uint8ClampedArray(data)) };
 }
 
+interface ResultRow {
+  aspect: Aspect; t: number; diffPixels: number; total: number; percent: number;
+  maxDelta: number; bbox: { x0: number; y0: number; x1: number; y1: number } | null;
+  pixelmatch: number; verdict: string;
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   log('build');
@@ -137,6 +150,7 @@ async function main() {
   preview.stderr.on('data', (d) => { previewOut += d; });
 
   let exitCode = 1;
+  const extraChecks: Array<{ name: string; ok: boolean; message: string }> = [];
   try {
     if (!(await waitForServer(PORT))) {
       log('preview NOT up');
@@ -153,7 +167,7 @@ async function main() {
     });
 
     const page = await browser.newPage();
-    const results: Array<{ aspect: Aspect; t: number; diffPixels: number; total: number; percent: number; maxDelta: number; bbox: { x0: number; y0: number; x1: number; y1: number } | null; pixelmatch: number; verdict: string }> = [];
+    const results: ResultRow[] = [];
     let etalonStable = true;
 
     const m0v_t6_a = await captureM0(page, 'v', 6);
@@ -163,10 +177,20 @@ async function main() {
     etalonStable = noise.diffPixels === 0;
     log(`etalon self-noise t=6 (9:16): differing=${noise.diffPixels} maxDelta=${noise.maxDelta} -> ${etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН'}`);
 
+    // защита от пустого совпадения: цвета у эталона
+    for (const f of [m0v_t6_a, m0v_t0_b, m0v_t6_b]) {
+      const uc = uniqueColors(f.data);
+      const ok = uc >= MIN_UNIQUE_COLORS;
+      extraChecks.push({ name: `M0 ${f.aspect.toUpperCase()} t=${f.t} уникальных цветов`, ok, message: `${uc} цветов (требуется ≥ ${MIN_UNIQUE_COLORS})` });
+      if (!ok) log(`FAIL: M0 ${f.aspect.toUpperCase()} t=${f.t}: ${uc} уникальных цветов < ${MIN_UNIQUE_COLORS}`);
+    }
+
+    const newFrames: Record<string, Frame> = {};
     for (const aspect of ASPECTS) {
       for (const t of TS) {
         const m0 = await captureM0(page, aspect, t);
         const New = await captureNew(page, aspect, t);
+        newFrames[`${aspect}-t${t}`] = New;
         const cmp = compare(m0, New);
         const total = m0.w * m0.h;
         const percent = (cmp.diffPixels / total) * 100;
@@ -178,6 +202,27 @@ async function main() {
         log(`${aspect.toUpperCase()} t=${t}: diff=${cmp.diffPixels}/${total} (${percent.toFixed(2)}%) maxDelta=${cmp.maxDelta} pixelmatch=${cmp.pixelmatch} verdict=${verdict}`);
       }
     }
+
+    // защита от пустого совпадения: цвета у нового рендера
+    for (const key of Object.keys(newFrames)) {
+      const f = newFrames[key];
+      const uc = uniqueColors(f.data);
+      const ok = uc >= MIN_UNIQUE_COLORS;
+      extraChecks.push({ name: `NEW ${f.aspect.toUpperCase()} t=${f.t} уникальных цветов`, ok, message: `${uc} цветов (требуется ≥ ${MIN_UNIQUE_COLORS})` });
+      if (!ok) log(`FAIL: NEW ${f.aspect.toUpperCase()} t=${f.t}: ${uc} уникальных цветов < ${MIN_UNIQUE_COLORS}`);
+    }
+
+    // защита от пустого совпадения: t=0 и t=6 нового рендера различаются > 1% в каждом формате
+    for (const aspect of ASPECTS) {
+      const f0 = newFrames[`${aspect}-t0`];
+      const f6 = newFrames[`${aspect}-t6`];
+      const cmp = compare(f0, f6);
+      const pct = (cmp.diffPixels / (f0.w * f0.h)) * 100;
+      const ok = pct > MIN_CHANGE_PCT;
+      extraChecks.push({ name: `NEW ${aspect.toUpperCase()} t=0 vs t=6 изменение`, ok, message: `${pct.toFixed(2)}% пикселей различаются (требуется > ${MIN_CHANGE_PCT}%)` });
+      if (!ok) log(`FAIL: NEW ${aspect.toUpperCase()} t=0 vs t=6: ${pct.toFixed(2)}% изменений ≤ ${MIN_CHANGE_PCT}%`);
+    }
+
     await browser.close();
 
     // sheet.png
@@ -217,17 +262,22 @@ async function main() {
     }
     await savePng(path.join(OUT_DIR, 'sheet.png'), sheetW, sheetH, sheet);
 
-    const report = { etalonStable, etalonNote: etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН', results };
+    const report = { etalonStable, etalonNote: etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН', extraChecks, results };
     fs.writeFileSync(path.join(OUT_DIR, 'report.json'), JSON.stringify(report, null, 2));
 
     log('\nformat  t  diffPixels  percent   maxDelta  pixelmatch  verdict');
     for (const r of results) {
       log(`${r.aspect.toUpperCase().padEnd(5)} ${String(r.t).padEnd(2)} ${String(r.diffPixels).padEnd(10)} ${r.percent.toFixed(2).padEnd(9)} ${String(r.maxDelta).padEnd(10)} ${String(r.pixelmatch).padEnd(11)} ${r.verdict}`);
     }
+    log('\nпроверки защиты от пустого кадра:');
+    for (const c of extraChecks) {
+      log(`${c.ok ? 'OK  ' : 'FAIL'} ${c.name}: ${c.message}`);
+    }
     log(`etalon self-noise: ${etalonStable ? 'стабилен' : 'НЕСТАБИЛЕН'}`);
 
     const allExact = results.every((r) => r.verdict === 'EXACT');
-    if (allExact && etalonStable) {
+    const allExtra = extraChecks.every((c) => c.ok);
+    if (allExact && etalonStable && allExtra) {
       log('OVERALL: PASS');
       exitCode = 0;
     } else {
