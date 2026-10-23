@@ -2,7 +2,8 @@ import type { SceneV1 } from './schema.ts';
 import { camAt, evalObj } from './anim.ts';
 import { col, mixc, rgba } from './color.ts';
 import { clamp } from './math.ts';
-import { cloudSprite, skylineGeo, drawAsset, getNoise, createRenderCache, CreateCanvas } from './kinds.ts';
+import { cloudSprite, skylineGeo, drawAsset, getNoise, createRenderCache } from './kinds.ts';
+import type { CreateCanvas } from './kinds.ts';
 
 export type RenderDeps = {
   createCanvas: CreateCanvas;

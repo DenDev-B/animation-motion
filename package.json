@@ -9,9 +9,12 @@
     "typecheck": "tsc --noEmit",
     "check:schema": "node tools/check-schema.ts",
     "check:render": "node tools/check-render.ts",
-    "compare:frames": "node tools/compare-frames.ts"
+    "compare:frames": "node tools/compare-frames.ts",
+    "export:a": "node tools/export-a.ts",
+    "export:b": "node tools/export-b.ts"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.13",
     "@types/node": "^22.10.7",
     "@types/pixelmatch": "^5.2.6",
     "@types/pngjs": "^6.0.5",
