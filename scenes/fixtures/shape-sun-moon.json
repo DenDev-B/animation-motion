@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "title": "shape-sun-moon",
+  "duration": 12,
+  "palette": {
+    "sky": ["#16213e", "#0f1b2b"],
+    "sun": "#ffd27a",
+    "haze": "#8aa2ff",
+    "far": "#5f7aa6",
+    "mid": "#9fb3d1",
+    "near": "#c9d6ea",
+    "whale": "#b9c7ff",
+    "belly": "#dfe7ff",
+    "rim": "#f5f8ff",
+    "cloudLight": "#f2f6ff",
+    "cloudShadow": "#7f8db8",
+    "window": "#ffd27a"
+  },
+  "style": {"grain": 0.04, "vignette": 0.12},
+  "camera": {"verticalFit": 0.52, "keys": [{"t":0,"x":0,"y":-40,"zoom":1},{"t":12,"x":0,"y":-60,"zoom":1.05}]},
+  "assets": {},
+  "layers": [
+    {
+      "id": "bg",
+      "name": "Фон",
+      "depth": 0,
+      "visible": true,
+      "objects": [{"id": "sky", "name": "Небо", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "color": "sky", "params": {}}]
+    },
+    {
+      "id": "sun-layer",
+      "name": "Солнце",
+      "depth": 0.4,
+      "visible": true,
+      "objects": [{
+        "id": "sun-shape", "name": "Солнце", "kind": "shape", "x": -320, "y": -220, "s": 1, "rot": 0, "alpha": 1, "color": "sun", "params": {"model": {"bounds": [-80,-80,160,160], "parts": [
+          {"id": "disk", "name": "Диск", "type": "circle", "cx": 0, "cy": 0, "r": 60, "fill": "sun"},
+          {"id": "ray1", "name": "Луч1", "type": "path", "d": "M 0 -90 L 6 -70 L -6 -70 Z", "fill": "sun"},
+          {"id": "ray2", "name": "Луч2", "type": "path", "d": "M 90 0 L 70 6 L 70 -6 Z", "fill": "sun"},
+          {"id": "ray3", "name": "Луч3", "type": "path", "d": "M 0 90 L -6 70 L 6 70 Z", "fill": "sun"},
+          {"id": "ray4", "name": "Луч4", "type": "path", "d": "M -90 0 L -70 -6 L -70 6 Z", "fill": "sun"}
+        ]}}, "anim": [{"type": "bob", "amp": 4, "period": 6}]
+      }]
+    },
+    {
+      "id": "moon-layer",
+      "name": "Луна",
+      "depth": 0.6,
+      "visible": true,
+      "objects": [
+        {
+          "id": "moon-shape", "name": "Луна", "kind": "shape", "x": 280, "y": -260, "s": 1, "rot": 0, "alpha": 1, "color": "#c9d6ea", "params": {"model": {"bounds": [-60,-60,120,120], "parts": [
+            {"id": "moon-disk", "name": "Диск", "type": "circle", "cx": 0, "cy": 0, "r": 48, "fill": "#c9d6ea"},
+            {"id": "moon-shadow", "name": "Серп", "type": "circle", "cx": 16, "cy": -6, "r": 42, "fill": "#0f1b2b"}
+          ]}}, "anim": [{"type": "bob", "amp": 3, "period": 7}]
+        },
+        {
+          "id": "star-shape", "name": "Звезда", "kind": "shape", "x": 120, "y": -320, "s": 0.6, "rot": 0, "alpha": 0.9, "color": "#f5f8ff", "params": {"model": {"bounds": [-30,-30,60,60], "parts": [
+            {"id": "star", "name": "Звезда", "type": "path", "d": "M 0 -24 L 6 -8 L 22 -6 L 10 2 L 14 18 L 0 10 L -14 18 L -10 2 L -22 -6 L -6 -8 Z", "fill": "#f5f8ff"}
+          ]}}
+        },
+        {
+          "id": "boat-shape", "name": "Кораблик", "kind": "shape", "x": -80, "y": 120, "s": 0.8, "rot": 0, "alpha": 1, "color": "#c9d6ea", "params": {"model": {"bounds": [-40,-20,80,40], "parts": [
+            {"id": "hull", "name": "Корпус", "type": "path", "d": "M -30 0 L -20 10 L 20 10 L 30 0 Z", "fill": "#9fb3d1"},
+            {"id": "sail", "name": "Парус", "type": "path", "d": "M 0 0 L 0 -26 L 16 -12 Z", "fill": "#dfe7ff"}
+          ]}}, "anim": [{"type": "bob", "amp": 6, "period": 3}]
+        }
+      ]
+    }
+  ]
+}
