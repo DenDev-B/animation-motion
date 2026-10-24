@@ -200,6 +200,32 @@ function scaleChecks(): string | null {
   return null;
 }
 
+function cameraChecks(): string | null {
+  const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
+  for (const file of ['camera-shake.json', 'camera-push.json']) {
+    const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
+    const validation = validateScene(target, { catalogIds: Object.keys(catalog) });
+    if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
+    for (const [label, w, h] of cases) {
+      if (!equal(renderSceneToImageData(target, w, h, 3, createRenderCache()), renderSceneToImageData(target, w, h, 3, createRenderCache()))) return `${file} ${label}: кадр t=3 невоспроизводим`;
+      const ordered = createRenderCache();
+      const before = renderSceneToImageData(target, w, h, 5, ordered);
+      for (const t of [0, 1, 2, 3, 4]) renderSceneToImageData(target, w, h, t, ordered);
+      if (!equal(before, renderSceneToImageData(target, w, h, 5, ordered))) return `${file} ${label}: кадр зависит от порядка рендера`;
+      log(`CAMERA: ${file} ${label} PASS`);
+    }
+  }
+  const shaken = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', 'camera-shake.json'), 'utf8')) as unknown as SceneV1;
+  const still = structuredClone(shaken);
+  delete still.camera.shake;
+  if (!equal(renderSceneToImageData(shaken, 1280, 720, 1, createRenderCache()), renderSceneToImageData(still, 1280, 720, 1, createRenderCache()))) return 'camera-shake: вне окна кадр отличается от камеры без тряски';
+  if (equal(renderSceneToImageData(shaken, 1280, 720, 3, createRenderCache()), renderSceneToImageData(still, 1280, 720, 3, createRenderCache()))) return 'camera-shake: внутри окна тряска не меняет кадр';
+  const push = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', 'camera-push.json'), 'utf8')) as unknown as SceneV1;
+  if (equal(renderSceneToImageData(push, 1280, 720, 0, createRenderCache()), renderSceneToImageData(push, 1280, 720, 6, createRenderCache()))) return 'camera-push: наезд не меняет кадр';
+  log('CAMERA: shake окно и push-in EXACT');
+  return null;
+}
+
 async function nodeMode(): Promise<void> {
   const shapeFail = shapeEquivalence();
   if (shapeFail) {
@@ -225,6 +251,11 @@ async function nodeMode(): Promise<void> {
   const scaleFail = scaleChecks();
   if (scaleFail) {
     log(`SCALE: FAIL (${scaleFail})`);
+    process.exit(1);
+  }
+  const cameraFail = cameraChecks();
+  if (cameraFail) {
+    log(`CAMERA: FAIL (${cameraFail})`);
     process.exit(1);
   }
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];

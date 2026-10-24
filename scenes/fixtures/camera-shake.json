@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "title": "Тряска камеры",
+  "duration": 6,
+  "palette": {
+    "sky": ["#101528", "#26304d", "#6d4a63", "#c07a6a"],
+    "sun": "#ffd9a0",
+    "haze": "#7c6476",
+    "far": "#3c3450",
+    "mid": "#2a253e",
+    "near": "#171326",
+    "whale": "#1d2138",
+    "belly": "#333a5a",
+    "rim": "#ffc58c",
+    "cloudLight": "#b9c4e0",
+    "cloudShadow": "#5f5a7c",
+    "window": "#ffcf7a"
+  },
+  "style": {"grain": 0.06, "vignette": 0.4, "preset": "storm"},
+  "camera": {
+    "verticalFit": 0.52,
+    "keys": [{"t": 0, "x": -40, "y": 0, "zoom": 1}, {"t": 6, "x": 40, "y": -10, "zoom": 1.03}],
+    "shake": {"amp": 22, "freq": 7, "t0": 2, "t1": 4, "seed": 5, "decay": "out"}
+  },
+  "assets": {},
+  "layers": [
+    {
+      "id": "shake-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "shake-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "shake-glow",
+      "name": "Свечение",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {"id": "shake-glow-sun", "name": "Свечение", "kind": "glow", "x": 300, "y": 240, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 420, "color": "sun", "a": 0.35}}
+      ]
+    },
+    {
+      "id": "shake-far",
+      "name": "Дальний город",
+      "depth": 0.35,
+      "visible": true,
+      "objects": [
+        {"id": "shake-far-skyline", "name": "Силуэт", "kind": "skyline", "x": 0, "y": 230, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3200, "minH": 60, "maxH": 220, "seed": 5, "lit": 0.05, "windows": true, "haze": 0.35}}
+      ]
+    },
+    {
+      "id": "shake-near",
+      "name": "Ближний город",
+      "depth": 0.7,
+      "visible": true,
+      "objects": [
+        {"id": "shake-near-skyline", "name": "Силуэт", "kind": "skyline", "x": 0, "y": 340, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "minH": 100, "maxH": 330, "seed": 9, "lit": 0.12, "windows": true, "haze": 0.12}}
+      ]
+    },
+    {
+      "id": "shake-whale",
+      "name": "Кит",
+      "depth": 1.05,
+      "visible": true,
+      "objects": [
+        {"id": "shake-whale-object", "name": "Кит", "kind": "asset", "asset": "whale", "x": 0, "y": -120, "s": 0.8, "rot": 0, "alpha": 1, "anim": [{"type": "bob", "amp": 8, "period": 5}, {"type": "swing", "amp": 0.03, "period": 4.4}]}
+      ]
+    }
+  ]
+}

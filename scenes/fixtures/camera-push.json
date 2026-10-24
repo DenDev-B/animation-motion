@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "title": "Наезд камеры",
+  "duration": 6,
+  "palette": {
+    "sky": ["#7fbdf0", "#b8e0ff", "#f7e9c9"],
+    "sun": "#fff3c8",
+    "haze": "#e8dec6",
+    "far": "#8fa7b8",
+    "mid": "#64828b",
+    "near": "#3f6357",
+    "whale": "#2f4a5c",
+    "belly": "#496b7d",
+    "rim": "#fff2b8",
+    "cloudLight": "#ffffff",
+    "cloudShadow": "#c7d6e0",
+    "window": "#ffd27a"
+  },
+  "style": {"grain": 0.03, "vignette": 0.2, "preset": "day"},
+  "camera": {
+    "verticalFit": 0.52,
+    "keys": [{"t": 0, "x": 0, "y": 0, "zoom": 1}, {"t": 6, "x": 0, "y": 0, "zoom": 1.25}]
+  },
+  "assets": {},
+  "layers": [
+    {
+      "id": "push-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "push-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "push-sun",
+      "name": "Солнце",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {"id": "push-sun-glow", "name": "Свечение", "kind": "glow", "x": 250, "y": -250, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 420, "color": "sun", "a": 0.5}}
+      ]
+    },
+    {
+      "id": "push-mountains",
+      "name": "Горы",
+      "depth": 0.35,
+      "visible": true,
+      "objects": [
+        {"id": "push-mountains-mesh", "name": "Горы", "kind": "mountains", "x": 0, "y": 260, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3000, "minH": 70, "maxH": 230, "peaks": 7, "rough": 0.4, "seed": 6, "color": "far", "haze": 0.3, "snow": 0.25}}
+      ]
+    },
+    {
+      "id": "push-hills",
+      "name": "Холмы",
+      "depth": 0.75,
+      "visible": true,
+      "objects": [
+        {"id": "push-hills-mesh", "name": "Холмы", "kind": "hills", "x": 0, "y": 470, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 70, "waves": 3, "seed": 8, "color": "near", "haze": 0.05}}
+      ]
+    },
+    {
+      "id": "push-whale",
+      "name": "Кит",
+      "depth": 1.1,
+      "visible": true,
+      "objects": [
+        {"id": "push-whale-object", "name": "Кит", "kind": "asset", "asset": "whale", "x": 0, "y": -80, "s": 0.75, "rot": 0, "alpha": 1, "anim": [{"type": "bob", "amp": 7, "period": 4.5}, {"type": "swing", "amp": 0.03, "period": 4}]}
+      ]
+    }
+  ]
+}

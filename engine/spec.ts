@@ -40,6 +40,7 @@ export const SCENE_SPEC = {
   camera: [
     { name: 'verticalFit', type: 'number', default: 0.52, description: 'Дополнительный масштаб вертикального кадра.' },
     { name: 'keys', type: 'array', description: 'Ключи {t, x, y, zoom}; t в секундах, zoom > 0.' },
+    { name: 'shake', type: 'object', description: 'Тряска {amp 0..60, freq 0.5..30, t0?, t1?, seed?, decay?: none|out} или массив таких записей.' },
   ] as const,
   palette: [
     { name: 'sky', type: 'array', min: 2, description: 'Массив минимум из двух цветов градиента.' },

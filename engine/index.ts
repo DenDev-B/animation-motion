@@ -13,6 +13,7 @@ import type {
   Anim,
   Camera,
   CameraKey,
+  CameraShake,
   Style,
   CatalogAsset,
   AssetPart,
@@ -50,6 +51,9 @@ export { KIND_SPEC, ANIM_SPEC, PALETTE_SLOTS, SCENE_SPEC } from './spec.ts';
 export { buildPrompt, extractJson, buildFixRequest } from './ai-io.ts';
 export { counterValue, TEXT_FONT_FAMILY } from './kinds-text.ts';
 export { unitsPerMeter, metersToUnits, unitsToMeters, assetScaleForMeters } from './units.ts';
+export { cameraShake } from './shake.ts';
+export { cameraPreset } from './camera-presets.ts';
+export type { CameraPresetName, CameraPresetOptions } from './camera-presets.ts';
 export type {
   SceneV1,
   Layer,
@@ -58,6 +62,7 @@ export type {
   Anim,
   Camera,
   CameraKey,
+  CameraShake,
   Style,
   CatalogAsset,
   AssetPart,

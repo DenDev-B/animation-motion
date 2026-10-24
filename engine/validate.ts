@@ -196,6 +196,26 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
         }
       });
     }
+    if (camera.shake !== undefined) {
+      const list = Array.isArray(camera.shake) ? camera.shake : [camera.shake];
+      if (!Array.isArray(camera.shake) && !isRecord(camera.shake)) err('camera.shake', 'shake должен быть объектом или массивом объектов; пример: {"amp":12,"freq":6}');
+      else list.forEach((rawShake, index) => {
+        const base = Array.isArray(camera.shake) ? `camera.shake[${index}]` : 'camera.shake';
+        if (!isRecord(rawShake)) { err(base, 'тряска должна быть объектом; пример: {"amp":12,"freq":6}'); return; }
+        checkUnknown(rawShake, ['amp', 'freq', 't0', 't1', 'seed', 'decay'], base, warnings);
+        if (!isFiniteNum(rawShake.amp) || rawShake.amp < 0 || rawShake.amp > 60) err(`${base}.amp`, 'amp должен быть числом от 0 до 60; пример: 12');
+        if (!isFiniteNum(rawShake.freq) || rawShake.freq < 0.5 || rawShake.freq > 30) err(`${base}.freq`, 'freq должен быть числом от 0.5 до 30; пример: 6');
+        if (rawShake.seed !== undefined && (!isFiniteNum(rawShake.seed) || !Number.isInteger(rawShake.seed))) err(`${base}.seed`, 'seed должен быть целым числом; пример: 3');
+        if (rawShake.decay !== undefined && rawShake.decay !== 'none' && rawShake.decay !== 'out') err(`${base}.decay`, 'decay должен быть none или out; пример: out');
+        const t0 = rawShake.t0;
+        const t1 = rawShake.t1;
+        for (const [key, value] of [['t0', t0], ['t1', t1]] as const) {
+          if (value !== undefined && (!isFiniteNum(value) || value < 0)) err(`${base}.${key}`, `${key} должен быть числом не меньше нуля; пример: 2`);
+          else if (isFiniteNum(value) && duration !== undefined && value > duration) err(`${base}.${key}`, `${key} должен быть в диапазоне 0..duration (${duration}); пример: 2`);
+        }
+        if (isFiniteNum(t0) && isFiniteNum(t1) && t1 < t0) err(`${base}.t1`, 't1 не должен быть меньше t0; пример: 4');
+      });
+    }
   }
   const assets = isRecord(s.assets) ? s.assets : undefined;
   if (!assets) err('assets', 'assets должен быть объектом; пример: {}');

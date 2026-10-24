@@ -7,9 +7,19 @@ export interface CameraKey {
   zoom: number;
 }
 
+export interface CameraShake {
+  amp: number;
+  freq: number;
+  t0?: number;
+  t1?: number;
+  seed?: number;
+  decay?: 'none' | 'out';
+}
+
 export interface Camera {
   verticalFit?: number;
   keys: CameraKey[];
+  shake?: CameraShake | CameraShake[];
 }
 
 export interface World {

@@ -1,5 +1,6 @@
 import type { SceneV1, SceneObject } from './schema.ts';
 import { clamp, lerp, EASE } from './math.ts';
+import { cameraShake } from './shake.ts';
 
 export function evalObj(o: SceneObject, t: number, scene: SceneV1) {
   let x = o.x ?? 0, y = o.y ?? 0, rot = (o.rot ?? 0) * Math.PI / 180, s = o.s ?? 1, a = o.alpha ?? 1;
@@ -31,13 +32,19 @@ export function evalObj(o: SceneObject, t: number, scene: SceneV1) {
 
 export function camAt(t: number, scene: SceneV1) {
   const k = scene.camera.keys;
-  if (!k || !k.length) return { x: 0, y: 0, zoom: 1 };
-  if (t <= k[0].t) return k[0];
-  for (let i = 1; i < k.length; i++) {
-    if (t <= k[i].t) {
-      const e = EASE.sine(clamp((t - k[i - 1].t) / Math.max(0.001, k[i].t - k[i - 1].t)));
-      return { x: lerp(k[i - 1].x, k[i].x, e), y: lerp(k[i - 1].y, k[i].y, e), zoom: lerp(k[i - 1].zoom, k[i].zoom, e) };
+  let base: { x: number; y: number; zoom: number };
+  if (!k || !k.length) base = { x: 0, y: 0, zoom: 1 };
+  else if (t <= k[0].t) base = k[0];
+  else {
+    base = k[k.length - 1];
+    for (let i = 1; i < k.length; i++) {
+      if (t <= k[i].t) {
+        const e = EASE.sine(clamp((t - k[i - 1].t) / Math.max(0.001, k[i].t - k[i - 1].t)));
+        base = { x: lerp(k[i - 1].x, k[i].x, e), y: lerp(k[i - 1].y, k[i].y, e), zoom: lerp(k[i - 1].zoom, k[i].zoom, e) };
+        break;
+      }
     }
   }
-  return k[k.length - 1];
+  const shake = cameraShake(scene.camera, t);
+  return { x: base.x + shake.x, y: base.y + shake.y, zoom: base.zoom };
 }
