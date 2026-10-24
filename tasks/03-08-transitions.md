@@ -25,3 +25,9 @@ M0 6/6 EXACT; whale-demo.project.json (все cut) экспортируется 
 
 ## Не делать
 Не менять renderFrame. Не трогать редактор (это 03-09). Не добавлять зависимости.
+
+## Поправки v2 (приоритетнее текста выше)
+- Смена сигнатуры `locateFrame` разрешена: обновить ВСЕХ потребителей (tools/export.ts, tools/contact-sheet.ts, editor/, tools/check-project.ts и тесты) в одном коммите. Для проектов, где все переходы cut, результат и число кадров прежние.
+- Не ждать чужих фикстур: создай scenes/fixtures/ и 3 простые сцены (копии сцены из whale-demo с разной палитрой и длительностью, id разные) для projects/transitions-demo.project.json. Зависит только от 03-01 и 03-02.
+- Описание `transition` добавить в engine/spec.ts и в docs/SCHEMA-v1.md (npm run docs:schema).
+- Редактор не трогать (в 03-09 переходы правятся через JSON).

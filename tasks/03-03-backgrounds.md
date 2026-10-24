@@ -20,3 +20,7 @@
 
 ## Не делать
 Не менять существующие kind. Не добавлять зависимости и растровые файлы.
+
+## Поправки v2
+- `moon` НЕ делать отдельным kind (луна и солнце рисуются через `shape`, 03-02b). Оставить mountains, hills, stars. В scenes/fixtures/bg-night.json луна это shape-пример.
+- Описания params вносить в engine/spec.ts, затем `npm run docs:schema`.
