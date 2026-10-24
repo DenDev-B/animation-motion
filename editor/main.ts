@@ -3,6 +3,7 @@ import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import whaleCatalog from '../catalog/whale.json';
 import type { CatalogAsset } from '../engine/schema.ts';
+import { EditorHistory } from './history.ts';
 
 const cv = document.getElementById('cv') as HTMLCanvasElement | null;
 const ctx = cv?.getContext('2d') as CanvasRenderingContext2D | null;
@@ -29,6 +30,42 @@ let vertical = false;
 let lastTs = 0;
 let rafId: number | null = null;
 let cache = createRenderCache();
+const history = new EditorHistory(project);
+const AUTOSAVE_KEY = 'animation-motion/autosave/v1';
+let autosaveTimer: number | undefined;
+let hasUnsavedChanges = false;
+
+function updateSavedLabel() {
+  const el = document.getElementById('saveState');
+  if (el) el.textContent = hasUnsavedChanges ? 'Есть несохранённые изменения' : 'Сохранено';
+}
+function saveAutosave() {
+  try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ savedAt: Date.now(), project })); } catch {}
+}
+function applyChange(label: string, mutator: () => void) {
+  mutator();
+  history.push(label, project);
+  hasUnsavedChanges = true;
+  updateSavedLabel();
+  window.clearTimeout(autosaveTimer);
+  autosaveTimer = window.setTimeout(saveAutosave, 1000);
+  renderTabs(); frame();
+}
+function restoreProject(value: ProjectV1) {
+  project = structuredClone(value); activeSceneIndex = 0; scene = project.scenes[0].scene; duration = scene.duration;
+  if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
+  renderTabs(); frame();
+}
+function undoChange() { const value = history.undo(); if (value) { restoreProject(value); hasUnsavedChanges = true; updateSavedLabel(); saveAutosave(); } }
+function redoChange() { const value = history.redo(); if (value) { restoreProject(value); hasUnsavedChanges = true; updateSavedLabel(); saveAutosave(); } }
+
+document.addEventListener('keydown', (event) => {
+  const target = event.target as HTMLElement | null;
+  if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) return;
+  if (event.ctrlKey && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redoChange() : undoChange(); }
+  else if (event.ctrlKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redoChange(); }
+});
+window.addEventListener('beforeunload', (event) => { if (hasUnsavedChanges) { event.preventDefault(); event.returnValue = ''; } });
 
 const size = { w: 1280, h: 720 };
 
@@ -113,7 +150,7 @@ function renderTabs() {
     const select = document.createElement('button'); select.textContent = entry.name; select.classList.toggle('on', index === activeSceneIndex); select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2); frame(); renderTabs(); };
     const left = document.createElement('button'); left.textContent = '←'; left.title = 'Переместить влево'; left.disabled = index === 0; left.onclick = () => moveScene(index, -1);
     const right = document.createElement('button'); right.textContent = '→'; right.title = 'Переместить вправо'; right.disabled = index === project.scenes.length - 1; right.onclick = () => moveScene(index, 1);
-    select.ondblclick = () => { const name = prompt('Название сцены', entry.name); if (name?.trim()) { entry.name = name.trim(); renderTabs(); } };
+    select.ondblclick = () => { const name = prompt('Название сцены', entry.name); if (name?.trim()) applyChange('rename-scene', () => { entry.name = name.trim(); }); };
     tab.append(select, left, right); tabs.appendChild(tab);
   });
   if (projectTitle) projectTitle.value = project.title;
@@ -121,16 +158,16 @@ function renderTabs() {
   if (projectFps) projectFps.value = String(project.fps);
   if (projectDuration) projectDuration.textContent = `Проект: ${(projectFrameCount(project) / project.fps).toFixed(1)} с · Сцена: ${scene.duration.toFixed(1)} с`;
 }
-function moveScene(index: number, delta: number) { const target = index + delta; [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; renderTabs(); frame(); }
-function updateProjectControls() { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); renderTabs(); }
-document.getElementById('addScene')?.addEventListener('click', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name = 'Новая сцена'; entry.scene.title = entry.name; project.scenes.push(entry); activeSceneIndex = project.scenes.length - 1; renderTabs(); frame(); });
-document.getElementById('duplicateScene')?.addEventListener('click', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; renderTabs(); frame(); });
-document.getElementById('deleteScene')?.addEventListener('click', () => { if (project.scenes.length <= 1) return; project.scenes.splice(activeSceneIndex, 1); activeSceneIndex = Math.min(activeSceneIndex, project.scenes.length - 1); renderTabs(); frame(); });
+function moveScene(index: number, delta: number) { const target = index + delta; applyChange('move-scene', () => { [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; }); }
+function updateProjectControls() { applyChange('project-settings', () => { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); }); }
+document.getElementById('addScene')?.addEventListener('click', () => applyChange('add-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name = 'Новая сцена'; entry.scene.title = entry.name; project.scenes.push(entry); activeSceneIndex = project.scenes.length - 1; }));
+document.getElementById('duplicateScene')?.addEventListener('click', () => applyChange('duplicate-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; }));
+document.getElementById('deleteScene')?.addEventListener('click', () => { if (project.scenes.length <= 1) return; applyChange('delete-scene', () => { project.scenes.splice(activeSceneIndex, 1); activeSceneIndex = Math.min(activeSceneIndex, project.scenes.length - 1); }); });
 projectTitle?.addEventListener('change', updateProjectControls); projectFormat?.addEventListener('change', updateProjectControls); projectFps?.addEventListener('change', updateProjectControls);
-document.getElementById('newProject')?.addEventListener('click', () => { const entry = structuredClone(project.scenes[0]); entry.id = 's1'; entry.name = 'Сцена 1'; project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [entry] }; activeSceneIndex = 0; renderTabs(); frame(); });
-document.getElementById('saveProject')?.addEventListener('click', () => { updateProjectControls(); const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); });
+document.getElementById('newProject')?.addEventListener('click', () => applyChange('new-project', () => { const entry = structuredClone(project.scenes[0]); entry.id = 's1'; entry.name = 'Сцена 1'; project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [entry] }; activeSceneIndex = 0; }));
+document.getElementById('saveProject')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); hasUnsavedChanges = false; updateSavedLabel(); });
 document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
-openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed); if (!result.ok) { showErrors(result.errors); return; } project = parsed as ProjectV1; activeSceneIndex = 0; scene = project.scenes[0].scene; duration = scene.duration; if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2); showErrors(null); renderTabs(); frame(); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
+openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
 
 function applyJSON() {
   if (!jsonArea) return;
@@ -138,13 +175,14 @@ function applyJSON() {
     const parsed = JSON.parse(jsonArea.value);
     const res = validateScene(parsed, { catalogIds: Object.keys(catalog) });
     if (!res.ok) { showErrors(res.errors); return; }
-    scene = parsed as SceneV1;
-    project.scenes[activeSceneIndex].scene = scene;
-    duration = scene.duration;
-    t = Math.min(t, duration);
+    applyChange('edit-scene-json', () => {
+      scene = parsed as SceneV1;
+      project.scenes[activeSceneIndex].scene = scene;
+      duration = scene.duration;
+      t = Math.min(t, duration);
+    });
     showErrors(null);
     jsonArea.value = JSON.stringify(scene, null, 2);
-    frame();
   } catch (e: any) {
     showErrors([{ path: '', message: e.message || 'Неверный JSON' }]);
   }
@@ -152,18 +190,30 @@ function applyJSON() {
 
 if (applyBtn) applyBtn.onclick = applyJSON;
 if (resetBtn) resetBtn.onclick = () => {
-  scene = demoScene as unknown as SceneV1;
-  project.scenes[activeSceneIndex].scene = scene;
-  duration = scene.duration;
-  t = Math.min(t, duration);
-  if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
-  showErrors(null);
-  frame();
-  renderTabs();
+  applyChange('reset-scene', () => {
+    scene = demoScene as unknown as SceneV1;
+    project.scenes[activeSceneIndex].scene = scene;
+    duration = scene.duration;
+    t = Math.min(t, duration);
+    if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
+    showErrors(null);
+  });
 };
+
+document.getElementById('undo')?.addEventListener('click', undoChange);
+document.getElementById('redo')?.addEventListener('click', redoChange);
 
 if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
 renderTabs();
+updateSavedLabel();
+try {
+  const stored = localStorage.getItem(AUTOSAVE_KEY);
+  if (stored) {
+    const saved = JSON.parse(stored) as { savedAt?: number; project?: unknown };
+    const valid = validateProject(saved.project);
+    if (saved.savedAt && valid.ok && confirm('Восстановить прошлую сессию?')) restoreProject(saved.project as ProjectV1);
+  }
+} catch {}
 
 // boot
 setAspect('h');
