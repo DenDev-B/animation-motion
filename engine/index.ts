@@ -1,4 +1,6 @@
 import { validateScene } from './validate.ts';
+export { validateProject, migrateProject, projectFrameCount, locateFrame } from './project.ts';
+export type { ProjectV1, ProjectSceneV1 } from './project.ts';
 import { draw } from './render.ts';
 import { createRenderCache, type RenderCache } from './kinds.ts';
 import type {

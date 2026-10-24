@@ -1,0 +1,558 @@
+{
+  "version": 1,
+  "title": "Что если бы киты летали",
+  "fps": 30,
+  "format": "16:9",
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Закат над городом",
+      "scene": {
+        "version": 1,
+        "title": "Кит в облаках",
+        "duration": 12,
+        "palette": {
+          "sky": [
+            "#2b2350",
+            "#6e4272",
+            "#c9686a",
+            "#f4a860"
+          ],
+          "sun": "#ffd9a0",
+          "haze": "#c98a90",
+          "far": "#8a6590",
+          "mid": "#53396a",
+          "near": "#1f1733",
+          "whale": "#232842",
+          "belly": "#3a4166",
+          "rim": "#ffc58c",
+          "cloudLight": "#ffd5a6",
+          "cloudShadow": "#a4638a",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.07,
+          "vignette": 0.55,
+          "preset": "dusk"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": -90,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 12,
+              "x": 90,
+              "y": -14,
+              "zoom": 1.12
+            }
+          ]
+        },
+        "assets": {
+          "whale": {
+            "version": 1,
+            "id": "whale",
+            "name": "Кит",
+            "bounds": [
+              -320,
+              -100,
+              270,
+              130
+            ],
+            "parts": [
+              {
+                "id": "tail",
+                "name": "Хвост",
+                "off": [
+                  -236,
+                  0
+                ],
+                "fill": "whale",
+                "rim": [
+                  -70,
+                  -10
+                ],
+                "anim": [
+                  {
+                    "type": "swing",
+                    "amp": 0.32,
+                    "period": 2.4,
+                    "phase": 0
+                  }
+                ],
+                "d": "M 6 -5 C -8 -24 -34 -50 -70 -60 C -66 -40 -52 -22 -34 -6 L -30 0 L -34 6 C -52 22 -66 40 -70 60 C -34 50 -8 24 6 5 Z"
+              },
+              {
+                "id": "body",
+                "name": "Тело",
+                "fill": "whale",
+                "rim": [
+                  -72,
+                  -20
+                ],
+                "d": "M 258 12 C 250 -10 215 -30 170 -42 C 120 -56 70 -64 10 -62 C -50 -60 -100 -48 -140 -32 C -180 -18 -215 -8 -240 -6 L -240 8 C -215 12 -180 22 -140 36 C -100 50 -40 66 20 68 C 90 70 160 62 215 46 C 245 36 262 26 258 12 Z"
+              },
+              {
+                "id": "dorsal",
+                "name": "Спинной плавник",
+                "fill": "whale",
+                "rim": [
+                  -85,
+                  -55
+                ],
+                "d": "M -70 -55 C -60 -80 -44 -88 -30 -56 Z"
+              },
+              {
+                "id": "belly",
+                "name": "Брюхо",
+                "fill": "belly",
+                "d": "M 232 38 C 170 58 100 62 20 62 C -40 60 -100 46 -150 28 C -100 40 -40 50 20 52 C 100 54 170 50 232 38 Z"
+              },
+              {
+                "id": "mouth",
+                "name": "Линия рта",
+                "type": "line",
+                "stroke": {
+                  "color": "belly",
+                  "w": 2.5
+                },
+                "d": "M 257 14 C 235 22 200 26 165 22"
+              },
+              {
+                "id": "eye",
+                "name": "Глаз",
+                "type": "circle",
+                "cx": 205,
+                "cy": 6,
+                "r": 3.6,
+                "fill": "rim"
+              },
+              {
+                "id": "flipper",
+                "name": "Грудной плавник",
+                "off": [
+                  70,
+                  46
+                ],
+                "fill": "whale",
+                "rim": [
+                  0,
+                  18
+                ],
+                "anim": [
+                  {
+                    "type": "swing",
+                    "amp": 0.16,
+                    "period": 2.4,
+                    "phase": 0.75
+                  }
+                ],
+                "d": "M -4 -4 C 28 22 52 66 44 124 C 24 96 -8 56 -26 12 Z"
+              }
+            ]
+          }
+        },
+        "layers": [
+          {
+            "id": "layer-1",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-1",
+                "name": "Градиент неба",
+                "kind": "sky"
+              }
+            ]
+          },
+          {
+            "id": "layer-2",
+            "name": "Свет",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-2",
+                "name": "Солнце",
+                "kind": "glow",
+                "x": 430,
+                "y": 170,
+                "params": {
+                  "r": 560,
+                  "color": "sun",
+                  "a": 0.85
+                }
+              }
+            ]
+          },
+          {
+            "id": "layer-3",
+            "name": "Облака дальние",
+            "depth": 0.2,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-3",
+                "name": "Облако д1",
+                "kind": "cloud",
+                "x": -520,
+                "y": 200,
+                "params": {
+                  "w": 520,
+                  "h": 150,
+                  "seed": 3,
+                  "puffs": 9,
+                  "lit": "cloudLight",
+                  "shade": "cloudShadow",
+                  "haze": 0.45
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 5,
+                    "vy": 0
+                  }
+                ],
+                "alpha": 0.7
+              }
+            ]
+          },
+          {
+            "id": "layer-4",
+            "name": "Город",
+            "depth": 0.35,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-4",
+                "name": "Дома",
+                "kind": "skyline",
+                "x": 0,
+                "y": 300,
+                "color": "far",
+                "params": {
+                  "w": 3200,
+                  "minH": 60,
+                  "maxH": 230,
+                  "seed": 5,
+                  "lit": 0,
+                  "windows": false,
+                  "haze": 0.35
+                }
+              }
+            ]
+          },
+          {
+            "id": "layer-5",
+            "name": "Кит",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-5",
+                "name": "Кит",
+                "kind": "asset",
+                "asset": "whale",
+                "x": 0,
+                "y": -70,
+                "s": 1.45,
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      -190,
+                      0
+                    ],
+                    "to": [
+                      190,
+                      24
+                    ],
+                    "t0": 0,
+                    "t1": 12,
+                    "ease": "sine"
+                  },
+                  {
+                    "type": "bob",
+                    "amp": 9,
+                    "period": 4,
+                    "phase": 0
+                  },
+                  {
+                    "type": "swing",
+                    "amp": 0.035,
+                    "period": 4,
+                    "phase": 0.2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "transition": {
+        "type": "cut"
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Рассвет",
+      "scene": {
+        "version": 1,
+        "title": "Рассвет над городом",
+        "duration": 8,
+        "palette": {
+          "sky": [
+            "#203a5a",
+            "#5d7790",
+            "#d7a078",
+            "#f5d28b"
+          ],
+          "sun": "#fff0b4",
+          "haze": "#d6a584",
+          "far": "#7891a6",
+          "mid": "#455c78",
+          "near": "#25344a",
+          "whale": "#232842",
+          "belly": "#3a4166",
+          "rim": "#ffc58c",
+          "cloudLight": "#ffe2b6",
+          "cloudShadow": "#8a7792",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.07,
+          "vignette": 0.55,
+          "preset": "dawn"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": -90,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 8,
+              "x": 90,
+              "y": -14,
+              "zoom": 1.12
+            }
+          ]
+        },
+        "assets": {
+          "whale": {
+            "version": 1,
+            "id": "whale",
+            "name": "Кит",
+            "bounds": [
+              -320,
+              -100,
+              270,
+              130
+            ],
+            "parts": [
+              {
+                "id": "tail",
+                "name": "Хвост",
+                "off": [
+                  -236,
+                  0
+                ],
+                "fill": "whale",
+                "rim": [
+                  -70,
+                  -10
+                ],
+                "anim": [
+                  {
+                    "type": "swing",
+                    "amp": 0.32,
+                    "period": 2.4,
+                    "phase": 0
+                  }
+                ],
+                "d": "M 6 -5 C -8 -24 -34 -50 -70 -60 C -66 -40 -52 -22 -34 -6 L -30 0 L -34 6 C -52 22 -66 40 -70 60 C -34 50 -8 24 6 5 Z"
+              },
+              {
+                "id": "body",
+                "name": "Тело",
+                "fill": "whale",
+                "rim": [
+                  -72,
+                  -20
+                ],
+                "d": "M 258 12 C 250 -10 215 -30 170 -42 C 120 -56 70 -64 10 -62 C -50 -60 -100 -48 -140 -32 C -180 -18 -215 -8 -240 -6 L -240 8 C -215 12 -180 22 -140 36 C -100 50 -40 66 20 68 C 90 70 160 62 215 46 C 245 36 262 26 258 12 Z"
+              },
+              {
+                "id": "dorsal",
+                "name": "Спинной плавник",
+                "fill": "whale",
+                "rim": [
+                  -85,
+                  -55
+                ],
+                "d": "M -70 -55 C -60 -80 -44 -88 -30 -56 Z"
+              },
+              {
+                "id": "belly",
+                "name": "Брюхо",
+                "fill": "belly",
+                "d": "M 232 38 C 170 58 100 62 20 62 C -40 60 -100 46 -150 28 C -100 40 -40 50 20 52 C 100 54 170 50 232 38 Z"
+              },
+              {
+                "id": "mouth",
+                "name": "Линия рта",
+                "type": "line",
+                "stroke": {
+                  "color": "belly",
+                  "w": 2.5
+                },
+                "d": "M 257 14 C 235 22 200 26 165 22"
+              },
+              {
+                "id": "eye",
+                "name": "Глаз",
+                "type": "circle",
+                "cx": 205,
+                "cy": 6,
+                "r": 3.6,
+                "fill": "rim"
+              },
+              {
+                "id": "flipper",
+                "name": "Грудной плавник",
+                "off": [
+                  70,
+                  46
+                ],
+                "fill": "whale",
+                "rim": [
+                  0,
+                  18
+                ],
+                "anim": [
+                  {
+                    "type": "swing",
+                    "amp": 0.16,
+                    "period": 2.4,
+                    "phase": 0.75
+                  }
+                ],
+                "d": "M -4 -4 C 28 22 52 66 44 124 C 24 96 -8 56 -26 12 Z"
+              }
+            ]
+          }
+        },
+        "layers": [
+          {
+            "id": "layer-1",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-1",
+                "name": "Градиент неба",
+                "kind": "sky"
+              }
+            ]
+          },
+          {
+            "id": "layer-2",
+            "name": "Свет",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-2",
+                "name": "Солнце",
+                "kind": "glow",
+                "x": 430,
+                "y": 170,
+                "params": {
+                  "r": 560,
+                  "color": "sun",
+                  "a": 0.85
+                }
+              }
+            ]
+          },
+          {
+            "id": "layer-3",
+            "name": "Город",
+            "depth": 0.35,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-3",
+                "name": "Дома",
+                "kind": "skyline",
+                "x": 0,
+                "y": 300,
+                "color": "far",
+                "params": {
+                  "w": 3200,
+                  "minH": 60,
+                  "maxH": 230,
+                  "seed": 5,
+                  "lit": 0,
+                  "windows": false,
+                  "haze": 0.35
+                }
+              }
+            ]
+          },
+          {
+            "id": "layer-4",
+            "name": "Кит",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "obj-4",
+                "name": "Кит",
+                "kind": "asset",
+                "asset": "whale",
+                "x": 0,
+                "y": -70,
+                "s": 1.45,
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      -190,
+                      0
+                    ],
+                    "to": [
+                      190,
+                      24
+                    ],
+                    "t0": 0,
+                    "t1": 8,
+                    "ease": "sine"
+                  },
+                  {
+                    "type": "bob",
+                    "amp": 9,
+                    "period": 4,
+                    "phase": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "transition": {
+        "type": "cut"
+      }
+    }
+  ]
+}
