@@ -1,7 +1,6 @@
 import type { CatalogAsset, SceneObject } from './schema.ts';
-import { lerp } from './math.ts';
+import { lerp, rng } from './math.ts';
 import { col, mixc, rgba } from './color.ts';
-import { rng } from './math.ts';
 
 export interface RenderCache {
   cloudCache: Map<string, HTMLCanvasElement>;

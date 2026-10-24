@@ -10,6 +10,7 @@
     "check:schema": "node tools/check-schema.ts",
     "check:project": "node tools/check-project.ts",
     "check:history": "node tools/check-history.ts",
+    "check:names": "node tools/check-names.ts",
     "contact": "node tools/contact-sheet.ts",
     "check:render": "node tools/check-render.ts",
     "check:render:chrome": "node tools/check-render.ts",
@@ -18,7 +19,7 @@
     "export": "node tools/export.ts",
     "export:a:chrome": "node tools/export-a.ts",
     "export:b": "node tools/export-b.ts",
-    "check": "npm.cmd run typecheck && npm.cmd run build && npm.cmd run check:schema && npm.cmd run check:project && npm.cmd run check:history && npm.cmd run check:render && npm.cmd run compare:frames"
+    "check": "npm.cmd run typecheck && npm.cmd run build && npm.cmd run check:schema && npm.cmd run check:project && npm.cmd run check:history && npm.cmd run check:names && npm.cmd run check:render && npm.cmd run compare:frames"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.13",

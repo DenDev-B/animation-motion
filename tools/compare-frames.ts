@@ -10,6 +10,7 @@ import { renderFrame, createRenderCache, type SceneV1, type CatalogAsset } from 
 (globalThis as any).Path2D = Path2D;
 import { spawnPreview, waitForServer, launchSafeChrome, assertPortFree } from './browser.ts';
 import { fileURLToPath } from 'url';
+import { safeFileName } from './file-names.ts';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = 4174;
@@ -31,6 +32,7 @@ function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 function log(m: string) { process.stdout.write(m + '\n'); }
 
 function savePng(file: string, w: number, h: number, data: Buffer): Promise<void> {
+  file = path.join(path.dirname(file), safeFileName(path.basename(file)));
   return new Promise((resolve, reject) => {
     const png = new PNG({ width: w, height: h });
     png.data = data;

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createCanvas, Path2D } from '@napi-rs/canvas';
 import { createRenderCache, projectFrameCount, renderFrame, validateProject, type CatalogAsset, type ProjectV1 } from '../engine/index.ts';
+import { safeFileName } from './file-names.ts';
 (globalThis as any).Path2D = Path2D;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -36,7 +37,7 @@ for (const file of fs.readdirSync(catalogDir).filter((name) => name.endsWith('.j
 const size = value.format === '16:9' ? { w: thumb, h: Math.round(thumb * 9 / 16) } : { w: thumb, h: Math.round(thumb * 16 / 9) };
 const cache = createRenderCache();
 const createCanvasFn = ((w: number, h: number) => createCanvas(w, h)) as unknown as (w: number, h: number) => HTMLCanvasElement;
-const safeName = path.basename(value.title).replace(/[\\/:*?"<>|]/g, '_');
+const safeName = safeFileName(path.basename(value.title));
 const outputDir = path.join(root, 'out', 'contact');
 fs.mkdirSync(outputDir, { recursive: true });
 

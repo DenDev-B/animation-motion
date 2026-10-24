@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { createCanvas, Path2D } from '@napi-rs/canvas';
 import { renderFrame, createRenderCache, validateScene, validateProject, projectFrameCount, locateFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { formatFileToken, safeFileName } from './file-names.ts';
 (globalThis as any).Path2D = Path2D;
 
 function log(m: string) { process.stdout.write(m + '\n'); }
@@ -93,11 +94,12 @@ async function main() {
       const i = process.argv.indexOf('--out');
       return process.argv[i + 1];
     }
-    const base = projectV1 ? path.basename(projectV1.title).replace(/[\\/:*?"<>|]/g, '_') : path.basename(scene, '.json');
-    return path.join(__dirname, '..', projectV1 ? 'out/export' : 'out/video', `${base}_${aspect}.mp4`);
+    const base = safeFileName(projectV1 ? projectV1.title : path.basename(scene, '.json'));
+    return path.join(__dirname, '..', projectV1 ? 'out/export' : 'out/video', `${base}_${formatFileToken(aspect as '16:9' | '9:16')}.mp4`);
   })();
-  let outFile = requestedOutFile;
-  if (!args.overwrite) { let suffix = 2; while (fs.existsSync(outFile)) outFile = requestedOutFile.replace(/\.mp4$/, `_${suffix++}.mp4`); }
+  const outFileSafe = path.join(path.dirname(requestedOutFile), safeFileName(path.basename(requestedOutFile)));
+  let outFile = outFileSafe;
+  if (!args.overwrite) { let suffix = 2; while (fs.existsSync(outFile)) outFile = outFileSafe.replace(/\.mp4$/, `_${suffix++}.mp4`); }
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
   // один холст и один буфер на весь экспорт

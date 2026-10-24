@@ -8,13 +8,14 @@ export interface CameraKey {
 }
 
 export interface Camera {
-  verticalFit: number;
+  verticalFit?: number;
   keys: CameraKey[];
 }
 
 export interface Style {
   grain?: number;
   vignette?: number;
+  /** Свободная метка; renderer не читает это поле. */
   preset?: string;
 }
 
@@ -88,7 +89,7 @@ export interface SceneV1 {
   title: string;
   duration: number;
   palette: Palette;
-  style: Style;
+  style?: Style;
   camera: Camera;
   assets: Record<string, CatalogAsset>;
   layers: Layer[];

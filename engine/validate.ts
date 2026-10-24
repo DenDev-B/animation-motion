@@ -32,10 +32,6 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): { ok: boo
     errors.push({ path, message });
   }
 
-  function at(base: string, key: string | number): string {
-    return base === '' ? String(key) : `${base}[${typeof key === 'number' ? key : key}]`;
-  }
-
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     err('', 'сцена должна быть объектом');
     return { ok: false, errors };
