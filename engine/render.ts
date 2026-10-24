@@ -78,6 +78,9 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
       } else if (o.kind === 'asset') {
         const a = scene.assets[o.asset ?? ''] ?? catalog[o.asset ?? ''];
         if (a) drawAsset(g, o, a, t, pal);
+      } else if (o.kind === 'shape') {
+        const model = (o.params?.model as import('./schema.ts').CatalogAsset | undefined);
+        if (model) drawAsset(g, o, model, t, pal);
       }
     }
   }
