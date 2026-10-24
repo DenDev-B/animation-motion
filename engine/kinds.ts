@@ -77,8 +77,23 @@ export function skylineGeo(p: Record<string, unknown>, cache: RenderCache): { B:
   return result;
 }
 
+const MODEL_PATH_CACHE = new Map<string, { source: string; paths: (Path2D | undefined)[] }>();
+
+function modelPaths(a: CatalogAsset): (Path2D | undefined)[] {
+  const source = JSON.stringify(a);
+  let hash = 2166136261;
+  for (let index = 0; index < source.length; index++) hash = Math.imul(hash ^ source.charCodeAt(index), 16777619);
+  const key = `${source.length}:${hash >>> 0}`;
+  const cached = MODEL_PATH_CACHE.get(key);
+  if (cached && cached.source === source) return cached.paths;
+  const paths = a.parts.map((part) => (part.type === 'circle' ? undefined : new Path2D(part.d as string)));
+  MODEL_PATH_CACHE.set(key, { source, paths });
+  return paths;
+}
+
 export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: CatalogAsset, t: number, pal: Record<string, unknown>) {
-  for (const part of a.parts) {
+  const paths = modelPaths(a);
+  for (const [index, part] of a.parts.entries()) {
     g.save();
     if (part.off) g.translate(part.off[0], part.off[1]);
     let pa: import('./schema.ts').Anim[] = [];
@@ -98,9 +113,9 @@ export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: Catalo
       g.strokeStyle = col(st?.color, pal);
       g.lineWidth = st?.w ?? 1;
       g.lineCap = 'round';
-      g.stroke(new Path2D(part.d as string));
+      g.stroke(paths[index] as Path2D);
     } else {
-      const P = new Path2D(part.d as string);
+      const P = paths[index] as Path2D;
       if (part.fill !== 'none') {
         g.fillStyle = fill;
         g.fill(P);

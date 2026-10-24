@@ -45,4 +45,10 @@ const promptRun = spawnSync(process.execPath, ['tools/ai-prompt.ts', 'scenes/wha
 assert.equal(promptRun.status, 0, `ai:prompt завершился ошибкой: ${promptRun.stderr}\n${promptRun.stdout}`);
 assert.ok(fs.readFileSync('out/ai/prompt.md', 'utf8').includes('проверка'));
 
+const shapeRun = spawnSync(process.execPath, ['tools/ai-prompt.ts', 'scenes/fixtures/shape-sun-moon.json', '--task', 'добавь кольцо вокруг луны'], { encoding: 'utf8' });
+assert.equal(shapeRun.status, 0, `ai:prompt для shape завершился ошибкой: ${shapeRun.stderr}\n${shapeRun.stdout}`);
+const shapePrompt = fs.readFileSync('out/ai/prompt.md', 'utf8');
+assert.ok(shapePrompt.includes('### shape'), 'промт shape должен содержать справочник по kind shape');
+assert.ok(shapePrompt.includes('Задача: добавь кольцо вокруг луны'));
+
 console.log('check:roundtrip PASS');

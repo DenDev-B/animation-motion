@@ -128,6 +128,22 @@
 |---|---|---|---|
 | `model` | object; — | — | Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны. |
 
+## Нарисовать своё через shape
+
+`kind: "shape"` рисует модель прямо в сцене: `params.model` содержит `bounds` и `parts` в формате каталога; `id`, `name` и `version` модели необязательны. Части бывают `path` (по умолчанию), `line` и `circle`; цвета — hex или слоты палитры. Остальные поля объекта (`x`, `y`, `s`, `rot`, `alpha`, `color`, `anim`, `partAnim`) работают как у `asset`. Рисуется тем же `drawAsset`, что и модель каталога.
+
+Круг:
+
+```json
+{"id":"moon-1","name":"Луна","kind":"shape","x":200,"y":-200,"params":{"model":{"bounds":[-40,-40,80,80],"parts":[{"id":"disk","name":"Диск","type":"circle","cx":0,"cy":0,"r":36,"fill":"#e8ecff"}]}}}
+```
+
+Путь:
+
+```json
+{"id":"star-1","name":"Звезда","kind":"shape","x":-200,"y":-240,"params":{"model":{"bounds":[-20,-20,40,40],"parts":[{"id":"star","name":"Звезда","type":"path","d":"M 0 -18 L 5 -6 L 18 -6 L 8 2 L 12 16 L 0 8 L -12 16 L -8 2 L -18 -6 L -5 -6 Z","fill":"rim"}]}}}
+```
+
 ## Анимации
 
 Периодические анимации требуют `period > 0`; `ease` у move — один из sine, inOut, out, lin. Все кадры являются функцией времени и seed.

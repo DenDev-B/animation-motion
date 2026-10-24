@@ -22,11 +22,26 @@ const catalogJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catal
 const catalog: Record<string, CatalogAsset> = { whale: catalogJson };
 const cache = createRenderCache();
 
-function renderToImageData(w: number, h: number, t: number): ImageData {
+function renderToImageData(w: number, h: number, t: number, target: SceneV1 = scene): ImageData {
   const canvas = createCanvas(w, h);
   const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
-  renderFrame(ctx, scene, t, { w, h }, { createCanvas: ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement, catalog, cache });
+  renderFrame(ctx, target, t, { w, h }, { createCanvas: ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement, catalog, cache });
   return ctx.getImageData(0, 0, w, h);
+}
+
+function shapeEquivalence(): string | null {
+  const source = scene.layers.flatMap((layer) => layer.objects).find((object) => object.kind === 'asset');
+  if (!source) return 'в whale-demo нет объекта kind asset';
+  const shapeScene = structuredClone(scene);
+  const shapeObject = shapeScene.layers.flatMap((layer) => layer.objects).find((object) => object.id === source.id);
+  if (!shapeObject) return `не найден объект ${source.id}`;
+  shapeObject.kind = 'shape';
+  shapeObject.params = { model: structuredClone(catalogJson) };
+  const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
+  for (const [label, w, h] of cases) for (const t of [0, 6, 12]) {
+    if (!equal(renderToImageData(w, h, t), renderToImageData(w, h, t, shapeScene))) return `${label} t=${t}`;
+  }
+  return null;
 }
 
 function equal(a: ImageData, b: ImageData): boolean {
@@ -36,6 +51,12 @@ function equal(a: ImageData, b: ImageData): boolean {
 }
 
 async function nodeMode(): Promise<void> {
+  const shapeFail = shapeEquivalence();
+  if (shapeFail) {
+    log(`SHAPE: FAIL (${shapeFail})`);
+    process.exit(1);
+  }
+  log('SHAPE: EXACT (asset whale = shape whale)');
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
   let fail = '';
   for (const [label, w, h] of cases) {
