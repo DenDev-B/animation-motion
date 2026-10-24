@@ -18,7 +18,7 @@ export interface KindSpec {
 
 export const EASES = ['sine', 'inOut', 'out', 'lin'] as const;
 export const PALETTE_SLOTS = ['sky', 'sun', 'haze', 'far', 'mid', 'near', 'whale', 'belly', 'rim', 'cloudLight', 'cloudShadow', 'window'] as const;
-export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'rain', 'snow', 'birds', 'asset', 'shape'] as const;
+export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'rain', 'snow', 'birds', 'text', 'counter', 'asset', 'shape'] as const;
 
 export const SCENE_SPEC = {
   fields: [
@@ -163,6 +163,38 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
     { name: 'dir', type: 'number', description: 'Направление: -1 влево, 1 вправо.' },
     { name: 'bob', type: 'number', min: 0, max: 40, default: 12, description: 'Амплитуда покачивания птицы.' },
     { name: 'color', type: 'color', default: '#2b2b33', description: 'Цвет птиц: слот палитры или hex.' },
+  ] },
+  text: { description: 'Титры и подписи: многострочный текст, обводка и тень.', params: [
+    { name: 'text', type: 'string', description: 'Текст от 1 до 400 символов; поддерживает \\n.' },
+    { name: 'size', type: 'number', min: 8, max: 400, default: 64, description: 'Размер шрифта.' },
+    { name: 'weight', type: 'number', default: 700, description: 'Насыщенность: 400 или 700.' },
+    { name: 'align', type: 'enum', values: ['left', 'center', 'right'], default: 'center', description: 'Горизонтальное выравнивание.' },
+    { name: 'color', type: 'color', default: '#ffffff', description: 'Цвет текста: слот палитры или hex.' },
+    { name: 'stroke', type: 'number', min: 0, max: 20, default: 0, description: 'Толщина обводки.' },
+    { name: 'strokeColor', type: 'color', default: '#000000', description: 'Цвет обводки: слот палитры или hex.' },
+    { name: 'shadow', type: 'number', min: 0, max: 30, default: 0, description: 'Размытие тени.' },
+    { name: 'maxWidth', type: 'number', min: 0, exclusiveMin: true, description: 'Ширина переноса по словам (> 0).' },
+    { name: 'lineHeight', type: 'number', min: 0.8, max: 2, default: 1.2, description: 'Межстрочный интервал в долях размера.' },
+  ] },
+  counter: { description: 'Число, растущее от from до to за t0..t1.', params: [
+    { name: 'from', type: 'number', default: 0, description: 'Значение до t0.' },
+    { name: 'to', type: 'number', default: 1000, description: 'Значение после t1.' },
+    { name: 't0', type: 'number', min: 0, default: 0, description: 'Начало роста в секундах.' },
+    { name: 't1', type: 'number', min: 0, default: 1, description: 'Конец роста в секундах.' },
+    { name: 'ease', type: 'enum', values: EASES, default: 'inOut', description: 'Функция сглаживания.' },
+    { name: 'decimals', type: 'int', min: 0, max: 4, default: 0, description: 'Число знаков после запятой.' },
+    { name: 'thousands', type: 'string', default: ' ', description: 'Разделитель тысяч: " ", "," или "".' },
+    { name: 'prefix', type: 'string', default: '', description: 'Текст перед числом.' },
+    { name: 'suffix', type: 'string', default: '', description: 'Текст после числа.' },
+    { name: 'size', type: 'number', min: 8, max: 400, default: 64, description: 'Размер шрифта.' },
+    { name: 'weight', type: 'number', default: 700, description: 'Насыщенность: 400 или 700.' },
+    { name: 'align', type: 'enum', values: ['left', 'center', 'right'], default: 'center', description: 'Горизонтальное выравнивание.' },
+    { name: 'color', type: 'color', default: '#ffffff', description: 'Цвет текста: слот палитры или hex.' },
+    { name: 'stroke', type: 'number', min: 0, max: 20, default: 0, description: 'Толщина обводки.' },
+    { name: 'strokeColor', type: 'color', default: '#000000', description: 'Цвет обводки: слот палитры или hex.' },
+    { name: 'shadow', type: 'number', min: 0, max: 30, default: 0, description: 'Размытие тени.' },
+    { name: 'maxWidth', type: 'number', min: 0, exclusiveMin: true, description: 'Ширина переноса по словам (> 0).' },
+    { name: 'lineHeight', type: 'number', min: 0.8, max: 2, default: 1.2, description: 'Межстрочный интервал в долях размера.' },
   ] },
 };
 

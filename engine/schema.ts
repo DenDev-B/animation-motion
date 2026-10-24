@@ -1,4 +1,4 @@
-export type ObjectKind = 'sky' | 'glow' | 'cloud' | 'skyline' | 'mountains' | 'hills' | 'stars' | 'rain' | 'snow' | 'birds' | 'asset' | 'shape';
+export type ObjectKind = 'sky' | 'glow' | 'cloud' | 'skyline' | 'mountains' | 'hills' | 'stars' | 'rain' | 'snow' | 'birds' | 'text' | 'counter' | 'asset' | 'shape';
 
 export interface CameraKey {
   t: number;

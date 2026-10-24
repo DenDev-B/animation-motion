@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "title": "Счётчик",
+  "duration": 5,
+  "palette": {
+    "sky": ["#1a0f1e", "#4a2338", "#a8544a", "#f0a55e"],
+    "sun": "#ffe4a2",
+    "haze": "#c98870",
+    "far": "#8f5560",
+    "mid": "#5c364a",
+    "near": "#2a1a26",
+    "whale": "#241722",
+    "belly": "#3c2836",
+    "rim": "#ffd39e",
+    "cloudLight": "#ffd9ac",
+    "cloudShadow": "#9c6270",
+    "window": "#ffcf7a"
+  },
+  "style": {"grain": 0.05, "vignette": 0.4, "preset": "sunset"},
+  "camera": {"verticalFit": 0.52, "keys": [{"t": 0, "x": 0, "y": 0, "zoom": 1}, {"t": 5, "x": 0, "y": -6, "zoom": 1.04}]},
+  "assets": {},
+  "layers": [
+    {
+      "id": "counter-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "counter-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "counter-glow",
+      "name": "Свечение",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {"id": "counter-glow-sun", "name": "Свечение", "kind": "glow", "x": 0, "y": 360, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 560, "color": "sun", "a": 0.5}}
+      ]
+    },
+    {
+      "id": "counter-hills",
+      "name": "Холмы",
+      "depth": 0.7,
+      "visible": true,
+      "objects": [
+        {"id": "counter-hills-mesh", "name": "Холмы", "kind": "hills", "x": 0, "y": 520, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 80, "waves": 3, "seed": 15, "color": "near", "haze": 0.05}}
+      ]
+    },
+    {
+      "id": "counter-text",
+      "name": "Текст",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "counter-label", "name": "Подпись", "kind": "text", "x": 0, "y": -110, "s": 1, "rot": 0, "alpha": 0.9, "params": {"text": "ЛЕТ ИСТОРИИ", "size": 28, "weight": 400, "align": "center", "color": "#ffd9ac", "stroke": 0, "shadow": 4, "maxWidth": 420, "lineHeight": 1.2}},
+        {"id": "counter-value", "name": "Счётчик", "kind": "counter", "x": 0, "y": 10, "s": 1, "rot": 0, "alpha": 1, "params": {"from": 0, "to": 1000000, "t0": 0, "t1": 5, "ease": "inOut", "decimals": 0, "thousands": " ", "prefix": "", "suffix": " лет", "size": 64, "weight": 700, "align": "center", "color": "sun", "stroke": 3, "strokeColor": "#2a1a26", "shadow": 14, "maxWidth": 620, "lineHeight": 1.2}},
+        {"id": "counter-caption", "name": "Пояснение", "kind": "text", "x": 0, "y": 110, "s": 1, "rot": 0, "alpha": 0.85, "params": {"text": "0 → 1 000 000 за 5 секунд", "size": 24, "weight": 400, "align": "center", "color": "#f3d7c2", "stroke": 0, "shadow": 4, "maxWidth": 480, "lineHeight": 1.2}}
+      ]
+    }
+  ]
+}

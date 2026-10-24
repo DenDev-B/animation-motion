@@ -5,6 +5,7 @@ import { clamp } from './math.ts';
 import { cloudSprite, skylineGeo, drawAsset, getNoise, createRenderCache } from './kinds.ts';
 import { drawMountains, drawHills, drawStars } from './kinds-bg.ts';
 import { drawRain, drawSnow, drawBirds } from './kinds-particles.ts';
+import { drawText, drawCounter } from './kinds-text.ts';
 import type { CreateCanvas } from './kinds.ts';
 
 export type RenderDeps = {
@@ -89,6 +90,10 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
         drawSnow(g, p, pal, cache, t);
       } else if (o.kind === 'birds') {
         drawBirds(g, p, pal, cache, t);
+      } else if (o.kind === 'text') {
+        drawText(g, p, pal);
+      } else if (o.kind === 'counter') {
+        drawCounter(g, p, pal, t);
       } else if (o.kind === 'asset') {
         const a = scene.assets[o.asset ?? ''] ?? catalog[o.asset ?? ''];
         if (a) drawAsset(g, o, a, t, pal);

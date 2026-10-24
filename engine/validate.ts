@@ -65,7 +65,7 @@ function validateAnimations(value: unknown, path: string, errors: ValidationErro
         if (['from', 'to'].includes(field.name) && entry.type === 'move') errors.push(fieldError(`${animPath}.${field.name}`, field.name, 'массив из 2 конечных чисел', '[0, 0]'));
         continue;
       }
-      if (field.name === 'from' || field.name === 'to') {
+      if (field.type === 'array') {
         if (!Array.isArray(fieldValue) || fieldValue.length !== 2 || !fieldValue.every(isFiniteNum)) errors.push(fieldError(`${animPath}.${field.name}`, field.name, 'массив из 2 конечных чисел', '[0, 0]'));
       } else validateField(fieldValue, field, `${animPath}.${field.name}`, errors);
     }
@@ -240,6 +240,21 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       } else if (object.kind === 'birds' && isRecord(object.params)) {
         const dir = object.params.dir;
         if (dir !== undefined && dir !== -1 && dir !== 1) err(`${objectPath}.params.dir`, 'dir должен быть -1 (влево) или 1 (вправо); пример: 1');
+      } else if (object.kind === 'text' || object.kind === 'counter') {
+        if (isRecord(object.params)) {
+          const weight = object.params.weight;
+          if (weight !== undefined && weight !== 400 && weight !== 700) err(`${objectPath}.params.weight`, 'weight должен быть 400 или 700; пример: 700');
+          if (object.kind === 'text') {
+            const text = object.params.text;
+            if (typeof text !== 'string' || text.length < 1 || text.length > 400) err(`${objectPath}.params.text`, 'text должен быть строкой от 1 до 400 символов; пример: Заголовок');
+          } else {
+            const thousands = object.params.thousands;
+            if (thousands !== undefined && thousands !== ' ' && thousands !== ',' && thousands !== '') err(`${objectPath}.params.thousands`, 'thousands должен быть " ", "," или ""; пример: " "');
+            const t0 = object.params.t0;
+            const t1 = object.params.t1;
+            if (isFiniteNum(t0) && isFiniteNum(t1) && t1 < t0) err(`${objectPath}.params.t1`, 't1 не должен быть меньше t0; пример: 5');
+          }
+        } else if (object.kind === 'text') err(`${objectPath}.params`, 'params должен быть объектом с полем text; пример: {"text":"Заголовок"}');
       }
     });
   });

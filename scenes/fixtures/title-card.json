@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "title": "Титры",
+  "duration": 6,
+  "palette": {
+    "sky": ["#08182b", "#123a55", "#2d6b78"],
+    "sun": "#ffe7a8",
+    "haze": "#6f9aa3",
+    "far": "#4f7484",
+    "mid": "#2f5563",
+    "near": "#16303d",
+    "whale": "#0e2430",
+    "belly": "#1d3d4b",
+    "rim": "#ffd38c",
+    "cloudLight": "#e8f3f6",
+    "cloudShadow": "#7f9fa8",
+    "window": "#ffcf7a"
+  },
+  "style": {"grain": 0.05, "vignette": 0.35, "preset": "night"},
+  "camera": {"verticalFit": 0.52, "keys": [{"t": 0, "x": 0, "y": 0, "zoom": 1}, {"t": 6, "x": 24, "y": -8, "zoom": 1.05}]},
+  "assets": {},
+  "layers": [
+    {
+      "id": "title-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "title-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "title-glow",
+      "name": "Свечение",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {"id": "title-glow-sun", "name": "Свечение", "kind": "glow", "x": 280, "y": -240, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 420, "color": "sun", "a": 0.4}}
+      ]
+    },
+    {
+      "id": "title-far",
+      "name": "Дальние горы",
+      "depth": 0.4,
+      "visible": true,
+      "objects": [
+        {"id": "title-mountains", "name": "Горы", "kind": "mountains", "x": 0, "y": 380, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 2800, "minH": 80, "maxH": 220, "peaks": 7, "rough": 0.45, "seed": 5, "color": "far", "haze": 0.35, "snow": 0.3}}
+      ]
+    },
+    {
+      "id": "title-near",
+      "name": "Холмы",
+      "depth": 0.8,
+      "visible": true,
+      "objects": [
+        {"id": "title-hills", "name": "Холмы", "kind": "hills", "x": 0, "y": 560, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 70, "waves": 4, "seed": 9, "color": "near", "haze": 0.05}}
+      ]
+    },
+    {
+      "id": "title-text",
+      "name": "Титры",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "title-main", "name": "Заголовок", "kind": "text", "x": 0, "y": -150, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "Древний кит", "size": 72, "weight": 700, "align": "center", "color": "sun", "stroke": 3, "strokeColor": "#08182b", "shadow": 16, "maxWidth": 620, "lineHeight": 1.2}, "anim": [{"type": "fade", "from": 0, "to": 1, "t0": 0.2, "t1": 1.2}]},
+        {"id": "title-latin", "name": "Латиница", "kind": "text", "x": 0, "y": -40, "s": 1, "rot": 0, "alpha": 0.92, "params": {"text": "Ancient Whale", "size": 34, "weight": 400, "align": "center", "color": "#d8eef6", "stroke": 0, "shadow": 6, "maxWidth": 520, "lineHeight": 1.2}, "anim": [{"type": "fade", "from": 0, "to": 1, "t0": 0.5, "t1": 1.6}]},
+        {"id": "title-body", "name": "Подзаголовок", "kind": "text", "x": 0, "y": 70, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "Он плывёт сквозь время и пространство,\nгде каждый кадр — новая история.", "size": 30, "weight": 400, "align": "center", "color": "#d8eef6", "stroke": 0, "shadow": 8, "maxWidth": 520, "lineHeight": 1.45}, "anim": [{"type": "fade", "from": 0, "to": 1, "t0": 0.9, "t1": 2}]},
+        {"id": "title-footer", "name": "Подпись", "kind": "text", "x": 0, "y": 220, "s": 1, "rot": 0, "alpha": 0.85, "params": {"text": "animation motion · 2026", "size": 22, "weight": 400, "align": "center", "color": "#8fb8c4", "stroke": 0, "shadow": 0, "maxWidth": 420, "lineHeight": 1.2}, "anim": [{"type": "fade", "from": 0, "to": 1, "t0": 1.3, "t1": 2.4}]}
+      ]
+    }
+  ]
+}

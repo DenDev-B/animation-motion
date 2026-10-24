@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createCanvas, Path2D } from '@napi-rs/canvas';
 (globalThis as any).Path2D = Path2D;
-import { renderFrame, createRenderCache, validateScene, type SceneV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateScene, counterValue, type SceneV1, type CatalogAsset } from '../engine/index.ts';
 import { spawn } from 'child_process';
 import http from 'http';
 import { spawnPreview, waitForServer, launchSafeChrome, assertPortFree } from './browser.ts';
@@ -130,6 +130,40 @@ function particleChecks(): string | null {
   return null;
 }
 
+function textChecks(): string | null {
+  const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
+  for (const file of ['title-card.json', 'counter-demo.json']) {
+    const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
+    const validation = validateScene(target, { catalogIds: ['whale'] });
+    if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
+    for (const [label, w, h] of cases) {
+      if (!equal(renderSceneToImageData(target, w, h, 2, createRenderCache()), renderSceneToImageData(target, w, h, 2, createRenderCache()))) return `${file} ${label}: кадр t=2 невоспроизводим`;
+      const ordered = createRenderCache();
+      const before = renderSceneToImageData(target, w, h, 3, ordered);
+      for (const t of [0, 1, 2]) renderSceneToImageData(target, w, h, t, ordered);
+      if (!equal(before, renderSceneToImageData(target, w, h, 3, ordered))) return `${file} ${label}: кадр зависит от порядка рендера`;
+      log(`TEXT: ${file} ${label} PASS`);
+    }
+  }
+  const counter = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', 'counter-demo.json'), 'utf8')) as unknown as SceneV1;
+  const start = renderSceneToImageData(counter, 1280, 720, 0, createRenderCache());
+  const middle = renderSceneToImageData(counter, 1280, 720, 2.5, createRenderCache());
+  const end = renderSceneToImageData(counter, 1280, 720, 5, createRenderCache());
+  if (equal(start, end) || equal(start, middle)) return 'counter-demo: значение счётчика не меняет кадр';
+
+  const linear = { from: 0, to: 1000000, t0: 1, t1: 5, ease: 'lin', thousands: ' ' };
+  const expected: Array<[number, string]> = [[0, '0'], [1, '0'], [3, '500 000'], [5, '1 000 000'], [9, '1 000 000']];
+  for (const [t, value] of expected) {
+    const actual = counterValue(linear, t);
+    if (actual !== value) return `counterValue t=${t}: "${actual}" вместо "${value}"`;
+  }
+  if (counterValue({ ...linear, ease: 'inOut' }, 3) !== '500 000') return 'counterValue inOut: середина не 500 000';
+  const formatted = counterValue({ from: 0, to: 1234567, decimals: 1, thousands: ',', prefix: '~', suffix: ' y', t0: 0, t1: 1, ease: 'lin' }, 1);
+  if (formatted !== '~1,234,567.0 y') return `counterValue формат: "${formatted}"`;
+  log('TEXT: counterValue 0→500 000→1 000 000 EXACT');
+  return null;
+}
+
 async function nodeMode(): Promise<void> {
   const shapeFail = shapeEquivalence();
   if (shapeFail) {
@@ -145,6 +179,11 @@ async function nodeMode(): Promise<void> {
   const particleFail = particleChecks();
   if (particleFail) {
     log(`PARTICLES: FAIL (${particleFail})`);
+    process.exit(1);
+  }
+  const textFail = textChecks();
+  if (textFail) {
+    log(`TEXT: FAIL (${textFail})`);
     process.exit(1);
   }
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
