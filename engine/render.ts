@@ -3,6 +3,7 @@ import { camAt, evalObj } from './anim.ts';
 import { col, mixc, rgba } from './color.ts';
 import { clamp } from './math.ts';
 import { cloudSprite, skylineGeo, drawAsset, getNoise, createRenderCache } from './kinds.ts';
+import { drawMountains, drawHills, drawStars } from './kinds-bg.ts';
 import type { CreateCanvas } from './kinds.ts';
 
 export type RenderDeps = {
@@ -75,6 +76,12 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
           g.fillStyle = rgba(pal.window ?? '#ffd27a', 0.85);
           for (const w of geo.WN) g.fillRect(w[0], w[1], 6, 8);
         }
+      } else if (o.kind === 'mountains') {
+        drawMountains(g, p, pal, cache);
+      } else if (o.kind === 'hills') {
+        drawHills(g, p, pal, cache);
+      } else if (o.kind === 'stars') {
+        drawStars(g, p, pal, cache, t);
       } else if (o.kind === 'asset') {
         const a = scene.assets[o.asset ?? ''] ?? catalog[o.asset ?? ''];
         if (a) drawAsset(g, o, a, t, pal);

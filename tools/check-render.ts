@@ -50,6 +50,35 @@ function equal(a: ImageData, b: ImageData): boolean {
   return true;
 }
 
+function renderSceneToImageData(target: SceneV1, w: number, h: number, t: number, targetCache: ReturnType<typeof createRenderCache>): ImageData {
+  const canvas = createCanvas(w, h);
+  const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
+  renderFrame(ctx, target, t, { w, h }, { createCanvas: ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement, catalog, cache: targetCache });
+  return ctx.getImageData(0, 0, w, h);
+}
+
+function backgroundChecks(): string | null {
+  const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
+  for (const file of ['bg-night.json', 'bg-day.json']) {
+    const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
+    const validation = validateScene(target, { catalogIds: ['whale'] });
+    if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
+    for (const [label, w, h] of cases) {
+      if (!equal(renderSceneToImageData(target, w, h, 5, createRenderCache()), renderSceneToImageData(target, w, h, 5, createRenderCache()))) return `${file} ${label}: кадр t=5 невоспроизводим`;
+      const ordered = createRenderCache();
+      const before = renderSceneToImageData(target, w, h, 5, ordered);
+      for (const t of [0, 1, 2, 3, 4]) renderSceneToImageData(target, w, h, t, ordered);
+      if (!equal(before, renderSceneToImageData(target, w, h, 5, ordered))) return `${file} ${label}: кадр зависит от порядка рендера`;
+      const data = renderSceneToImageData(target, w, h, 2, createRenderCache()).data;
+      const colors = new Set<string>();
+      for (let i = 0; i < data.length; i += 16) colors.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
+      if (colors.size < 256) return `${file} ${label}: пустой кадр (${colors.size} цветов)`;
+      log(`BG: ${file} ${label} PASS (${colors.size} цветов)`);
+    }
+  }
+  return null;
+}
+
 async function nodeMode(): Promise<void> {
   const shapeFail = shapeEquivalence();
   if (shapeFail) {
@@ -57,6 +86,11 @@ async function nodeMode(): Promise<void> {
     process.exit(1);
   }
   log('SHAPE: EXACT (asset whale = shape whale)');
+  const bgFail = backgroundChecks();
+  if (bgFail) {
+    log(`BG: FAIL (${bgFail})`);
+    process.exit(1);
+  }
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
   let fail = '';
   for (const [label, w, h] of cases) {

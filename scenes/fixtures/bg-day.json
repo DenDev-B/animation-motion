@@ -1,0 +1,252 @@
+{
+  "version": 1,
+  "title": "Дневной фон",
+  "duration": 6,
+  "palette": {
+    "sky": [
+      "#7fbdf0",
+      "#b8e0ff",
+      "#f7e9c9"
+    ],
+    "sun": "#fff3c8",
+    "haze": "#e8dec6",
+    "far": "#8fa7b8",
+    "mid": "#64828b",
+    "near": "#3f6357",
+    "whale": "#2f4a5c",
+    "belly": "#496b7d",
+    "rim": "#fff2b8",
+    "cloudLight": "#ffffff",
+    "cloudShadow": "#c7d6e0",
+    "window": "#ffd27a"
+  },
+  "style": {
+    "grain": 0.04,
+    "vignette": 0.2,
+    "preset": "day"
+  },
+  "camera": {
+    "verticalFit": 0.52,
+    "keys": [
+      {
+        "t": 0,
+        "x": -30,
+        "y": 0,
+        "zoom": 1
+      },
+      {
+        "t": 6,
+        "x": 50,
+        "y": -20,
+        "zoom": 1.08
+      }
+    ]
+  },
+  "assets": {},
+  "layers": [
+    {
+      "id": "day-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {
+          "id": "day-sky-gradient",
+          "name": "Градиент неба",
+          "kind": "sky",
+          "x": 0,
+          "y": 0,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "day-sun",
+      "name": "Солнце",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {
+          "id": "day-sun-glow",
+          "name": "Свечение",
+          "kind": "glow",
+          "x": -250,
+          "y": -250,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "r": 520,
+            "color": "sun",
+            "a": 0.7
+          }
+        },
+        {
+          "id": "day-sun-shape",
+          "name": "Солнце",
+          "kind": "shape",
+          "x": -250,
+          "y": -250,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "color": "sun",
+          "params": {
+            "model": {
+              "bounds": [
+                -50,
+                -50,
+                100,
+                100
+              ],
+              "parts": [
+                {
+                  "id": "sun-disk",
+                  "name": "Диск",
+                  "type": "circle",
+                  "cx": 0,
+                  "cy": 0,
+                  "r": 44,
+                  "fill": "sun"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "day-clouds",
+      "name": "Облака",
+      "depth": 0.25,
+      "visible": true,
+      "objects": [
+        {
+          "id": "day-cloud-1",
+          "name": "Облако 1",
+          "kind": "cloud",
+          "x": -160,
+          "y": 120,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 560,
+            "h": 160,
+            "seed": 4,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow",
+            "haze": 0.3
+          }
+        },
+        {
+          "id": "day-cloud-2",
+          "name": "Облако 2",
+          "kind": "cloud",
+          "x": 200,
+          "y": 160,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 620,
+            "h": 170,
+            "seed": 21,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow",
+            "haze": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "day-far-mountains",
+      "name": "Дальние горы",
+      "depth": 0.2,
+      "visible": true,
+      "objects": [
+        {
+          "id": "day-far-mountains-mesh",
+          "name": "Хребет",
+          "kind": "mountains",
+          "x": 0,
+          "y": 300,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3200,
+            "minH": 220,
+            "maxH": 520,
+            "peaks": 7,
+            "rough": 0.45,
+            "seed": 3,
+            "color": "far",
+            "haze": 0.3,
+            "snow": 0.85
+          }
+        }
+      ]
+    },
+    {
+      "id": "day-mid-mountains",
+      "name": "Средние горы",
+      "depth": 0.45,
+      "visible": true,
+      "objects": [
+        {
+          "id": "day-mid-mountains-mesh",
+          "name": "Хребет",
+          "kind": "mountains",
+          "x": 0,
+          "y": 420,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3400,
+            "minH": 120,
+            "maxH": 340,
+            "peaks": 11,
+            "rough": 0.6,
+            "seed": 9,
+            "color": "mid",
+            "haze": 0.1,
+            "snow": 0.55
+          }
+        }
+      ]
+    },
+    {
+      "id": "day-hills",
+      "name": "Холмы",
+      "depth": 0.7,
+      "visible": true,
+      "objects": [
+        {
+          "id": "day-hills-mesh",
+          "name": "Холмы",
+          "kind": "hills",
+          "x": 0,
+          "y": 520,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3600,
+            "amp": 100,
+            "waves": 3,
+            "seed": 2,
+            "color": "near",
+            "haze": 0
+          }
+        }
+      ]
+    }
+  ]
+}

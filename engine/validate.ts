@@ -216,7 +216,7 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
           if (value === undefined) continue;
           validateField(value, field, `${objectPath}.params.${field.name}`, errors, palette);
         }
-        for (const [minKey, maxKey] of [['minW', 'maxW'], ['minH', 'maxH']]) {
+        for (const [minKey, maxKey] of [['minW', 'maxW'], ['minH', 'maxH'], ['minR', 'maxR']]) {
           const min = object.params[minKey], max = object.params[maxKey];
           if (isFiniteNum(min) && isFiniteNum(max) && min > max) err(`${objectPath}.params.${minKey}`, `${minKey} не должен превышать ${maxKey}; пример: ${minKey}=40, ${maxKey}=100`);
         }

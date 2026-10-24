@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "title": "Ночной фон",
+  "duration": 6,
+  "palette": {
+    "sky": [
+      "#070d24",
+      "#101a3a",
+      "#1b2a55"
+    ],
+    "sun": "#ffe9b0",
+    "haze": "#3a4f7a",
+    "far": "#28355f",
+    "mid": "#1b2444",
+    "near": "#0b1126",
+    "whale": "#202844",
+    "belly": "#2c3757",
+    "rim": "#8fa9d9",
+    "cloudLight": "#c9d8f5",
+    "cloudShadow": "#2c3a5e",
+    "window": "#ffd27a"
+  },
+  "style": {
+    "grain": 0.05,
+    "vignette": 0.45,
+    "preset": "night"
+  },
+  "camera": {
+    "verticalFit": 0.52,
+    "keys": [
+      {
+        "t": 0,
+        "x": -40,
+        "y": -10,
+        "zoom": 1
+      },
+      {
+        "t": 6,
+        "x": 40,
+        "y": -30,
+        "zoom": 1.06
+      }
+    ]
+  },
+  "assets": {},
+  "layers": [
+    {
+      "id": "night-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {
+          "id": "night-sky-gradient",
+          "name": "Градиент неба",
+          "kind": "sky",
+          "x": 0,
+          "y": 0,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "night-stars",
+      "name": "Звёзды",
+      "depth": 0.02,
+      "visible": true,
+      "objects": [
+        {
+          "id": "night-stars-field",
+          "name": "Звёздное поле",
+          "kind": "stars",
+          "x": 0,
+          "y": 0,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3000,
+            "h": 700,
+            "count": 560,
+            "seed": 11,
+            "minR": 1,
+            "maxR": 2.6,
+            "twinkle": 0.5,
+            "color": "#fff6d5",
+            "bias": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "night-moon",
+      "name": "Луна",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {
+          "id": "night-moon-shape",
+          "name": "Луна",
+          "kind": "shape",
+          "x": 235,
+          "y": -330,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "model": {
+              "bounds": [
+                -70,
+                -70,
+                140,
+                140
+              ],
+              "parts": [
+                {
+                  "id": "moon-disk",
+                  "name": "Диск",
+                  "type": "circle",
+                  "cx": 0,
+                  "cy": 0,
+                  "r": 62,
+                  "fill": "#ffe9b0"
+                },
+                {
+                  "id": "moon-crater-1",
+                  "name": "Кратер 1",
+                  "type": "circle",
+                  "cx": -22,
+                  "cy": 14,
+                  "r": 7,
+                  "fill": "#d9c79b"
+                },
+                {
+                  "id": "moon-crater-2",
+                  "name": "Кратер 2",
+                  "type": "circle",
+                  "cx": -10,
+                  "cy": -20,
+                  "r": 4,
+                  "fill": "#d9c79b"
+                },
+                {
+                  "id": "moon-crater-3",
+                  "name": "Кратер 3",
+                  "type": "circle",
+                  "cx": 20,
+                  "cy": 28,
+                  "r": 5,
+                  "fill": "#d9c79b"
+                }
+              ]
+            }
+          },
+          "anim": [
+            {
+              "type": "bob",
+              "amp": 3,
+              "period": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "night-far-mountains",
+      "name": "Дальние горы",
+      "depth": 0.2,
+      "visible": true,
+      "objects": [
+        {
+          "id": "night-far-mountains-mesh",
+          "name": "Хребет",
+          "kind": "mountains",
+          "x": 0,
+          "y": 260,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3200,
+            "minH": 180,
+            "maxH": 460,
+            "peaks": 9,
+            "rough": 0.6,
+            "seed": 7,
+            "color": "far",
+            "haze": 0.35,
+            "snow": 0.65
+          }
+        }
+      ]
+    },
+    {
+      "id": "night-mid-mountains",
+      "name": "Средние горы",
+      "depth": 0.4,
+      "visible": true,
+      "objects": [
+        {
+          "id": "night-mid-mountains-mesh",
+          "name": "Хребет",
+          "kind": "mountains",
+          "x": 0,
+          "y": 360,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3400,
+            "minH": 120,
+            "maxH": 330,
+            "peaks": 12,
+            "rough": 0.7,
+            "seed": 13,
+            "color": "mid",
+            "haze": 0.15,
+            "snow": 0.25
+          }
+        }
+      ]
+    },
+    {
+      "id": "night-hills",
+      "name": "Холмы",
+      "depth": 0.65,
+      "visible": true,
+      "objects": [
+        {
+          "id": "night-hills-mesh",
+          "name": "Холмы",
+          "kind": "hills",
+          "x": 0,
+          "y": 470,
+          "s": 1,
+          "rot": 0,
+          "alpha": 1,
+          "params": {
+            "w": 3600,
+            "amp": 80,
+            "waves": 4,
+            "seed": 5,
+            "color": "near",
+            "haze": 0
+          }
+        }
+      ]
+    }
+  ]
+}

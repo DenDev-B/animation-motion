@@ -5,11 +5,12 @@ import { col, mixc, rgba } from './color.ts';
 export interface RenderCache {
   cloudCache: Map<string, HTMLCanvasElement>;
   skyCache: Map<string, { B: Array<{ x: number; w: number; h: number; step?: { w: number; h: number }; ant?: number }>; WN: number[][]; W: number }>;
+  bgCache: Map<string, unknown>;
   noiseTile: HTMLCanvasElement | null;
 }
 
 export function createRenderCache(): RenderCache {
-  return { cloudCache: new Map(), skyCache: new Map(), noiseTile: null };
+  return { cloudCache: new Map(), skyCache: new Map(), bgCache: new Map(), noiseTile: null };
 }
 
 export type CreateCanvas = (w: number, h: number) => HTMLCanvasElement;

@@ -18,7 +18,7 @@ export interface KindSpec {
 
 export const EASES = ['sine', 'inOut', 'out', 'lin'] as const;
 export const PALETTE_SLOTS = ['sky', 'sun', 'haze', 'far', 'mid', 'near', 'whale', 'belly', 'rim', 'cloudLight', 'cloudShadow', 'window'] as const;
-export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'asset', 'shape'] as const;
+export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'asset', 'shape'] as const;
 
 export const SCENE_SPEC = {
   fields: [
@@ -96,6 +96,36 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
     { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Доля смешения с цветом haze.' },
   ] },
   asset: { description: 'Модель из scene.assets или catalog/.', params: [] },
+  mountains: { description: 'Детерминированный горный хребет одним замкнутым контуром.', params: [
+    { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 2400, description: 'Ширина хребта (> 0).' },
+    { name: 'minH', type: 'number', min: 0, default: 60, description: 'Минимальная высота вершины.' },
+    { name: 'maxH', type: 'number', min: 0, default: 260, description: 'Максимальная высота вершины.' },
+    { name: 'peaks', type: 'int', min: 3, max: 40, default: 8, description: 'Число вершин.' },
+    { name: 'rough', type: 'number', min: 0, max: 1, default: 0.5, description: 'Неровность склонов и седловин.' },
+    { name: 'seed', type: 'int', default: 1, description: 'Seed геометрии.' },
+    { name: 'color', type: 'color', default: 'far', description: 'Цвет склонов: слот палитры или hex.' },
+    { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Доля смешения с цветом haze.' },
+    { name: 'snow', type: 'number', min: 0, max: 1, default: 0, description: 'Доля снежной шапки у вершин.' },
+  ] },
+  hills: { description: 'Детерминированные пологие холмы одним замкнутым контуром.', params: [
+    { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 2400, description: 'Ширина гряды (> 0).' },
+    { name: 'amp', type: 'number', min: 10, max: 200, default: 60, description: 'Амплитуда холмов.' },
+    { name: 'waves', type: 'int', min: 1, max: 8, default: 3, description: 'Число наложенных волн.' },
+    { name: 'seed', type: 'int', default: 1, description: 'Seed геометрии.' },
+    { name: 'color', type: 'color', default: 'mid', description: 'Цвет холмов: слот палитры или hex.' },
+    { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Доля смешения с цветом haze.' },
+  ] },
+  stars: { description: 'Детерминированное звёздное поле с мерцанием.', params: [
+    { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 2400, description: 'Ширина области (> 0).' },
+    { name: 'h', type: 'number', min: 0, exclusiveMin: true, default: 1000, description: 'Высота области (> 0).' },
+    { name: 'count', type: 'int', min: 1, max: 2000, default: 300, description: 'Число звёзд.' },
+    { name: 'seed', type: 'int', default: 1, description: 'Seed расположения звёзд.' },
+    { name: 'minR', type: 'number', min: 0.5, max: 4, default: 0.8, description: 'Минимальный радиус звезды.' },
+    { name: 'maxR', type: 'number', min: 0.5, max: 4, default: 2.2, description: 'Максимальный радиус звезды.' },
+    { name: 'twinkle', type: 'number', min: 0, max: 1, default: 0.3, description: 'Интенсивность мерцания.' },
+    { name: 'color', type: 'color', default: '#fff6d5', description: 'Цвет звёзд: слот палитры или hex.' },
+    { name: 'bias', type: 'number', min: 0, max: 1, default: 0.5, description: 'Смещение звёзд к верху области.' },
+  ] },
   shape: { description: 'Модель прямо в scene (params.model). Рендерится через drawAsset.', params: [
     { name: 'model', type: 'object', description: 'Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны.' },
   ] },
