@@ -1,5 +1,6 @@
-import { renderFrame, createRenderCache, type SceneV1, type RenderEnv, validateScene } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene } from '../engine/index.ts';
 import demoScene from '../scenes/whale-demo.json';
+import demoProject from '../projects/whale-demo.project.json';
 import whaleCatalog from '../catalog/whale.json';
 import type { CatalogAsset } from '../engine/schema.ts';
 
@@ -17,7 +18,9 @@ const applyBtn = document.getElementById('apply') as HTMLButtonElement | null;
 const resetBtn = document.getElementById('reset') as HTMLButtonElement | null;
 const selftestPre = document.getElementById('selftest') as HTMLElement | null;
 
-let scene: SceneV1 = demoScene as unknown as SceneV1;
+let project: ProjectV1 = structuredClone(demoProject) as unknown as ProjectV1;
+let activeSceneIndex = 0;
+let scene: SceneV1 = project.scenes[activeSceneIndex].scene;
 let catalog: Record<string, CatalogAsset> = { whale: whaleCatalog as unknown as CatalogAsset };
 let t = 0;
 let duration = 12;
@@ -52,6 +55,8 @@ function showErrors(errors: { path: string; message: string }[] | null) {
 }
 
 function frame() {
+  scene = project.scenes[activeSceneIndex].scene;
+  duration = scene.duration;
   if (!ctx) return;
   const errors = validateScene(scene, { catalogIds: Object.keys(catalog) });
   showErrors(errors.ok ? null : errors.errors);
@@ -93,6 +98,40 @@ if (playBtn) playBtn.onclick = () => setPlaying(!playing);
 if (aspectH) aspectH.onclick = () => setAspect('h');
 if (aspectV) aspectV.onclick = () => setAspect('v');
 
+const tabs = document.getElementById('sceneTabs');
+const openInput = document.getElementById('openProject') as HTMLInputElement | null;
+const projectTitle = document.getElementById('projectTitle') as HTMLInputElement | null;
+const projectFormat = document.getElementById('projectFormat') as HTMLSelectElement | null;
+const projectFps = document.getElementById('projectFps') as HTMLSelectElement | null;
+const projectDuration = document.getElementById('projectDuration');
+function renderTabs() {
+  if (!tabs) return;
+  tabs.innerHTML = '';
+  project.scenes.forEach((entry, index) => {
+    const tab = document.createElement('span');
+    tab.className = 'scene-tab';
+    const select = document.createElement('button'); select.textContent = entry.name; select.classList.toggle('on', index === activeSceneIndex); select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2); frame(); renderTabs(); };
+    const left = document.createElement('button'); left.textContent = '←'; left.title = 'Переместить влево'; left.disabled = index === 0; left.onclick = () => moveScene(index, -1);
+    const right = document.createElement('button'); right.textContent = '→'; right.title = 'Переместить вправо'; right.disabled = index === project.scenes.length - 1; right.onclick = () => moveScene(index, 1);
+    select.ondblclick = () => { const name = prompt('Название сцены', entry.name); if (name?.trim()) { entry.name = name.trim(); renderTabs(); } };
+    tab.append(select, left, right); tabs.appendChild(tab);
+  });
+  if (projectTitle) projectTitle.value = project.title;
+  if (projectFormat) projectFormat.value = project.format;
+  if (projectFps) projectFps.value = String(project.fps);
+  if (projectDuration) projectDuration.textContent = `Проект: ${(projectFrameCount(project) / project.fps).toFixed(1)} с · Сцена: ${scene.duration.toFixed(1)} с`;
+}
+function moveScene(index: number, delta: number) { const target = index + delta; [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; renderTabs(); frame(); }
+function updateProjectControls() { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); renderTabs(); }
+document.getElementById('addScene')?.addEventListener('click', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name = 'Новая сцена'; entry.scene.title = entry.name; project.scenes.push(entry); activeSceneIndex = project.scenes.length - 1; renderTabs(); frame(); });
+document.getElementById('duplicateScene')?.addEventListener('click', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; renderTabs(); frame(); });
+document.getElementById('deleteScene')?.addEventListener('click', () => { if (project.scenes.length <= 1) return; project.scenes.splice(activeSceneIndex, 1); activeSceneIndex = Math.min(activeSceneIndex, project.scenes.length - 1); renderTabs(); frame(); });
+projectTitle?.addEventListener('change', updateProjectControls); projectFormat?.addEventListener('change', updateProjectControls); projectFps?.addEventListener('change', updateProjectControls);
+document.getElementById('newProject')?.addEventListener('click', () => { const entry = structuredClone(project.scenes[0]); entry.id = 's1'; entry.name = 'Сцена 1'; project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [entry] }; activeSceneIndex = 0; renderTabs(); frame(); });
+document.getElementById('saveProject')?.addEventListener('click', () => { updateProjectControls(); const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); });
+document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
+openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed); if (!result.ok) { showErrors(result.errors); return; } project = parsed as ProjectV1; activeSceneIndex = 0; scene = project.scenes[0].scene; duration = scene.duration; if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2); showErrors(null); renderTabs(); frame(); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
+
 function applyJSON() {
   if (!jsonArea) return;
   try {
@@ -100,6 +139,7 @@ function applyJSON() {
     const res = validateScene(parsed, { catalogIds: Object.keys(catalog) });
     if (!res.ok) { showErrors(res.errors); return; }
     scene = parsed as SceneV1;
+    project.scenes[activeSceneIndex].scene = scene;
     duration = scene.duration;
     t = Math.min(t, duration);
     showErrors(null);
@@ -113,14 +153,17 @@ function applyJSON() {
 if (applyBtn) applyBtn.onclick = applyJSON;
 if (resetBtn) resetBtn.onclick = () => {
   scene = demoScene as unknown as SceneV1;
+  project.scenes[activeSceneIndex].scene = scene;
   duration = scene.duration;
   t = Math.min(t, duration);
   if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
   showErrors(null);
   frame();
+  renderTabs();
 };
 
 if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
+renderTabs();
 
 // boot
 setAspect('h');

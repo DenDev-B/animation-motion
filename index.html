@@ -30,6 +30,14 @@
     </div>
     <div class="col">
       <div class="box">
+        <h2>Проект</h2>
+        <div class="bar"><button id="newProject">Новый проект</button><button id="openProjectButton">Открыть</button><button id="saveProject">Сохранить</button><input id="openProject" type="file" accept=".json,application/json" hidden></div>
+        <div class="bar" style="margin-top:8px"><label class="f">Название<input id="projectTitle"></label><label class="f">Формат<select id="projectFormat"><option>16:9</option><option>9:16</option></select></label><label class="f">FPS<select id="projectFps"><option>24</option><option>30</option><option>60</option></select></label></div>
+        <div id="sceneTabs" class="bar" style="margin-top:8px"></div>
+        <div class="btns"><button id="addScene">+ Сцена</button><button id="duplicateScene">Дублировать</button><button id="deleteScene">Удалить</button></div>
+        <div id="projectDuration" class="hint"></div>
+      </div>
+      <div class="box">
         <h2>Код сцены</h2>
         <textarea id="json" spellcheck="false" rows="14" aria-label="JSON сцены"></textarea>
         <div class="btns">

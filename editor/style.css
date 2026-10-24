@@ -11,6 +11,8 @@ button, select, input, textarea { font: inherit; color: inherit; }
 button { background: #fff; border: 1px solid #ddd5ca; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
 button.primary { background: #b8531f; color: #fff; border-color: #b8531f; font-weight: 700; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+.scene-tab { display: inline-flex; gap: 2px; }
+.scene-tab button.on { background: #f3d3bd; border-color: #b8531f; }
 input[type=range] { flex: 1; min-width: 120px; width: auto; padding: 0; }
 .time { font: 12px 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; min-width: 92px; text-align: right; }
 label.f { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: #6f6676; }
