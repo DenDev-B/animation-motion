@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { createCanvas, Path2D } from '@napi-rs/canvas';
-import { renderFrame, createRenderCache, validateScene, validateProject, projectFrameCount, locateFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
 (globalThis as any).Path2D = Path2D;
 
@@ -59,6 +59,8 @@ async function main() {
   for (const f of fs.readdirSync(catalogDir)) {
     if (!f.endsWith('.json')) continue;
     const c = JSON.parse(fs.readFileSync(path.join(catalogDir, f), 'utf8')) as CatalogAsset;
+    const validation = validateAsset(c);
+    if (!validation.ok) fail(`модель каталога ${f} не прошла валидацию: ${validation.errors.map(({ path: p, message }) => `${p}: ${message}`).join('; ')}`);
     catalog[c.id] = c;
   }
   log(`каталог: ${Object.keys(catalog).join(', ') || '(пуст)'}`);
@@ -67,7 +69,7 @@ async function main() {
   let sceneV1: SceneV1 | null = null;
   if (projectPath) {
     const raw = JSON.parse(fs.readFileSync(projectPath, 'utf8')) as unknown;
-    const result = validateProject(raw);
+    const result = validateProject(raw, { catalogIds: Object.keys(catalog) });
     if (!result.ok) { log('проект не прошёл валидацию:'); for (const e of result.errors) log(`  ${e.path}: ${e.message}`); process.exit(1); }
     projectV1 = raw as ProjectV1;
   } else {

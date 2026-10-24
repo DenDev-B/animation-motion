@@ -1,4 +1,4 @@
-import { validateScene } from './validate.ts';
+import { validateScene, validateAsset, validateObject } from './validate.ts';
 export { validateProject, migrateProject, projectFrameCount, locateFrame } from './project.ts';
 export type { ProjectV1, ProjectSceneV1 } from './project.ts';
 import { draw } from './render.ts';
@@ -41,6 +41,11 @@ export function renderFrame(ctx: CanvasRenderingContext2D, scene: SceneV1, t: nu
 
 export { createRenderCache };
 export { validateScene };
+export { validateAsset };
+export { validateObject };
+export type { ValidationError, ValidationResult } from './validate.ts';
+export { KIND_SPEC, ANIM_SPEC, PALETTE_SLOTS, SCENE_SPEC } from './spec.ts';
+export { buildPrompt, extractJson, buildFixRequest } from './ai-io.ts';
 export type {
   SceneV1,
   Layer,

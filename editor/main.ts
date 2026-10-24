@@ -185,7 +185,7 @@ projectTitle?.addEventListener('change', updateProjectControls); projectFormat?.
 document.getElementById('newProject')?.addEventListener('click', () => applyChange('new-project', () => { project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [makeEmptyScene('Сцена 1')] }; activeSceneIndex = 0; }));
 document.getElementById('saveProject')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); hasUnsavedChanges = false; updateSavedLabel(); });
 document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
-openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
+openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed, { catalogIds: Object.keys(catalog) }); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
 
 function applyJSON() {
   if (!jsonArea) return;
@@ -228,7 +228,7 @@ try {
   const stored = localStorage.getItem(AUTOSAVE_KEY);
   if (stored) {
     const saved = JSON.parse(stored) as { savedAt?: number; project?: unknown };
-    const valid = validateProject(saved.project);
+    const valid = validateProject(saved.project, { catalogIds: Object.keys(catalog) });
     if (saved.savedAt && valid.ok && confirm('Восстановить прошлую сессию?')) restoreProject(saved.project as ProjectV1);
   }
 } catch {}

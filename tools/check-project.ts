@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { locateFrame, projectFrameCount, validateProject, type ProjectV1 } from '../engine/project.ts';
 
 const project = JSON.parse(fs.readFileSync('projects/whale-demo.project.json', 'utf8')) as ProjectV1;
-assert.deepEqual(validateProject(project), { ok: true, errors: [] });
+assert.deepEqual(validateProject(project), { ok: true, errors: [], warnings: [] });
 const total = projectFrameCount(project);
 const firstCount = Math.round(project.scenes[0].scene.duration * project.fps);
 assert.equal(locateFrame(project, firstCount - 1).sceneIndex, 0);

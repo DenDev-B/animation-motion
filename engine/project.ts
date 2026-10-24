@@ -1,4 +1,4 @@
-import { validateScene, type ValidationError } from './validate.ts';
+import { validateScene, type ValidateOpts, type ValidationError } from './validate.ts';
 import type { SceneV1 } from './schema.ts';
 
 export interface ProjectSceneV1 {
@@ -16,10 +16,11 @@ export interface ProjectV1 {
   scenes: ProjectSceneV1[];
 }
 
-export function validateProject(json: unknown): { ok: boolean; errors: ValidationError[] } {
+export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: boolean; errors: ValidationError[]; warnings: ValidationError[] } {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
   const err = (path: string, message: string) => errors.push({ path, message });
-  if (!json || typeof json !== 'object' || Array.isArray(json)) return { ok: false, errors: [{ path: '', message: 'проект должен быть объектом' }] };
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return { ok: false, errors: [{ path: '', message: 'проект должен быть объектом' }], warnings };
   const project = json as Record<string, unknown>;
   if (project.version !== 1) err('version', 'version должен быть равен 1');
   if (typeof project.title !== 'string') err('title', 'title должен быть строкой');
@@ -38,11 +39,12 @@ export function validateProject(json: unknown): { ok: boolean; errors: Validatio
       else ids.add(entry.id);
       if (typeof entry.name !== 'string' || !entry.name) err(`${base}.name`, 'name сцены должен быть непустой строкой');
       if (!entry.transition || typeof entry.transition !== 'object' || (entry.transition as Record<string, unknown>).type !== 'cut') err(`${base}.transition.type`, 'пока поддерживается только cut');
-      const result = validateScene(entry.scene);
+      const result = validateScene(entry.scene, opts);
       for (const issue of result.errors) err(`${base}.scene${issue.path ? `.${issue.path}` : ''}`, issue.message);
+      for (const warning of result.warnings) warnings.push({ ...warning, path: `${base}.scene${warning.path ? `.${warning.path}` : ''}` });
     });
   }
-  return { ok: errors.length === 0, errors };
+  return { ok: errors.length === 0, errors, warnings };
 }
 
 export function migrateProject(json: unknown): ProjectV1 {
