@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "title": "Дождь над городом",
+  "duration": 8,
+  "palette": {
+    "sky": ["#141b33", "#3a3a5e", "#8a5a6a"],
+    "sun": "#ffd9a0",
+    "haze": "#6b5f7a",
+    "far": "#3a3550",
+    "mid": "#2a2540",
+    "near": "#171326",
+    "whale": "#232842",
+    "belly": "#3a4166",
+    "rim": "#ffc58c",
+    "cloudLight": "#cfe0ff",
+    "cloudShadow": "#6d6a8c",
+    "window": "#ffd27a"
+  },
+  "style": {"grain": 0.05, "vignette": 0.4, "preset": "rain"},
+  "camera": {"verticalFit": 0.52, "keys": [{"t": 0, "x": -30, "y": 0, "zoom": 1}, {"t": 8, "x": 30, "y": -10, "zoom": 1.05}]},
+  "assets": {},
+  "layers": [
+    {
+      "id": "rain-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "rain-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "rain-far-skyline",
+      "name": "Дальный город",
+      "depth": 0.3,
+      "visible": true,
+      "objects": [
+        {"id": "rain-far-skyline-mesh", "name": "Силуэт", "kind": "skyline", "x": 0, "y": 260, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3200, "minH": 60, "maxH": 220, "seed": 5, "lit": 0.05, "windows": true, "haze": 0.3}}
+      ]
+    },
+    {
+      "id": "rain-near-skyline",
+      "name": "Ближний город",
+      "depth": 0.6,
+      "visible": true,
+      "objects": [
+        {"id": "rain-near-skyline-mesh", "name": "Силуэт", "kind": "skyline", "x": 0, "y": 380, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "minH": 100, "maxH": 340, "seed": 9, "lit": 0.14, "windows": true, "haze": 0.1}}
+      ]
+    },
+    {
+      "id": "rain-overlay",
+      "name": "Дождь",
+      "depth": 1.2,
+      "visible": true,
+      "objects": [
+        {"id": "rain-overlay-particles", "name": "Капли", "kind": "rain", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 2600, "h": 1400, "count": 900, "seed": 21, "speed": 1600, "angle": 12, "len": 34, "width": 1.5, "alpha": 0.55, "color": "#cfe0ff"}}
+      ]
+    }
+  ]
+}

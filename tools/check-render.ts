@@ -79,6 +79,57 @@ function backgroundChecks(): string | null {
   return null;
 }
 
+function rainScene(params: Record<string, unknown>): SceneV1 {
+  return {
+    version: 1,
+    title: 'rain-period',
+    duration: 10,
+    palette: { sky: ['#000000', '#000000'] },
+    style: {},
+    camera: { verticalFit: 1, keys: [{ t: 0, x: 0, y: 0, zoom: 1 }] },
+    assets: {},
+    layers: [
+      { id: 'p-sky', name: 'Небо', depth: 0, visible: true, objects: [{ id: 'p-sky-obj', name: 'Небо', kind: 'sky' }] },
+      { id: 'p-rain', name: 'Дождь', depth: 0, visible: true, objects: [{ id: 'p-rain-obj', name: 'Дождь', kind: 'rain', params }] },
+    ],
+  };
+}
+
+function averageMs(target: SceneV1, w: number, h: number, iterations: number): number {
+  const targetCache = createRenderCache();
+  renderSceneToImageData(target, w, h, 0, targetCache);
+  const started = process.hrtime.bigint();
+  for (let i = 0; i < iterations; i++) renderSceneToImageData(target, w, h, i * 0.03, targetCache);
+  return Number(process.hrtime.bigint() - started) / 1e6 / iterations;
+}
+
+function particleChecks(): string | null {
+  const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
+  for (const file of ['rain-city.json', 'snow-hills.json', 'birds-sunset.json']) {
+    const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
+    const validation = validateScene(target, { catalogIds: ['whale'] });
+    if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
+    for (const [label, w, h] of cases) {
+      if (!equal(renderSceneToImageData(target, w, h, 2, createRenderCache()), renderSceneToImageData(target, w, h, 2, createRenderCache()))) return `${file} ${label}: кадр t=2 невоспроизводим`;
+      const ordered = createRenderCache();
+      const before = renderSceneToImageData(target, w, h, 5, ordered);
+      for (const t of [0, 1, 2, 3, 4]) renderSceneToImageData(target, w, h, t, ordered);
+      if (!equal(before, renderSceneToImageData(target, w, h, 5, ordered))) return `${file} ${label}: кадр зависит от порядка рендера`;
+      log(`PARTICLES: ${file} ${label} PASS`);
+    }
+  }
+  const periodic = rainScene({ w: 1000, h: 600, count: 300, seed: 5, speed: 1200, angle: 0, len: 20, width: 1, alpha: 0.6, color: '#ffffff' });
+  const sample = renderSceneToImageData(periodic, 960, 540, 1, createRenderCache());
+  const shifted = renderSceneToImageData(periodic, 960, 540, 1.5, createRenderCache());
+  if (!equal(sample, shifted)) return 'rain angle=0: кадр t и t+h/speed не совпадают';
+  log('PARTICLES: rain period h/speed EXACT');
+  const heavy = rainScene({ w: 2600, h: 1400, count: 3000, seed: 7, speed: 1600, angle: 12, len: 34, width: 1.5, alpha: 0.5, color: '#cfe0ff' });
+  const baseline = averageMs(rainScene({ w: 2600, h: 1400, count: 1, seed: 7, speed: 1600, angle: 12, len: 34, width: 1.5, alpha: 0, color: '#cfe0ff' }), 1920, 1080, 8);
+  const loaded = averageMs(heavy, 1920, 1080, 8);
+  log(`PARTICLES: rain count=3000 1080p +${(loaded - baseline).toFixed(2)} ms/frame (${loaded.toFixed(2)} против ${baseline.toFixed(2)})`);
+  return null;
+}
+
 async function nodeMode(): Promise<void> {
   const shapeFail = shapeEquivalence();
   if (shapeFail) {
@@ -89,6 +140,11 @@ async function nodeMode(): Promise<void> {
   const bgFail = backgroundChecks();
   if (bgFail) {
     log(`BG: FAIL (${bgFail})`);
+    process.exit(1);
+  }
+  const particleFail = particleChecks();
+  if (particleFail) {
+    log(`PARTICLES: FAIL (${particleFail})`);
     process.exit(1);
   }
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];

@@ -237,6 +237,9 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
           for (const issue of res.errors) err(`${objectPath}.params.model${issue.path ? `.${issue.path}` : ''}`, issue.message);
           for (const warning of res.warnings) warnings.push({ ...warning, path: `${objectPath}.params.model${warning.path ? `.${warning.path}` : ''}` });
         }
+      } else if (object.kind === 'birds' && isRecord(object.params)) {
+        const dir = object.params.dir;
+        if (dir !== undefined && dir !== -1 && dir !== 1) err(`${objectPath}.params.dir`, 'dir должен быть -1 (влево) или 1 (вправо); пример: 1');
       }
     });
   });

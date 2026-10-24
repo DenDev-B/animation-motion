@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "title": "Птицы на закате",
+  "duration": 8,
+  "palette": {
+    "sky": ["#2a2a55", "#a2576e", "#e8956b", "#ffd9a0"],
+    "sun": "#fff0c4",
+    "haze": "#d59a86",
+    "far": "#9a6a86",
+    "mid": "#5f4166",
+    "near": "#2a2033",
+    "whale": "#2b2430",
+    "belly": "#443a4a",
+    "rim": "#ffd2a1",
+    "cloudLight": "#ffd9ae",
+    "cloudShadow": "#a56f86",
+    "window": "#ffd27a"
+  },
+  "style": {"grain": 0.05, "vignette": 0.35, "preset": "sunset"},
+  "camera": {"verticalFit": 0.52, "keys": [{"t": 0, "x": -40, "y": 0, "zoom": 1}, {"t": 8, "x": 40, "y": -10, "zoom": 1.06}]},
+  "assets": {},
+  "layers": [
+    {
+      "id": "birds-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "birds-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "birds-sun",
+      "name": "Солнце",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {"id": "birds-sun-glow", "name": "Свечение", "kind": "glow", "x": 380, "y": 220, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 520, "color": "sun", "a": 0.75}}
+      ]
+    },
+    {
+      "id": "birds-hills",
+      "name": "Холмы",
+      "depth": 0.7,
+      "visible": true,
+      "objects": [
+        {"id": "birds-hills-mesh", "name": "Холмы", "kind": "hills", "x": 0, "y": 480, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 90, "waves": 4, "seed": 7, "color": "near", "haze": 0.05}}
+      ]
+    },
+    {
+      "id": "birds-flock",
+      "name": "Стая",
+      "depth": 1.1,
+      "visible": true,
+      "objects": [
+        {"id": "birds-flock-mesh", "name": "Птицы", "kind": "birds", "x": -120, "y": -180, "s": 1, "rot": 0, "alpha": 1, "params": {"count": 14, "seed": 41, "spread": 480, "size": 24, "flap": 0.9, "speed": 100, "dir": 1, "bob": 16, "color": "#2a2030"}}
+      ]
+    }
+  ]
+}
