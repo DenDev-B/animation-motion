@@ -18,7 +18,7 @@ export interface KindSpec {
 
 export const EASES = ['sine', 'inOut', 'out', 'lin'] as const;
 export const PALETTE_SLOTS = ['sky', 'sun', 'haze', 'far', 'mid', 'near', 'whale', 'belly', 'rim', 'cloudLight', 'cloudShadow', 'window'] as const;
-export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'asset', 'shape'] as const;
+export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'asset'] as const;
 
 export const SCENE_SPEC = {
   fields: [
@@ -96,9 +96,6 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
     { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Доля смешения с цветом haze.' },
   ] },
   asset: { description: 'Модель из scene.assets или catalog/.', params: [] },
-  shape: { description: 'Модель прямо в scene (params.model). Рендерится через drawAsset.', params: [
-    { name: 'model', type: 'object', description: 'Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны.' },
-  ] },
 };
 
 export const ANIM_SPEC: Record<string, readonly FieldSpec[]> = {

@@ -229,14 +229,6 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       if (object.kind === 'asset') {
         if (typeof object.asset !== 'string' || !object.asset) err(`${objectPath}.asset`, 'asset обязателен для kind asset; пример: whale');
         else if (!catalogIds.has(object.asset) && !(assets && object.asset in assets)) err(`${objectPath}.asset`, `asset "${object.asset}" не найден в scene.assets или каталоге; пример: whale`);
-      } else if (object.kind === 'shape') {
-        if (!isRecord(object.params)) err(`${objectPath}.params`, 'params должен быть объектом; пример: {}');
-        else {
-          const model = object.params.model;
-          const res = validateAsset(model, { inline: true });
-          for (const issue of res.errors) err(`${objectPath}.params.model${issue.path ? `.${issue.path}` : ''}`, issue.message);
-          for (const warning of res.warnings) warnings.push({ ...warning, path: `${objectPath}.params.model${warning.path ? `.${warning.path}` : ''}` });
-        }
       }
     });
   });
