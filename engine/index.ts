@@ -1,6 +1,8 @@
 import { validateScene, validateAsset, validateObject } from './validate.ts';
 export { validateProject, migrateProject, projectFrameCount, locateFrame } from './project.ts';
-export type { ProjectV1, ProjectSceneV1 } from './project.ts';
+export type { ProjectV1, ProjectSceneV1, Transition, TransitionType, TransitionDir, LocatedScene, FrameLocation } from './project.ts';
+export { composeFrame } from './compose.ts';
+export type { ComposeSize, ComposeOptions } from './compose.ts';
 import { draw } from './render.ts';
 import { createRenderCache, type RenderCache } from './kinds.ts';
 import type {

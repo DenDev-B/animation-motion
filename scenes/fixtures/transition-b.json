@@ -1,0 +1,388 @@
+{
+  "version": 1,
+  "title": "Переход B",
+  "duration": 3.2,
+  "palette": {
+    "sky": [
+      "#12263a",
+      "#2d6a78",
+      "#63a6a0",
+      "#c8e6c9"
+    ],
+    "sun": "#e8f6d8",
+    "haze": "#c98a90",
+    "far": "#8a6590",
+    "mid": "#53396a",
+    "near": "#1f1733",
+    "whale": "#232842",
+    "belly": "#3a4166",
+    "rim": "#ffc58c",
+    "cloudLight": "#ffd5a6",
+    "cloudShadow": "#a4638a",
+    "window": "#ffd27a"
+  },
+  "style": {
+    "grain": 0.07,
+    "vignette": 0.55,
+    "preset": "dusk"
+  },
+  "camera": {
+    "verticalFit": 0.52,
+    "keys": [
+      {
+        "t": 0,
+        "x": -90,
+        "y": 0,
+        "zoom": 1
+      },
+      {
+        "t": 3.2,
+        "x": 90,
+        "y": -14,
+        "zoom": 1.12
+      }
+    ]
+  },
+  "assets": {},
+  "layers": [
+    {
+      "id": "layer-1",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-1",
+          "name": "Градиент неба",
+          "kind": "sky"
+        }
+      ]
+    },
+    {
+      "id": "layer-2",
+      "name": "Свет",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-2",
+          "name": "Солнце",
+          "kind": "glow",
+          "x": 430,
+          "y": 170,
+          "params": {
+            "r": 560,
+            "color": "sun",
+            "a": 0.85
+          }
+        }
+      ]
+    },
+    {
+      "id": "layer-3",
+      "name": "Облака дальние",
+      "depth": 0.2,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-3",
+          "name": "Облако д1",
+          "kind": "cloud",
+          "x": -520,
+          "y": 200,
+          "params": {
+            "w": 520,
+            "h": 150,
+            "seed": 3,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow",
+            "haze": 0.45
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 5,
+              "vy": 0
+            }
+          ],
+          "alpha": 0.7
+        },
+        {
+          "id": "obj-4",
+          "name": "Облако д2",
+          "kind": "cloud",
+          "x": 60,
+          "y": 170,
+          "params": {
+            "w": 640,
+            "h": 170,
+            "seed": 8,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow",
+            "haze": 0.45
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 4,
+              "vy": 0
+            }
+          ],
+          "alpha": 0.7
+        },
+        {
+          "id": "obj-5",
+          "name": "Облако д3",
+          "kind": "cloud",
+          "x": 620,
+          "y": 215,
+          "params": {
+            "w": 520,
+            "h": 140,
+            "seed": 12,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow",
+            "haze": 0.45
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 6,
+              "vy": 0
+            }
+          ],
+          "alpha": 0.7
+        }
+      ]
+    },
+    {
+      "id": "layer-4",
+      "name": "Город дальний",
+      "depth": 0.35,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-6",
+          "name": "Дома дальние",
+          "kind": "skyline",
+          "x": 0,
+          "y": 300,
+          "color": "far",
+          "params": {
+            "w": 3200,
+            "minH": 60,
+            "maxH": 230,
+            "seed": 5,
+            "lit": 0,
+            "windows": false,
+            "haze": 0.35
+          }
+        }
+      ]
+    },
+    {
+      "id": "layer-5",
+      "name": "Облака средние",
+      "depth": 0.6,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-7",
+          "name": "Облако с1",
+          "kind": "cloud",
+          "x": -420,
+          "y": 40,
+          "params": {
+            "w": 560,
+            "h": 170,
+            "seed": 21,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow"
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 9,
+              "vy": 0
+            }
+          ]
+        },
+        {
+          "id": "obj-8",
+          "name": "Облако с2",
+          "kind": "cloud",
+          "x": 520,
+          "y": 90,
+          "params": {
+            "w": 620,
+            "h": 180,
+            "seed": 34,
+            "puffs": 9,
+            "lit": "cloudLight",
+            "shade": "cloudShadow"
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 7,
+              "vy": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer-6",
+      "name": "Город средний",
+      "depth": 0.7,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-9",
+          "name": "Дома средние",
+          "kind": "skyline",
+          "x": 0,
+          "y": 390,
+          "color": "mid",
+          "params": {
+            "w": 3600,
+            "minH": 90,
+            "maxH": 330,
+            "seed": 9,
+            "lit": 0.1,
+            "windows": true,
+            "haze": 0.12
+          }
+        }
+      ]
+    },
+    {
+      "id": "layer-7",
+      "name": "Кит",
+      "depth": 1,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-10",
+          "name": "Кит",
+          "kind": "asset",
+          "asset": "whale",
+          "x": 0,
+          "y": -70,
+          "s": 1.45,
+          "anim": [
+            {
+              "type": "move",
+              "from": [
+                -190,
+                0
+              ],
+              "to": [
+                190,
+                24
+              ],
+              "t0": 0,
+              "t1": 3.2,
+              "ease": "sine"
+            },
+            {
+              "type": "bob",
+              "amp": 9,
+              "period": 4,
+              "phase": 0
+            },
+            {
+              "type": "swing",
+              "amp": 0.035,
+              "period": 4,
+              "phase": 0.2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer-8",
+      "name": "Город ближний",
+      "depth": 1.25,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-11",
+          "name": "Дома ближние",
+          "kind": "skyline",
+          "x": 0,
+          "y": 610,
+          "color": "near",
+          "params": {
+            "w": 3800,
+            "minH": 170,
+            "maxH": 430,
+            "seed": 14,
+            "lit": 0.05,
+            "windows": true,
+            "haze": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "layer-9",
+      "name": "Облака ближние",
+      "depth": 1.45,
+      "visible": true,
+      "objects": [
+        {
+          "id": "obj-12",
+          "name": "Облако б1",
+          "kind": "cloud",
+          "x": -430,
+          "y": 640,
+          "params": {
+            "w": 900,
+            "h": 230,
+            "seed": 45,
+            "puffs": 9,
+            "lit": "mid",
+            "shade": "near"
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 14,
+              "vy": 0
+            }
+          ],
+          "alpha": 0.95
+        },
+        {
+          "id": "obj-13",
+          "name": "Облако б2",
+          "kind": "cloud",
+          "x": 560,
+          "y": 660,
+          "params": {
+            "w": 820,
+            "h": 220,
+            "seed": 52,
+            "puffs": 9,
+            "lit": "mid",
+            "shade": "near"
+          },
+          "anim": [
+            {
+              "type": "drift",
+              "vx": 11,
+              "vy": 0
+            }
+          ],
+          "alpha": 0.95
+        }
+      ]
+    }
+  ]
+}

@@ -135,6 +135,16 @@ export const ANIM_SPEC: Record<string, readonly FieldSpec[]> = {
   ],
 };
 
+export const TRANSITION_TYPES = ['cut', 'fade', 'crossfade', 'slide', 'wipe', 'dip'] as const;
+export const TRANSITION_DIRS = ['left', 'right', 'up', 'down'] as const;
+
+export const TRANSITION_SPEC: readonly FieldSpec[] = [
+  { name: 'type', type: 'enum', values: TRANSITION_TYPES, default: 'cut', description: 'Тип перехода между соседними сценами.' },
+  { name: 'duration', type: 'number', min: 0, description: 'Длина наложения в секундах; для cut игнорируется.' },
+  { name: 'dir', type: 'enum', values: TRANSITION_DIRS, default: 'left', description: 'Направление для slide и wipe.' },
+  { name: 'color', type: 'color', default: '#000', description: 'Цвет для fade и dip.' },
+];
+
 export const SPEC_KEYS = {
   scene: SCENE_SPEC.fields.map(({ name }) => name),
   layer: SCENE_SPEC.layer.map(({ name }) => name),

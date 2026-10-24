@@ -6,8 +6,9 @@ const project = JSON.parse(fs.readFileSync('projects/whale-demo.project.json', '
 assert.deepEqual(validateProject(project), { ok: true, errors: [], warnings: [] });
 const total = projectFrameCount(project);
 const firstCount = Math.round(project.scenes[0].scene.duration * project.fps);
-assert.equal(locateFrame(project, firstCount - 1).sceneIndex, 0);
-assert.equal(locateFrame(project, firstCount).sceneIndex, 1);
+assert.equal(locateFrame(project, firstCount - 1).frames[0].sceneIndex, 0);
+assert.equal(locateFrame(project, firstCount).frames[0].sceneIndex, 1);
+assert.equal(locateFrame(project, firstCount).frames.length, 1);
 assert.equal(total, project.scenes.reduce((sum, entry) => sum + Math.round(entry.scene.duration * project.fps), 0));
 
 function expectError(change: (value: any) => void, path: string) {

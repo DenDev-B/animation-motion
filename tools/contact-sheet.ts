@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createCanvas, Path2D } from '@napi-rs/canvas';
-import { createRenderCache, projectFrameCount, renderFrame, validateAsset, validateProject, type CatalogAsset, type ProjectV1 } from '../engine/index.ts';
+import { createCanvas, Path2D, type Canvas } from '@napi-rs/canvas';
+import { composeFrame, createRenderCache, locateFrame, projectFrameCount, renderFrame, validateAsset, validateProject, type CatalogAsset, type ProjectV1 } from '../engine/index.ts';
 import { safeFileName } from './file-names.ts';
 (globalThis as any).Path2D = Path2D;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,8 +33,8 @@ for (const file of fs.readdirSync(catalogDir).filter((name) => name.endsWith('.j
 const validation = validateProject(project, { catalogIds: Object.keys(catalog) });
 if (!validation.ok) fail(validation.errors.map(({ path: p, message }) => `${p}: ${message}`).join('\n'));
 const value = project as ProjectV1;
-const duration = value.scenes.reduce((sum, entry) => sum + entry.scene.duration, 0);
 const frameCount = projectFrameCount(value);
+const duration = frameCount / value.fps;
 const frameTimes = Array.from({ length: Math.ceil(duration / step) }, (_, index) => index * step);
 const size = value.format === '16:9' ? { w: thumb, h: Math.round(thumb * 9 / 16) } : { w: thumb, h: Math.round(thumb * 16 / 9) };
 const cache = createRenderCache();
@@ -43,21 +43,30 @@ const safeName = safeFileName(path.basename(value.title));
 const outputDir = path.join(root, 'out', 'contact');
 fs.mkdirSync(outputDir, { recursive: true });
 
-function locateTime(time: number): { sceneIndex: number; localTime: number } {
-  let elapsed = 0;
-  for (let sceneIndex = 0; sceneIndex < value.scenes.length; sceneIndex++) {
-    const scene = value.scenes[sceneIndex].scene;
-    if (time < elapsed + scene.duration || sceneIndex === value.scenes.length - 1) return { sceneIndex, localTime: Math.min(time - elapsed, scene.duration) };
-    elapsed += scene.duration;
-  }
-  return { sceneIndex: value.scenes.length - 1, localTime: 0 };
+function frameIndex(time: number): number {
+  return Math.min(frameCount - 1, Math.max(0, Math.round(time * value.fps)));
 }
-function render(time: number, sceneIndex: number, localTime: number, width: number, height: number) {
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
-  const scene = value.scenes[sceneIndex].scene;
-  renderFrame(ctx, scene, localTime, { w: width, h: height }, { createCanvas: createCanvasFn, catalog, cache });
-  return canvas;
+function locateAt(index: number) {
+  return locateFrame(value, Math.min(frameCount - 1, Math.max(0, index)));
+}
+type CanvasImage = Canvas;
+interface Buffers { a: CanvasImage; b: CanvasImage; out: CanvasImage; }
+function makeBuffers(width: number, height: number): Buffers {
+  return { a: createCanvas(width, height), b: createCanvas(width, height), out: createCanvas(width, height) };
+}
+function renderFrameAt(index: number, width: number, height: number, buffers: Buffers): CanvasImage {
+  const location = locateAt(index);
+  const ctxA = buffers.a.getContext('2d') as unknown as CanvasRenderingContext2D;
+  const first = location.frames[0];
+  renderFrame(ctxA, value.scenes[first.sceneIndex].scene, first.t, { w: width, h: height }, { createCanvas: createCanvasFn, catalog, cache });
+  const second = location.frames[1];
+  if (!second || !location.transition) return buffers.a;
+  const ctxB = buffers.b.getContext('2d') as unknown as CanvasRenderingContext2D;
+  const ctxOut = buffers.out.getContext('2d') as unknown as CanvasRenderingContext2D;
+  renderFrame(ctxB, value.scenes[second.sceneIndex].scene, second.t, { w: width, h: height }, { createCanvas: createCanvasFn, catalog, cache });
+  const transition = value.scenes[second.sceneIndex].transition;
+  composeFrame(ctxOut, ctxA, ctxB, location.transition.type, location.transition.progress, { w: width, h: height }, { color: transition.color, dir: transition.dir });
+  return buffers.out;
 }
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -66,6 +75,7 @@ function formatTime(seconds: number): string {
 
 const cellHeight = size.h + 34;
 const perSheet = 60;
+const thumbBuffers = makeBuffers(size.w, size.h);
 for (let start = 0; start < frameTimes.length; start += perSheet) {
   const group = frameTimes.slice(start, start + perSheet);
   const rows = Math.ceil(group.length / cols);
@@ -73,15 +83,20 @@ for (let start = 0; start < frameTimes.length; start += perSheet) {
   const ctx = sheet.getContext('2d');
   ctx.fillStyle = '#19151f'; ctx.fillRect(0, 0, sheet.width, sheet.height);
   group.forEach((time, index) => {
-    const { sceneIndex, localTime } = locateTime(time);
+    const timeIndex = frameIndex(time);
+    const location = locateAt(timeIndex);
+    const sceneIndex = location.frames[0].sceneIndex;
+    const previousIndex = frameIndex(index === 0 ? Math.max(0, frameTimes[start] - step) : group[index - 1]);
+    const previousScene = locateAt(previousIndex).frames[0].sceneIndex;
     const col = index % cols, row = Math.floor(index / cols);
     const x = col * size.w, y = row * cellHeight;
-    const image = render(time, sceneIndex, localTime, size.w, size.h);
+    const image = renderFrameAt(timeIndex, size.w, size.h, thumbBuffers);
     ctx.drawImage(image, x, y);
-    ctx.strokeStyle = sceneIndex !== (index === 0 ? locateTime(frameTimes[start] - step).sceneIndex : locateTime(group[index - 1]).sceneIndex) ? '#ffb347' : '#51485b';
+    ctx.strokeStyle = location.transition || sceneIndex !== previousScene ? '#ffb347' : '#51485b';
     ctx.lineWidth = 3; ctx.strokeRect(x + 1, y + 1, size.w - 2, size.h - 2);
     ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif';
-    ctx.fillText(`${formatTime(time)} · ${value.scenes[sceneIndex].name}`, x + 5, y + size.h + 22);
+    const label = location.frames.map((frame) => value.scenes[frame.sceneIndex].name).join(' → ');
+    ctx.fillText(`${formatTime(time)} · ${label}`, x + 5, y + size.h + 22);
   });
   const file = path.join(outputDir, `${safeName}_${Math.floor(start / perSheet) + 1}.png`);
   fs.writeFileSync(file, sheet.toBuffer('image/png'));
@@ -90,11 +105,11 @@ for (let start = 0; start < frameTimes.length; start += perSheet) {
 
 if (at) {
   const timestamps = at.split(',').map(Number);
+  const fullSize = value.format === '16:9' ? { w: 1920, h: 1080 } : { w: 1080, h: 1920 };
+  const fullBuffers = makeBuffers(fullSize.w, fullSize.h);
   for (const time of timestamps) {
     if (!Number.isFinite(time) || time < 0 || time >= duration) fail(`время --at вне проекта: ${time}`);
-    const { sceneIndex, localTime } = locateTime(time);
-    const fullSize = value.format === '16:9' ? { w: 1920, h: 1080 } : { w: 1080, h: 1920 };
-    const image = render(time, sceneIndex, localTime, fullSize.w, fullSize.h);
+    const image = renderFrameAt(frameIndex(time), fullSize.w, fullSize.h, fullBuffers);
     const filename = `${safeName}_at_${time.toFixed(1).replace('.', '-')}.png`;
     fs.writeFileSync(path.join(outputDir, filename), image.toBuffer('image/png'));
     console.log(`FRAME: ${path.join(outputDir, filename)}`);

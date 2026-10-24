@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { createCanvas, Path2D } from '@napi-rs/canvas';
-import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
 (globalThis as any).Path2D = Path2D;
 
@@ -84,7 +84,7 @@ async function main() {
   const fps = args.fps ?? projectV1?.fps ?? 30;
   const w = aspect === '16:9' ? 1920 : 1080;
   const h = aspect === '16:9' ? 1080 : 1920;
-  const sceneDuration = sceneV1?.duration ?? projectV1!.scenes.reduce((sum, entry) => sum + entry.scene.duration, 0);
+  const sceneDuration = sceneV1?.duration ?? projectFrameCount({ ...projectV1!, fps }) / fps;
   const t1 = args.t1 ?? sceneDuration;
   if (t1 > sceneDuration) fail(`--range заканчивается ${t1} > длительность ${sceneDuration}`);
   if (t0 >= t1) fail(`--range начинается ${t0} >= длительность ${t1}`);
@@ -104,9 +104,13 @@ async function main() {
   if (!args.overwrite) { let suffix = 2; while (fs.existsSync(outFile)) outFile = outFileSafe.replace(/\.mp4$/, `_${suffix++}.mp4`); }
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
-  // один холст и один буфер на весь экспорт
-  const canvas = createCanvas(w, h);
-  const ctx = canvas.getContext('2d') as unknown as CanvasRenderingContext2D;
+  // три переиспользуемых холста: кадры A/B и результат композитинга
+  const canvasA = createCanvas(w, h);
+  const ctxA = canvasA.getContext('2d') as unknown as CanvasRenderingContext2D;
+  const canvasB = createCanvas(w, h);
+  const ctxB = canvasB.getContext('2d') as unknown as CanvasRenderingContext2D;
+  const canvasOut = createCanvas(w, h);
+  const ctxOut = canvasOut.getContext('2d') as unknown as CanvasRenderingContext2D;
   const cache = createRenderCache();
   const createCanvasFn = ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement;
 
@@ -127,18 +131,28 @@ async function main() {
 
   for (let i = 0; i < N; i++) {
     const location = projectV1 ? locateFrame({ ...projectV1, fps }, i) : null;
-    const currentScene = projectV1 ? projectV1.scenes[location!.sceneIndex].scene : sceneV1!;
-    const t = projectV1 ? location!.t : t0 + i / fps;
     const tr0 = process.hrtime.bigint();
-    renderFrame(ctx, currentScene, t, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
-    const imgData = ctx.getImageData(0, 0, w, h);
-    if (projectV1 && location!.sceneIndex === 1 && t === 0) {
+    let frameCtx = ctxA;
+    if (projectV1) {
+      const first = location!.frames[0];
+      renderFrame(ctxA, projectV1.scenes[first.sceneIndex].scene, first.t, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
+      const second = location!.frames[1];
+      if (second && location!.transition) {
+        renderFrame(ctxB, projectV1.scenes[second.sceneIndex].scene, second.t, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
+        const transition = projectV1.scenes[second.sceneIndex].transition;
+        composeFrame(ctxOut, ctxA, ctxB, location!.transition.type, location!.transition.progress, { w, h }, { color: transition.color, dir: transition.dir });
+        frameCtx = ctxOut;
+      }
+    } else {
+      renderFrame(ctxA, sceneV1!, t0 + i / fps, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
+    }
+    const imgData = frameCtx.getImageData(0, 0, w, h);
+    if (projectV1 && location!.frames.length === 1 && location!.frames[0].sceneIndex === 1 && location!.frames[0].t === 0) {
       const separateCanvas = createCanvas(w, h);
       const separateCtx = separateCanvas.getContext('2d') as unknown as CanvasRenderingContext2D;
-      renderFrame(separateCtx, currentScene, 0, { w, h }, { createCanvas: createCanvasFn, catalog, cache: createRenderCache() });
+      renderFrame(separateCtx, projectV1.scenes[1].scene, 0, { w, h }, { createCanvas: createCanvasFn, catalog, cache: createRenderCache() });
       const separateData = separateCtx.getImageData(0, 0, w, h).data;
-      const projectData = imgData.data;
-      if (Buffer.compare(Buffer.from(separateData), Buffer.from(projectData)) !== 0) fail('кадр 0 второй сцены не совпал с отдельным рендером: FAIL');
+      if (Buffer.compare(Buffer.from(separateData), Buffer.from(imgData.data)) !== 0) fail('кадр 0 второй сцены не совпал с отдельным рендером: FAIL');
       secondSceneBaseline = Buffer.from(separateData);
     }
     const tr1 = process.hrtime.bigint();
@@ -154,7 +168,8 @@ async function main() {
       const elapsed = Number(process.hrtime.bigint() - tStart) / 1e6;
       const msPerFrame = elapsed / (i + 1);
       const eta = msPerFrame * (N - i - 1);
-      log(`${i + 1}/${N} сцена=${location ? location.sceneIndex + 1 : 1} ms/frame=${msPerFrame.toFixed(2)} ETA=${eta.toFixed(0)} ms`);
+      const scenes = location ? location.frames.map((frame) => frame.sceneIndex + 1).join('+') : '1';
+      log(`${i + 1}/${N} сцена=${scenes} ms/frame=${msPerFrame.toFixed(2)} ETA=${eta.toFixed(0)} ms`);
     }
   }
 
@@ -186,7 +201,7 @@ async function main() {
   checks.push({ name: 'fps', ok: fpsStr === `${fps}/1`, got: fpsStr ?? '', want: `${fps}/1` });
   checks.push({ name: 'число кадров', ok: nbFrames === N, got: String(nbFrames), want: String(N) });
   checks.push({ name: 'длительность', ok: Math.abs(duration - N / fps) <= 1 / fps, got: duration.toFixed(3), want: (N / fps).toFixed(3) });
-  if (projectV1) checks.push({ name: 'кадр второй сцены EXACT', ok: secondSceneBaseline !== null, got: secondSceneBaseline ? 'EXACT' : 'кадр не найден', want: 'EXACT' });
+  if (projectV1 && projectV1.scenes[1]?.transition.type === 'cut') checks.push({ name: 'кадр второй сцены EXACT', ok: secondSceneBaseline !== null, got: secondSceneBaseline ? 'EXACT' : 'кадр не найден', want: 'EXACT' });
 
   let allPass = true;
   for (const c of checks) {
