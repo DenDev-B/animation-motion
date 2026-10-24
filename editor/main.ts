@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, validateProject, projectFrameCount, validateScene } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene } from '../engine/index.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import whaleCatalog from '../catalog/whale.json';
@@ -55,6 +55,24 @@ function restoreProject(value: ProjectV1) {
   project = structuredClone(value); activeSceneIndex = 0; scene = project.scenes[0].scene; duration = scene.duration;
   if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
   renderTabs(); frame();
+}
+function makeEmptyScene(name: string): ProjectSceneV1 {
+  const template = demoScene as unknown as SceneV1;
+  return {
+    id: `s-${Date.now()}`,
+    name,
+    transition: { type: 'cut' },
+    scene: {
+      version: 1,
+      title: name,
+      duration: 5,
+      palette: structuredClone(template.palette),
+      style: {},
+      camera: { verticalFit: template.camera.verticalFit, keys: [{ t: 0, x: 0, y: 0, zoom: 1 }] },
+      assets: {},
+      layers: [],
+    },
+  };
 }
 function undoChange() { const value = history.undo(); if (value) { restoreProject(value); hasUnsavedChanges = true; updateSavedLabel(); saveAutosave(); } }
 function redoChange() { const value = history.redo(); if (value) { restoreProject(value); hasUnsavedChanges = true; updateSavedLabel(); saveAutosave(); } }
@@ -160,11 +178,11 @@ function renderTabs() {
 }
 function moveScene(index: number, delta: number) { const target = index + delta; applyChange('move-scene', () => { [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; }); }
 function updateProjectControls() { applyChange('project-settings', () => { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); }); }
-document.getElementById('addScene')?.addEventListener('click', () => applyChange('add-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name = 'Новая сцена'; entry.scene.title = entry.name; project.scenes.push(entry); activeSceneIndex = project.scenes.length - 1; }));
+document.getElementById('addScene')?.addEventListener('click', () => applyChange('add-scene', () => { project.scenes.push(makeEmptyScene('Новая сцена')); activeSceneIndex = project.scenes.length - 1; }));
 document.getElementById('duplicateScene')?.addEventListener('click', () => applyChange('duplicate-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; }));
 document.getElementById('deleteScene')?.addEventListener('click', () => { if (project.scenes.length <= 1) return; applyChange('delete-scene', () => { project.scenes.splice(activeSceneIndex, 1); activeSceneIndex = Math.min(activeSceneIndex, project.scenes.length - 1); }); });
 projectTitle?.addEventListener('change', updateProjectControls); projectFormat?.addEventListener('change', updateProjectControls); projectFps?.addEventListener('change', updateProjectControls);
-document.getElementById('newProject')?.addEventListener('click', () => applyChange('new-project', () => { const entry = structuredClone(project.scenes[0]); entry.id = 's1'; entry.name = 'Сцена 1'; project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [entry] }; activeSceneIndex = 0; }));
+document.getElementById('newProject')?.addEventListener('click', () => applyChange('new-project', () => { project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [makeEmptyScene('Сцена 1')] }; activeSceneIndex = 0; }));
 document.getElementById('saveProject')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); hasUnsavedChanges = false; updateSavedLabel(); });
 document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
 openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
