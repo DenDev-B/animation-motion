@@ -39,13 +39,34 @@
         <div id="projectDuration" class="hint"></div>
       </div>
       <div class="box">
-        <h2>Код сцены</h2>
-        <textarea id="json" spellcheck="false" rows="14" aria-label="JSON сцены"></textarea>
+        <h2>JSON</h2>
+        <div class="bar">
+          <label class="f">Область<select id="jsonScope"><option value="scene">Сцена</option><option value="project">Весь проект</option><option value="object">Выбранный объект</option></select></label>
+          <label class="f" id="objectRow" hidden>Объект<select id="objectSelect"></select></label>
+        </div>
+        <textarea id="json" spellcheck="false" rows="14" aria-label="JSON"></textarea>
         <div class="btns">
-          <button id="apply" class="primary">Применить</button>
+          <button id="copyJson">Копировать JSON</button>
+          <button id="apply" class="primary">Применить JSON</button>
           <button id="reset">Сбросить к демо</button>
         </div>
-        <p class="hint">Вставьте JSON сцены и нажмите «Применит». Ошибки валидации появятся ниже холста.</p>
+        <div class="bar" style="margin-top:8px">
+          <input id="aiTask" placeholder="Задача для ИИ (необязательно)" style="flex:1">
+          <button id="copyAi">Копировать для ИИ</button>
+        </div>
+        <h2 style="margin-top:10px">Ответ ИИ</h2>
+        <textarea id="aiResponse" spellcheck="false" rows="6" aria-label="Ответ ИИ" placeholder="Вставьте сюда ответ ИИ"></textarea>
+        <div class="btns">
+          <button id="aiCheck">Вставить ответ ИИ</button>
+          <button id="aiApply" class="primary" disabled>Применить</button>
+          <button id="aiFix" hidden>Копировать запрос на исправление</button>
+        </div>
+        <div id="aiStatus" class="msg"></div>
+        <ul id="aiErrors" class="errs"></ul>
+        <ul id="aiWarnings" class="warns"></ul>
+        <h2 style="margin-top:10px">Шаблоны объектов</h2>
+        <div id="templates"></div>
+        <p class="hint">Правки JSON применяются через историю: Ctrl+Z отменяет, Ctrl+Y повторяет.</p>
       </div>
     </div>
   </div>

@@ -1,9 +1,10 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError } from '../engine/index.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import whaleCatalog from '../catalog/whale.json';
 import type { CatalogAsset } from '../engine/schema.ts';
 import { EditorHistory } from './history.ts';
+import { applyTargetJson, targetJson, validateTargetJson, type JsonScope, type JsonTarget } from './json-patch.ts';
 
 const cv = document.getElementById('cv') as HTMLCanvasElement | null;
 const ctx = cv?.getContext('2d') as CanvasRenderingContext2D | null;
@@ -18,6 +19,20 @@ const jsonArea = document.getElementById('json') as HTMLTextAreaElement | null;
 const applyBtn = document.getElementById('apply') as HTMLButtonElement | null;
 const resetBtn = document.getElementById('reset') as HTMLButtonElement | null;
 const selftestPre = document.getElementById('selftest') as HTMLElement | null;
+const jsonScopeSelect = document.getElementById('jsonScope') as HTMLSelectElement | null;
+const objectRow = document.getElementById('objectRow') as HTMLElement | null;
+const objectSelect = document.getElementById('objectSelect') as HTMLSelectElement | null;
+const copyJsonBtn = document.getElementById('copyJson') as HTMLButtonElement | null;
+const copyAiBtn = document.getElementById('copyAi') as HTMLButtonElement | null;
+const aiTaskInput = document.getElementById('aiTask') as HTMLInputElement | null;
+const aiResponse = document.getElementById('aiResponse') as HTMLTextAreaElement | null;
+const aiCheckBtn = document.getElementById('aiCheck') as HTMLButtonElement | null;
+const aiApplyBtn = document.getElementById('aiApply') as HTMLButtonElement | null;
+const aiFixBtn = document.getElementById('aiFix') as HTMLButtonElement | null;
+const aiStatus = document.getElementById('aiStatus') as HTMLElement | null;
+const aiErrors = document.getElementById('aiErrors') as HTMLUListElement | null;
+const aiWarnings = document.getElementById('aiWarnings') as HTMLUListElement | null;
+const templates = document.getElementById('templates') as HTMLElement | null;
 
 let project: ProjectV1 = structuredClone(demoProject) as unknown as ProjectV1;
 let activeSceneIndex = 0;
@@ -34,6 +49,11 @@ const history = new EditorHistory(project);
 const AUTOSAVE_KEY = 'animation-motion/autosave/v1';
 let autosaveTimer: number | undefined;
 let hasUnsavedChanges = false;
+let jsonScope: JsonScope = 'scene';
+let pendingApply: { candidate: unknown; target: JsonTarget; label: string } | null = null;
+let fixCandidate: unknown;
+let fixErrors: ValidationError[] = [];
+const SCOPE_LABELS: Record<JsonScope, string> = { scene: 'сцена', project: 'весь проект', object: 'выбранный объект' };
 
 function updateSavedLabel() {
   const el = document.getElementById('saveState');
@@ -53,8 +73,179 @@ function applyChange(label: string, mutator: () => void) {
 }
 function restoreProject(value: ProjectV1) {
   project = structuredClone(value); activeSceneIndex = 0; scene = project.scenes[0].scene; duration = scene.duration;
-  if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
   renderTabs(); frame();
+}
+function currentTarget(): JsonTarget {
+  const [layerIndex, objectIndex] = (objectSelect?.value ?? '').split(':').map(Number);
+  return {
+    scope: jsonScope,
+    sceneIndex: jsonScope === 'project' ? 0 : activeSceneIndex,
+    layerIndex: jsonScope === 'object' && Number.isInteger(layerIndex) ? layerIndex : 0,
+    objectIndex: jsonScope === 'object' && Number.isInteger(objectIndex) ? objectIndex : 0,
+  };
+}
+function syncScopeRow() {
+  if (objectRow) objectRow.hidden = jsonScope !== 'object';
+}
+function syncObjectOptions() {
+  if (!objectSelect) return;
+  const previous = objectSelect.value;
+  objectSelect.innerHTML = '';
+  const layers = project.scenes[activeSceneIndex]?.scene.layers ?? [];
+  layers.forEach((layer, layerIndex) => layer.objects.forEach((object, objectIndex) => {
+    const option = document.createElement('option');
+    option.value = `${layerIndex}:${objectIndex}`;
+    option.textContent = `${layer.name} / ${object.name} (${object.kind})`;
+    objectSelect.appendChild(option);
+  }));
+  if (previous && Array.from(objectSelect.options).some((option) => option.value === previous)) objectSelect.value = previous;
+  else if (objectSelect.options.length) objectSelect.selectedIndex = 0;
+}
+function refreshJson() {
+  if (!jsonArea) return;
+  try {
+    const value = targetJson(project, currentTarget());
+    jsonArea.value = value === undefined ? '' : JSON.stringify(value, null, 2);
+  } catch {
+    jsonArea.value = '';
+  }
+}
+function showList(element: HTMLUListElement | null, issues: readonly ValidationError[]) {
+  if (!element) return;
+  element.innerHTML = '';
+  for (const issue of issues) {
+    const item = document.createElement('li');
+    item.textContent = `${issue.path || '(корень)'}: ${issue.message}`;
+    element.appendChild(item);
+  }
+}
+function setStatus(message: string, isError: boolean) {
+  if (!aiStatus) return;
+  aiStatus.textContent = message;
+  aiStatus.classList.toggle('err', isError);
+}
+function resetAiResult() {
+  pendingApply = null;
+  fixCandidate = undefined;
+  fixErrors = [];
+  if (aiApplyBtn) aiApplyBtn.disabled = true;
+  if (aiFixBtn) aiFixBtn.hidden = true;
+  showList(aiErrors, []);
+  showList(aiWarnings, []);
+  if (aiStatus) { aiStatus.textContent = ''; aiStatus.classList.remove('err'); }
+}
+function reportErrors(errors: readonly ValidationError[], candidate?: unknown) {
+  pendingApply = null;
+  if (aiApplyBtn) aiApplyBtn.disabled = true;
+  fixCandidate = candidate;
+  fixErrors = [...errors];
+  showList(aiErrors, errors);
+  showList(aiWarnings, []);
+  if (aiFixBtn) aiFixBtn.hidden = candidate === undefined || errors.length === 0;
+}
+function applyCandidate(candidate: unknown, target: JsonTarget, label: string) {
+  applyChange(label, () => {
+    project = applyTargetJson(project, target, candidate);
+    activeSceneIndex = Math.min(target.sceneIndex, project.scenes.length - 1);
+    scene = project.scenes[activeSceneIndex].scene;
+    duration = scene.duration;
+    t = Math.min(t, duration);
+  });
+  pendingApply = null;
+  if (aiApplyBtn) aiApplyBtn.disabled = true;
+}
+function kindExample(kind: string): Record<string, unknown> {
+  const spec = KIND_SPEC[kind as keyof typeof KIND_SPEC];
+  const params: Record<string, unknown> = {};
+  for (const field of spec.params) if (field.default !== undefined) params[field.name] = structuredClone(field.default);
+  if (kind === 'text') params.text = 'Текст';
+  if (kind === 'shape') params.model = { bounds: [-50, -50, 100, 100], parts: [{ id: 'body', type: 'path', d: 'M -50 -50 L 50 -50 L 50 50 L -50 50 Z', fill: '#ffffff' }] };
+  const object: Record<string, unknown> = { id: `obj-${kind}`, name: kind, kind, x: 0, y: 0, s: 1, rot: 0, alpha: 1 };
+  if (kind === 'asset') object.asset = 'whale';
+  object.params = params;
+  return object;
+}
+function renderTemplates() {
+  if (!templates) return;
+  templates.innerHTML = '';
+  for (const kind of Object.keys(KIND_SPEC)) {
+    const row = document.createElement('div');
+    row.className = 'tpl';
+    const name = document.createElement('code');
+    name.textContent = kind;
+    const button = document.createElement('button');
+    button.textContent = 'Копировать пример';
+    button.onclick = () => copyText(JSON.stringify(kindExample(kind), null, 2), `Шаблон ${kind}`);
+    row.append(name, button);
+    templates.appendChild(row);
+  }
+}
+async function copyText(text: string, label: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(`${label}: скопировано в буфер.`, false);
+  } catch {
+    setStatus(`${label}: браузер не дал доступ к буферу обмена.`, true);
+  }
+}
+function applyJsonText() {
+  if (!jsonArea) return;
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(jsonArea.value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    reportErrors([{ path: '', message: `Не удалось разобрать JSON: ${message}` }]);
+    setStatus('Не удалось разобрать JSON.', true);
+    return;
+  }
+  const target = currentTarget();
+  const result = validateTargetJson(project, target, candidate, Object.keys(catalog));
+  if (!result.ok) {
+    reportErrors(result.errors, candidate);
+    setStatus(`Ошибок: ${result.errors.length}. Исправьте JSON или скопируйте запрос на исправление.`, true);
+    return;
+  }
+  try {
+    applyCandidate(candidate, target, 'apply-json');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), true);
+    return;
+  }
+  showList(aiWarnings, result.warnings);
+  setStatus('Применено. Отмена — Ctrl+Z.', false);
+}
+function checkAiResponse() {
+  if (!aiResponse) return;
+  const text = aiResponse.value.trim();
+  if (!text) {
+    reportErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
+    setStatus('Ответ ИИ пуст.', true);
+    return;
+  }
+  let candidate: unknown;
+  try {
+    candidate = extractJson(text);
+  } catch (error) {
+    reportErrors([{ path: '', message: error instanceof Error ? error.message : String(error) }]);
+    setStatus('Не удалось разобрать ответ ИИ.', true);
+    return;
+  }
+  const target = currentTarget();
+  const result = validateTargetJson(project, target, candidate, Object.keys(catalog));
+  if (!result.ok) {
+    reportErrors(result.errors, candidate);
+    setStatus(`Ошибок: ${result.errors.length}. Можно скопировать запрос на исправление.`, true);
+    return;
+  }
+  showList(aiErrors, []);
+  showList(aiWarnings, result.warnings);
+  fixCandidate = undefined;
+  fixErrors = [];
+  if (aiFixBtn) aiFixBtn.hidden = true;
+  pendingApply = { candidate, target, label: 'apply-ai-json' };
+  if (aiApplyBtn) aiApplyBtn.disabled = false;
+  setStatus(result.warnings.length ? `ошибок нет; предупреждений: ${result.warnings.length}; можно применить.` : 'ошибок нет; можно применить.', false);
 }
 function makeEmptyScene(name: string): ProjectSceneV1 {
   const template = demoScene as unknown as SceneV1;
@@ -165,7 +356,7 @@ function renderTabs() {
   project.scenes.forEach((entry, index) => {
     const tab = document.createElement('span');
     tab.className = 'scene-tab';
-    const select = document.createElement('button'); select.textContent = entry.name; select.classList.toggle('on', index === activeSceneIndex); select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2); frame(); renderTabs(); };
+    const select = document.createElement('button'); select.textContent = entry.name; select.classList.toggle('on', index === activeSceneIndex); select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; frame(); renderTabs(); };
     const left = document.createElement('button'); left.textContent = '←'; left.title = 'Переместить влево'; left.disabled = index === 0; left.onclick = () => moveScene(index, -1);
     const right = document.createElement('button'); right.textContent = '→'; right.title = 'Переместить вправо'; right.disabled = index === project.scenes.length - 1; right.onclick = () => moveScene(index, 1);
     select.ondblclick = () => { const name = prompt('Название сцены', entry.name); if (name?.trim()) applyChange('rename-scene', () => { entry.name = name.trim(); }); };
@@ -175,6 +366,9 @@ function renderTabs() {
   if (projectFormat) projectFormat.value = project.format;
   if (projectFps) projectFps.value = String(project.fps);
   if (projectDuration) projectDuration.textContent = `Проект: ${(projectFrameCount(project) / project.fps).toFixed(1)} с · Сцена: ${scene.duration.toFixed(1)} с`;
+  syncObjectOptions();
+  refreshJson();
+  resetAiResult();
 }
 function moveScene(index: number, delta: number) { const target = index + delta; applyChange('move-scene', () => { [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; }); }
 function updateProjectControls() { applyChange('project-settings', () => { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); }); }
@@ -187,33 +381,47 @@ document.getElementById('saveProject')?.addEventListener('click', () => { const 
 document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
 openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed, { catalogIds: Object.keys(catalog) }); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
 
-function applyJSON() {
-  if (!jsonArea) return;
+if (applyBtn) applyBtn.onclick = applyJsonText;
+if (copyJsonBtn) copyJsonBtn.onclick = () => {
+  const value = targetJson(project, currentTarget());
+  if (value === undefined) { setStatus('Объект не выбран.', true); return; }
+  void copyText(JSON.stringify(value, null, 2), 'JSON');
+};
+if (copyAiBtn) copyAiBtn.onclick = () => {
+  const value = targetJson(project, currentTarget());
+  if (value === undefined) { setStatus('Объект не выбран.', true); return; }
+  const task = aiTaskInput?.value.trim() ?? '';
+  void copyText(buildPrompt(value, { task, scope: SCOPE_LABELS[jsonScope] }), 'Запрос для ИИ');
+};
+if (aiCheckBtn) aiCheckBtn.onclick = checkAiResponse;
+if (aiApplyBtn) aiApplyBtn.onclick = () => {
+  if (!pendingApply) return;
+  const { candidate, target, label } = pendingApply;
   try {
-    const parsed = JSON.parse(jsonArea.value);
-    const res = validateScene(parsed, { catalogIds: Object.keys(catalog) });
-    if (!res.ok) { showErrors(res.errors); return; }
-    applyChange('edit-scene-json', () => {
-      scene = parsed as SceneV1;
-      project.scenes[activeSceneIndex].scene = scene;
-      duration = scene.duration;
-      t = Math.min(t, duration);
-    });
-    showErrors(null);
-    jsonArea.value = JSON.stringify(scene, null, 2);
-  } catch (e: any) {
-    showErrors([{ path: '', message: e.message || 'Неверный JSON' }]);
+    applyCandidate(candidate, target, label);
+    setStatus('Применено. Отмена — Ctrl+Z.', false);
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : String(error), true);
   }
-}
-
-if (applyBtn) applyBtn.onclick = applyJSON;
+};
+if (aiFixBtn) aiFixBtn.onclick = () => {
+  if (fixCandidate === undefined || fixErrors.length === 0) return;
+  void copyText(buildFixRequest(fixCandidate, fixErrors), 'Запрос на исправление');
+};
+jsonScopeSelect?.addEventListener('change', () => {
+  jsonScope = (jsonScopeSelect.value as JsonScope) || 'scene';
+  syncScopeRow();
+  syncObjectOptions();
+  refreshJson();
+  resetAiResult();
+});
+objectSelect?.addEventListener('change', () => { refreshJson(); resetAiResult(); });
 if (resetBtn) resetBtn.onclick = () => {
   applyChange('reset-scene', () => {
     scene = demoScene as unknown as SceneV1;
     project.scenes[activeSceneIndex].scene = scene;
     duration = scene.duration;
     t = Math.min(t, duration);
-    if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
     showErrors(null);
   });
 };
@@ -221,7 +429,8 @@ if (resetBtn) resetBtn.onclick = () => {
 document.getElementById('undo')?.addEventListener('click', undoChange);
 document.getElementById('redo')?.addEventListener('click', redoChange);
 
-if (jsonArea) jsonArea.value = JSON.stringify(scene, null, 2);
+syncScopeRow();
+renderTemplates();
 renderTabs();
 updateSavedLabel();
 try {

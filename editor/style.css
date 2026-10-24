@@ -21,5 +21,9 @@ textarea { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospa
 .msg { font-size: 12px; color: #b8531f; min-height: 16px; margin-top: 4px; }
 .msg.err { color: #d2403a; }
 ul.errs { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: #d2403a; }
+ul.warns { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: #8a5a00; }
+.tpl { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px solid #eee6dc; font-size: 12px; }
+.tpl:last-child { border-bottom: 0; }
+.tpl code { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; }
 pre#selftest { font-size: 12px; font-family: monospace; padding: 8px; background: #eef2f7; border-radius: 4px; margin-top: 8px; }
 @media (max-width: 1100px) { .app { grid-template-columns: minmax(0, 1fr) } .stage { order: -1 } }
