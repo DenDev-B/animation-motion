@@ -49,6 +49,7 @@ export type { ValidationError, ValidationResult } from './validate.ts';
 export { KIND_SPEC, ANIM_SPEC, PALETTE_SLOTS, SCENE_SPEC } from './spec.ts';
 export { buildPrompt, extractJson, buildFixRequest } from './ai-io.ts';
 export { counterValue, TEXT_FONT_FAMILY } from './kinds-text.ts';
+export { unitsPerMeter, metersToUnits, unitsToMeters, assetScaleForMeters } from './units.ts';
 export type {
   SceneV1,
   Layer,

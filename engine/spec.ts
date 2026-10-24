@@ -27,6 +27,7 @@ export const SCENE_SPEC = {
     { name: 'duration', type: 'number', min: 0, exclusiveMin: true, description: 'Длительность в секундах; должна быть больше нуля.' },
     { name: 'palette', type: 'object', description: 'Цветовые слоты сцены.' },
     { name: 'style', type: 'object', default: {}, description: 'Эффекты изображения.' },
+    { name: 'world', type: 'object', description: 'Масштаб мира: {unitsPerMeter}; необязателен.' },
     { name: 'camera', type: 'object', description: 'Ключи движения камеры.' },
     { name: 'assets', type: 'object', description: 'Встроенные модели каталога.' },
     { name: 'layers', type: 'array', description: 'Слои сцены в порядке от дальнего к ближнему.' },
@@ -95,7 +96,9 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
     { name: 'windows', type: 'bool', default: true, description: 'Показывать окна; false отключает их.' },
     { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Доля смешения с цветом haze.' },
   ] },
-  asset: { description: 'Модель из scene.assets или catalog/.', params: [] },
+  asset: { description: 'Модель из scene.assets или catalog/.', params: [
+    { name: 'sizeM', type: 'number', min: 0, exclusiveMin: true, description: 'Высота bounds в метрах; требует scene.world.unitsPerMeter.' },
+  ] },
   mountains: { description: 'Детерминированный горный хребет одним замкнутым контуром.', params: [
     { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 2400, description: 'Ширина хребта (> 0).' },
     { name: 'minH', type: 'number', min: 0, default: 60, description: 'Минимальная высота вершины.' },

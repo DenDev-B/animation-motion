@@ -92,6 +92,20 @@ export function validateAsset(json: unknown, options: { inline?: boolean } = {})
   if (options.inline && asset.name !== undefined && typeof asset.name !== 'string') err('name', 'name должен быть строкой; пример: Фигура');
   if (!Array.isArray(asset.bounds) || asset.bounds.length !== 4 || !asset.bounds.every(isFiniteNum)) err('bounds', 'bounds должны содержать 4 конечных числа; допустимо: [x, y, w>0, h>0]; пример: [0, 0, 100, 100]');
   else if (asset.bounds[2] <= 0 || asset.bounds[3] <= 0) err('bounds', 'ширина и высота bounds должны быть больше нуля; пример: [0, 0, 100, 100]');
+  if (asset.realSize !== undefined) {
+    if (!isRecord(asset.realSize)) err('realSize', 'realSize должен быть объектом {heightM?, widthM?}; пример: {"heightM":7}');
+    else {
+      const realSize = asset.realSize;
+      checkUnknown(realSize, ['heightM', 'widthM'], 'realSize', warnings);
+      let hasSize = false;
+      for (const key of ['heightM', 'widthM']) {
+        if (realSize[key] === undefined) continue;
+        hasSize = true;
+        if (!isFiniteNum(realSize[key]) || (realSize[key] as number) <= 0) err(`realSize.${key}`, `${key} должен быть конечным числом больше нуля; пример: 7`);
+      }
+      if (!hasSize) err('realSize', 'нужен хотя бы один размер heightM или widthM; пример: {"heightM":7}');
+    }
+  }
   if (!Array.isArray(asset.parts) || asset.parts.length === 0) err('parts', 'parts должен быть непустым массивом; пример: [{"id":"body","d":"M 0 0 Z"}]');
   else {
     const ids = new Set<string>();
@@ -152,6 +166,15 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       if (st.preset !== undefined && typeof st.preset !== 'string') err('style.preset', 'preset должен быть строкой; пример: dusk');
     }
   }
+  if (s.world !== undefined) {
+    if (!isRecord(s.world)) err('world', 'world должен быть объектом {unitsPerMeter}; пример: {"unitsPerMeter":16}');
+    else {
+      const world = s.world;
+      checkUnknown(world, ['unitsPerMeter'], 'world', warnings);
+      if (!isFiniteNum(world.unitsPerMeter) || (world.unitsPerMeter as number) <= 0) err('world.unitsPerMeter', 'unitsPerMeter должен быть конечным числом больше нуля; пример: 16');
+    }
+  }
+  const world = isRecord(s.world) ? s.world : undefined;
   if (!isRecord(s.camera)) err('camera', 'camera должна быть объектом; пример: {"keys":[]}');
   else {
     const camera = s.camera;
@@ -229,6 +252,7 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       if (object.kind === 'asset') {
         if (typeof object.asset !== 'string' || !object.asset) err(`${objectPath}.asset`, 'asset обязателен для kind asset; пример: whale');
         else if (!catalogIds.has(object.asset) && !(assets && object.asset in assets)) err(`${objectPath}.asset`, `asset "${object.asset}" не найден в scene.assets или каталоге; пример: whale`);
+        if (isRecord(object.params) && object.params.sizeM !== undefined && !world) err(`${objectPath}.params.sizeM`, 'sizeM требует scene.world.unitsPerMeter; добавьте world или уберите sizeM');
       } else if (object.kind === 'shape') {
         if (!isRecord(object.params)) err(`${objectPath}.params`, 'params должен быть объектом; пример: {}');
         else {

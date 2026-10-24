@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "title": "Сравнение масштабов",
+  "duration": 6,
+  "world": {"unitsPerMeter": 16},
+  "palette": {
+    "sky": ["#7fbdf0", "#b8e0ff", "#f7e9c9"],
+    "sun": "#fff3c8",
+    "haze": "#e8dec6",
+    "far": "#8fa7b8",
+    "mid": "#64828b",
+    "near": "#3f6357",
+    "whale": "#2f4a5c",
+    "belly": "#496b7d",
+    "rim": "#fff2b8",
+    "cloudLight": "#ffffff",
+    "cloudShadow": "#c7d6e0",
+    "window": "#ffd27a"
+  },
+  "style": {"grain": 0.03, "vignette": 0.18, "preset": "day"},
+  "camera": {"verticalFit": 0.52, "keys": [{"t": 0, "x": 0, "y": 0, "zoom": 1}]},
+  "assets": {},
+  "layers": [
+    {
+      "id": "scale-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "scale-sky-gradient", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}
+      ]
+    },
+    {
+      "id": "scale-glow",
+      "name": "Солнце",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+        {"id": "scale-sun-glow", "name": "Свечение", "kind": "glow", "x": 620, "y": -330, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 460, "color": "sun", "a": 0.5}}
+      ]
+    },
+    {
+      "id": "scale-far",
+      "name": "Дальний план",
+      "depth": 0.15,
+      "visible": true,
+      "objects": [
+        {"id": "scale-far-hills", "name": "Дальние холмы", "kind": "hills", "x": 0, "y": 210, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 32, "waves": 3, "seed": 4, "color": "far", "haze": 0.35}}
+      ]
+    },
+    {
+      "id": "scale-ground",
+      "name": "Земля",
+      "depth": 0.25,
+      "visible": true,
+      "objects": [
+        {"id": "scale-ground-hills", "name": "Земля", "kind": "hills", "x": 0, "y": 292, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 14, "waves": 2, "seed": 11, "color": "near", "haze": 0.05}}
+      ]
+    },
+    {
+      "id": "scale-objects",
+      "name": "Эталоны",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "scale-human", "name": "Человек", "kind": "asset", "asset": "human", "x": -600, "y": 260, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 1.75}},
+        {"id": "scale-house", "name": "Дом", "kind": "asset", "asset": "house", "x": -390, "y": 260, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 7}},
+        {"id": "scale-whale", "name": "Кит", "kind": "asset", "asset": "whale", "x": -20, "y": -40, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 6.58}},
+        {"id": "scale-plane", "name": "Самолёт", "kind": "asset", "asset": "plane", "x": 470, "y": -130, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 12}}
+      ]
+    },
+    {
+      "id": "scale-labels",
+      "name": "Подписи",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {"id": "scale-label-human", "name": "Подпись человека", "kind": "text", "x": -600, "y": 330, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "1,75 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}},
+        {"id": "scale-label-house", "name": "Подпись дома", "kind": "text", "x": -390, "y": 330, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "7 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}},
+        {"id": "scale-label-whale", "name": "Подпись кита", "kind": "text", "x": -20, "y": 130, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "15 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}},
+        {"id": "scale-label-plane", "name": "Подпись самолёта", "kind": "text", "x": 470, "y": 40, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "37 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}}
+      ]
+    }
+  ]
+}

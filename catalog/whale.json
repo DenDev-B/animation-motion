@@ -3,11 +3,12 @@
   "id": "whale",
   "name": "Кит",
   "bounds": [
-    -320,
-    -100,
-    270,
-    130
+    -322,
+    -79,
+    581,
+    255
   ],
+  "realSize": {"heightM": 6.58, "widthM": 15},
   "parts": [
     {
       "id": "tail",

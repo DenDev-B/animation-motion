@@ -12,6 +12,10 @@ export interface Camera {
   keys: CameraKey[];
 }
 
+export interface World {
+  unitsPerMeter: number;
+}
+
 export interface Style {
   grain?: number;
   vignette?: number;
@@ -49,6 +53,7 @@ export interface CatalogAsset {
   id: string;
   name: string;
   bounds: [number, number, number, number];
+  realSize?: { heightM?: number; widthM?: number };
   parts: AssetPart[];
 }
 
@@ -90,6 +95,7 @@ export interface SceneV1 {
   duration: number;
   palette: Palette;
   style?: Style;
+  world?: World;
   camera: Camera;
   assets: Record<string, CatalogAsset>;
   layers: Layer[];

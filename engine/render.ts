@@ -6,6 +6,7 @@ import { cloudSprite, skylineGeo, drawAsset, getNoise, createRenderCache } from 
 import { drawMountains, drawHills, drawStars } from './kinds-bg.ts';
 import { drawRain, drawSnow, drawBirds } from './kinds-particles.ts';
 import { drawText, drawCounter } from './kinds-text.ts';
+import { assetScaleForMeters } from './units.ts';
 import type { CreateCanvas } from './kinds.ts';
 
 export type RenderDeps = {
@@ -96,7 +97,14 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
         drawCounter(g, p, pal, t);
       } else if (o.kind === 'asset') {
         const a = scene.assets[o.asset ?? ''] ?? catalog[o.asset ?? ''];
-        if (a) drawAsset(g, o, a, t, pal);
+        if (a) {
+          const sizeM = o.params?.sizeM;
+          if (typeof sizeM === 'number' && Number.isFinite(sizeM) && sizeM > 0) {
+            const metersScale = assetScaleForMeters(a, sizeM, scene);
+            g.scale(metersScale, metersScale);
+          }
+          drawAsset(g, o, a, t, pal);
+        }
       } else if (o.kind === 'shape') {
         const model = (o.params?.model as import('./schema.ts').CatalogAsset | undefined);
         if (model) drawAsset(g, o, model, t, pal);

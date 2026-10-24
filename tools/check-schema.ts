@@ -193,6 +193,24 @@ expectAssetFail((a) => { a.parts[0].off = [1]; }, 'asset off tuple');
 expectAssetFail((a) => { a.parts[0].fill = '#abcd'; }, 'asset fill color');
 expectAssetFail((a) => { a.parts[0].stroke = { color: 'rim', w: 0 }; }, 'asset stroke width');
 expectAssetFail((a) => { a.parts[0].type = 'circle'; a.parts[0].cx = 0; a.parts[0].cy = 0; a.parts[0].r = 0; }, 'asset circle radius');
+expectAssetFail((a) => { a.realSize = null; }, 'asset realSize null');
+expectAssetFail((a) => { a.realSize = {}; }, 'asset realSize empty');
+expectAssetFail((a) => { a.realSize.heightM = 0; }, 'asset realSize heightM=0');
+expectAssetFail((a) => { a.realSize.widthM = -1; }, 'asset realSize widthM<0');
+expectAssetFail((a) => { a.realSize.heightM = '7'; }, 'asset realSize heightM string');
+
+expectFail((s) => { s.world = 16; }, 'world not object');
+expectFail((s) => { s.world = {}; }, 'world without unitsPerMeter');
+expectFail((s) => { s.world = { unitsPerMeter: 0 }; }, 'world unitsPerMeter=0');
+expectFail((s) => { s.world = { unitsPerMeter: -2 }; }, 'world unitsPerMeter<0');
+expectFail((s) => { s.world = { unitsPerMeter: Number.NaN }; }, 'world unitsPerMeter NaN');
+expectFail((s) => { objectAt(s, 'Кит').params = { sizeM: 15 }; }, 'sizeM without world');
+const scaled = JSON.parse(JSON.stringify(actual));
+scaled.world = { unitsPerMeter: 16 };
+objectAt(scaled, 'Кит').params = { sizeM: 15 };
+const scaledResult = validateScene(scaled, { catalogIds });
+assert.ok(scaledResult.ok, `sizeM с world должен проходить: ${JSON.stringify(scaledResult.errors)}`);
+expectFail((s) => { s.world = { unitsPerMeter: 16 }; objectAt(s, 'Кит').params = { sizeM: 0 }; }, 'sizeM=0');
 
 expectFail((s) => { s.layers.push({ ...s.layers[0] }); }, 'дубль id');
 expectFail((s) => { s.layers[0].objects[0].kind = 'unknown' as never; }, 'неизвестный kind');

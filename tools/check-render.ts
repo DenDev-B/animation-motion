@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createCanvas, Path2D } from '@napi-rs/canvas';
 (globalThis as any).Path2D = Path2D;
-import { renderFrame, createRenderCache, validateScene, counterValue, type SceneV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateScene, counterValue, unitsPerMeter, unitsToMeters, assetScaleForMeters, type SceneV1, type CatalogAsset } from '../engine/index.ts';
 import { spawn } from 'child_process';
 import http from 'http';
 import { spawnPreview, waitForServer, launchSafeChrome, assertPortFree } from './browser.ts';
@@ -18,8 +18,12 @@ const ALLOW_CHROME = process.env.ALLOW_CHROME === '1';
 function log(m: string) { process.stdout.write(m + '\n'); }
 
 const scene = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'whale-demo.json'), 'utf8')) as unknown as SceneV1;
-const catalogJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalog', 'whale.json'), 'utf8')) as unknown as CatalogAsset;
-const catalog: Record<string, CatalogAsset> = { whale: catalogJson };
+const catalog: Record<string, CatalogAsset> = {};
+for (const file of fs.readdirSync(path.join(__dirname, '..', 'catalog')).filter((name) => name.endsWith('.json'))) {
+  const asset = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalog', file), 'utf8')) as CatalogAsset;
+  catalog[asset.id] = asset;
+}
+const catalogJson = catalog.whale;
 const cache = createRenderCache();
 
 function renderToImageData(w: number, h: number, t: number, target: SceneV1 = scene): ImageData {
@@ -61,7 +65,7 @@ function backgroundChecks(): string | null {
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
   for (const file of ['bg-night.json', 'bg-day.json']) {
     const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
-    const validation = validateScene(target, { catalogIds: ['whale'] });
+    const validation = validateScene(target, { catalogIds: Object.keys(catalog) });
     if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
     for (const [label, w, h] of cases) {
       if (!equal(renderSceneToImageData(target, w, h, 5, createRenderCache()), renderSceneToImageData(target, w, h, 5, createRenderCache()))) return `${file} ${label}: кадр t=5 невоспроизводим`;
@@ -107,7 +111,7 @@ function particleChecks(): string | null {
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
   for (const file of ['rain-city.json', 'snow-hills.json', 'birds-sunset.json']) {
     const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
-    const validation = validateScene(target, { catalogIds: ['whale'] });
+    const validation = validateScene(target, { catalogIds: Object.keys(catalog) });
     if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
     for (const [label, w, h] of cases) {
       if (!equal(renderSceneToImageData(target, w, h, 2, createRenderCache()), renderSceneToImageData(target, w, h, 2, createRenderCache()))) return `${file} ${label}: кадр t=2 невоспроизводим`;
@@ -134,7 +138,7 @@ function textChecks(): string | null {
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
   for (const file of ['title-card.json', 'counter-demo.json']) {
     const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
-    const validation = validateScene(target, { catalogIds: ['whale'] });
+    const validation = validateScene(target, { catalogIds: Object.keys(catalog) });
     if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
     for (const [label, w, h] of cases) {
       if (!equal(renderSceneToImageData(target, w, h, 2, createRenderCache()), renderSceneToImageData(target, w, h, 2, createRenderCache()))) return `${file} ${label}: кадр t=2 невоспроизводим`;
@@ -164,6 +168,38 @@ function textChecks(): string | null {
   return null;
 }
 
+function scaleChecks(): string | null {
+  const file = 'scale-compare.json';
+  const target = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'fixtures', file), 'utf8')) as unknown as SceneV1;
+  const validation = validateScene(target, { catalogIds: Object.keys(catalog) });
+  if (!validation.ok) return `${file}: ${validation.errors[0]?.message ?? 'не проходит валидацию'}`;
+  const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
+  for (const [label, w, h] of cases) {
+    if (!equal(renderSceneToImageData(target, w, h, 2, createRenderCache()), renderSceneToImageData(target, w, h, 2, createRenderCache()))) return `${file} ${label}: кадр t=2 невоспроизводим`;
+    const ordered = createRenderCache();
+    const before = renderSceneToImageData(target, w, h, 4, ordered);
+    for (const t of [0, 1, 2, 3]) renderSceneToImageData(target, w, h, t, ordered);
+    if (!equal(before, renderSceneToImageData(target, w, h, 4, ordered))) return `${file} ${label}: кадр зависит от порядка рендера`;
+    if (label === '16:9') {
+      const data = renderSceneToImageData(target, w, h, 2, createRenderCache()).data;
+      const colors = new Set<string>();
+      for (let i = 0; i < data.length; i += 16) colors.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
+      if (colors.size < 256) return `${file} ${label}: пустой кадр (${colors.size} цветов)`;
+    }
+    log(`SCALE: ${file} ${label} PASS`);
+  }
+  const upm = unitsPerMeter(target);
+  const sizes: Array<[string, number]> = [['human', 1.75], ['house', 7], ['plane', 12], ['whale', 6.58]];
+  for (const [id, sizeM] of sizes) {
+    const asset = catalog[id];
+    if (!asset) return `в каталоге нет ${id}`;
+    const renderedM = unitsToMeters(asset.bounds[3] * assetScaleForMeters(asset, sizeM, target), upm);
+    if (Math.abs(renderedM - sizeM) / sizeM > 0.01) return `${id}: ${renderedM.toFixed(3)} м вместо ${sizeM} м`;
+  }
+  log(`SCALE: world ${upm} units/m, высоты human/house/plane/whale = 1.75/7/12/6.58 м EXACT (в пределах 1%)`);
+  return null;
+}
+
 async function nodeMode(): Promise<void> {
   const shapeFail = shapeEquivalence();
   if (shapeFail) {
@@ -184,6 +220,11 @@ async function nodeMode(): Promise<void> {
   const textFail = textChecks();
   if (textFail) {
     log(`TEXT: FAIL (${textFail})`);
+    process.exit(1);
+  }
+  const scaleFail = scaleChecks();
+  if (scaleFail) {
+    log(`SCALE: FAIL (${scaleFail})`);
     process.exit(1);
   }
   const cases: Array<[string, number, number]> = [['16:9', 1280, 720], ['9:16', 720, 1280]];
