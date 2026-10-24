@@ -9,9 +9,13 @@
 - `npm run preview` — предпросмотр сборки
 - `npm run typecheck` — проверка типов TypeScript
 - `npm run check:schema` — валидация JSON-сцены и схемы
-- `npm run check:render` — самопроверка воспроизводимости кадров (Chrome headless)
-- `npm run compare:frames` — сверка кадров нового рендера с эталоном M0 (Chrome headless, пиксели, out/compare/)
-- `npm run export <scene.json> --format h|v [--size WxH] [--fps 30] [--range A:B] [--out ...] [--crf 18] [--preset veryfast]` — экспорт MP4 по пути B (engine/ + @napi-rs/canvas + ffmpeg rawvideo)
+- `npm run check:project` — проверка формата проекта и переходов между кадрами
+- `npm run check:history` — проверка отмены и повтора
+- `npm run check:render` — самопроверка воспроизводимости кадров через Node
+- `npm run compare:frames` — сверка Node-рендера с эталоном M0 в `reference/m0/baseline/`
+- `npm run export -- <scene.json> --format h|v [--fps 30] [--range A:B] [--out ...] [--crf 18] [--preset veryfast]` — экспорт одной сцены в MP4
+- `npm run export -- --project <project.json> [--format 16:9|9:16] [--fps 30]` — экспорт проекта в MP4
+- `npm run contact -- --project <project.json> [--step 0.5] [--cols 6] [--thumb 320]` — контактный лист в `out/contact/`
 
 ## Структура
 
