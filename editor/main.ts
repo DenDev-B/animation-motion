@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, validateProject, projectFrameCount, validateScene } from '../engine/index.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import whaleCatalog from '../catalog/whale.json';
