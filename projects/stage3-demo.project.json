@@ -1,0 +1,1558 @@
+{
+  "version": 1,
+  "title": "Что если бы киты летали — этап 3",
+  "fps": 30,
+  "format": "16:9",
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Закат",
+      "transition": {
+        "type": "cut"
+      },
+      "scene": {
+        "version": 1,
+        "title": "Закат",
+        "duration": 7,
+        "palette": {
+          "sky": [
+            "#2a2a55",
+            "#a2576e",
+            "#e8956b",
+            "#ffd9a0"
+          ],
+          "sun": "#fff0c4",
+          "haze": "#d59a86",
+          "far": "#9a6a86",
+          "mid": "#5f4166",
+          "near": "#2a2033",
+          "whale": "#2b2430",
+          "belly": "#443a4a",
+          "rim": "#ffd2a1",
+          "cloudLight": "#ffd9ae",
+          "cloudShadow": "#a56f86",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.05,
+          "vignette": 0.35,
+          "preset": "sunset"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": -60,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 7,
+              "x": 60,
+              "y": -14,
+              "zoom": 1.25
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "day-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "day-sky-gradient",
+                "name": "Градиент неба",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {}
+              }
+            ]
+          },
+          {
+            "id": "day-sun",
+            "name": "Солнце",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "day-sun-glow",
+                "name": "Свечение",
+                "kind": "glow",
+                "x": -250,
+                "y": -250,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "r": 520,
+                  "color": "sun",
+                  "a": 0.7
+                }
+              },
+              {
+                "id": "day-sun-shape",
+                "name": "Солнце",
+                "kind": "shape",
+                "x": -250,
+                "y": -250,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "color": "sun",
+                "params": {
+                  "model": {
+                    "bounds": [
+                      -50,
+                      -50,
+                      100,
+                      100
+                    ],
+                    "parts": [
+                      {
+                        "id": "sun-disk",
+                        "name": "Диск",
+                        "type": "circle",
+                        "cx": 0,
+                        "cy": 0,
+                        "r": 44,
+                        "fill": "sun"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "s1-clouds",
+            "name": "Облака",
+            "depth": 0.25,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-cloud-1",
+                "name": "Облако 1",
+                "kind": "cloud",
+                "x": -160,
+                "y": 120,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 560,
+                  "h": 160,
+                  "seed": 4,
+                  "puffs": 9,
+                  "lit": "cloudLight",
+                  "shade": "cloudShadow",
+                  "haze": 0.3
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 4,
+                    "vy": 0
+                  }
+                ]
+              },
+              {
+                "id": "s1-cloud-2",
+                "name": "Облако 2",
+                "kind": "cloud",
+                "x": 200,
+                "y": 160,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 620,
+                  "h": 170,
+                  "seed": 21,
+                  "puffs": 9,
+                  "lit": "cloudLight",
+                  "shade": "cloudShadow",
+                  "haze": 0.3
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 6,
+                    "vy": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "day-far-mountains",
+            "name": "Дальние горы",
+            "depth": 0.2,
+            "visible": true,
+            "objects": [
+              {
+                "id": "day-far-mountains-mesh",
+                "name": "Хребет",
+                "kind": "mountains",
+                "x": 0,
+                "y": 300,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3200,
+                  "minH": 220,
+                  "maxH": 520,
+                  "peaks": 7,
+                  "rough": 0.45,
+                  "seed": 3,
+                  "color": "far",
+                  "haze": 0.3,
+                  "snow": 0.85
+                }
+              }
+            ]
+          },
+          {
+            "id": "day-mid-mountains",
+            "name": "Средние горы",
+            "depth": 0.45,
+            "visible": true,
+            "objects": [
+              {
+                "id": "day-mid-mountains-mesh",
+                "name": "Хребет",
+                "kind": "mountains",
+                "x": 0,
+                "y": 420,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3400,
+                  "minH": 120,
+                  "maxH": 340,
+                  "peaks": 11,
+                  "rough": 0.6,
+                  "seed": 9,
+                  "color": "mid",
+                  "haze": 0.1,
+                  "snow": 0.55
+                }
+              }
+            ]
+          },
+          {
+            "id": "day-hills",
+            "name": "Холмы",
+            "depth": 0.7,
+            "visible": true,
+            "objects": [
+              {
+                "id": "day-hills-mesh",
+                "name": "Холмы",
+                "kind": "hills",
+                "x": 0,
+                "y": 520,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3600,
+                  "amp": 100,
+                  "waves": 3,
+                  "seed": 2,
+                  "color": "near",
+                  "haze": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "s1-whale",
+            "name": "Кит",
+            "depth": 1.15,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-whale-object",
+                "name": "Кит",
+                "kind": "asset",
+                "asset": "whale",
+                "x": 0,
+                "y": -70,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      -140,
+                      0
+                    ],
+                    "to": [
+                      140,
+                      18
+                    ],
+                    "t0": 0,
+                    "t1": 7,
+                    "ease": "sine"
+                  },
+                  {
+                    "type": "bob",
+                    "amp": 8,
+                    "period": 4,
+                    "phase": 0
+                  },
+                  {
+                    "type": "swing",
+                    "amp": 0.03,
+                    "period": 4,
+                    "phase": 0.2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "s1-birds",
+            "name": "Стая",
+            "depth": 1.35,
+            "visible": true,
+            "objects": [
+              {
+                "id": "birds-flock-mesh",
+                "name": "Птицы",
+                "kind": "birds",
+                "x": -120,
+                "y": -180,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "count": 14,
+                  "seed": 41,
+                  "spread": 480,
+                  "size": 24,
+                  "flap": 0.9,
+                  "speed": 100,
+                  "dir": 1,
+                  "bob": 16,
+                  "color": "#2a2030"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Ночь",
+      "transition": {
+        "type": "crossfade",
+        "duration": 1
+      },
+      "scene": {
+        "version": 1,
+        "title": "Ночь",
+        "duration": 6,
+        "palette": {
+          "sky": [
+            "#070d24",
+            "#101a3a",
+            "#1b2a55"
+          ],
+          "sun": "#ffe9b0",
+          "haze": "#3a4f7a",
+          "far": "#28355f",
+          "mid": "#1b2444",
+          "near": "#0b1126",
+          "whale": "#202844",
+          "belly": "#2c3757",
+          "rim": "#8fa9d9",
+          "cloudLight": "#c9d8f5",
+          "cloudShadow": "#2c3a5e",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.05,
+          "vignette": 0.45,
+          "preset": "night"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": -30,
+              "y": -10,
+              "zoom": 1
+            },
+            {
+              "t": 6,
+              "x": 30,
+              "y": -24,
+              "zoom": 1.05
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "night-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "night-sky-gradient",
+                "name": "Градиент неба",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {}
+              }
+            ]
+          },
+          {
+            "id": "night-stars",
+            "name": "Звёзды",
+            "depth": 0.02,
+            "visible": true,
+            "objects": [
+              {
+                "id": "night-stars-field",
+                "name": "Звёздное поле",
+                "kind": "stars",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3000,
+                  "h": 700,
+                  "count": 560,
+                  "seed": 11,
+                  "minR": 1,
+                  "maxR": 2.6,
+                  "twinkle": 0.5,
+                  "color": "#fff6d5",
+                  "bias": 0.3
+                }
+              }
+            ]
+          },
+          {
+            "id": "night-moon",
+            "name": "Луна",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "night-moon-shape",
+                "name": "Луна",
+                "kind": "shape",
+                "x": 170,
+                "y": -330,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "model": {
+                    "bounds": [
+                      -70,
+                      -70,
+                      140,
+                      140
+                    ],
+                    "parts": [
+                      {
+                        "id": "moon-disk",
+                        "name": "Диск",
+                        "type": "circle",
+                        "cx": 0,
+                        "cy": 0,
+                        "r": 62,
+                        "fill": "#ffe9b0"
+                      },
+                      {
+                        "id": "moon-crater-1",
+                        "name": "Кратер 1",
+                        "type": "circle",
+                        "cx": -22,
+                        "cy": 14,
+                        "r": 7,
+                        "fill": "#d9c79b"
+                      },
+                      {
+                        "id": "moon-crater-2",
+                        "name": "Кратер 2",
+                        "type": "circle",
+                        "cx": -10,
+                        "cy": -20,
+                        "r": 4,
+                        "fill": "#d9c79b"
+                      },
+                      {
+                        "id": "moon-crater-3",
+                        "name": "Кратер 3",
+                        "type": "circle",
+                        "cx": 20,
+                        "cy": 28,
+                        "r": 5,
+                        "fill": "#d9c79b"
+                      }
+                    ]
+                  }
+                },
+                "anim": [
+                  {
+                    "type": "bob",
+                    "amp": 3,
+                    "period": 9
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "night-far-mountains",
+            "name": "Дальние горы",
+            "depth": 0.2,
+            "visible": true,
+            "objects": [
+              {
+                "id": "night-far-mountains-mesh",
+                "name": "Хребет",
+                "kind": "mountains",
+                "x": 0,
+                "y": 260,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3200,
+                  "minH": 180,
+                  "maxH": 460,
+                  "peaks": 9,
+                  "rough": 0.6,
+                  "seed": 7,
+                  "color": "far",
+                  "haze": 0.35,
+                  "snow": 0.65
+                }
+              }
+            ]
+          },
+          {
+            "id": "night-mid-mountains",
+            "name": "Средние горы",
+            "depth": 0.4,
+            "visible": true,
+            "objects": [
+              {
+                "id": "night-mid-mountains-mesh",
+                "name": "Хребет",
+                "kind": "mountains",
+                "x": 0,
+                "y": 360,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3400,
+                  "minH": 120,
+                  "maxH": 330,
+                  "peaks": 12,
+                  "rough": 0.7,
+                  "seed": 13,
+                  "color": "mid",
+                  "haze": 0.15,
+                  "snow": 0.25
+                }
+              }
+            ]
+          },
+          {
+            "id": "night-hills",
+            "name": "Холмы",
+            "depth": 0.65,
+            "visible": true,
+            "objects": [
+              {
+                "id": "night-hills-mesh",
+                "name": "Холмы",
+                "kind": "hills",
+                "x": 0,
+                "y": 470,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3600,
+                  "amp": 80,
+                  "waves": 4,
+                  "seed": 5,
+                  "color": "near",
+                  "haze": 0
+                }
+              }
+            ]
+          },
+          {
+            "id": "s2-whale",
+            "name": "Кит",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s2-whale-object",
+                "name": "Кит",
+                "kind": "asset",
+                "asset": "whale",
+                "x": 0,
+                "y": -60,
+                "s": 0.9,
+                "rot": 0,
+                "alpha": 1,
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      -100,
+                      0
+                    ],
+                    "to": [
+                      100,
+                      18
+                    ],
+                    "t0": 0,
+                    "t1": 6,
+                    "ease": "sine"
+                  },
+                  {
+                    "type": "bob",
+                    "amp": 8,
+                    "period": 4,
+                    "phase": 0
+                  },
+                  {
+                    "type": "swing",
+                    "amp": 0.03,
+                    "period": 4,
+                    "phase": 0.2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Дождь",
+      "transition": {
+        "type": "dip",
+        "duration": 0.6,
+        "color": "#000000"
+      },
+      "scene": {
+        "version": 1,
+        "title": "Дождь над городом",
+        "duration": 6,
+        "palette": {
+          "sky": [
+            "#141b33",
+            "#3a3a5e",
+            "#8a5a6a"
+          ],
+          "sun": "#ffd9a0",
+          "haze": "#6b5f7a",
+          "far": "#3a3550",
+          "mid": "#2a2540",
+          "near": "#171326",
+          "whale": "#232842",
+          "belly": "#3a4166",
+          "rim": "#ffc58c",
+          "cloudLight": "#cfe0ff",
+          "cloudShadow": "#6d6a8c",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.05,
+          "vignette": 0.4,
+          "preset": "rain"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": -30,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 6,
+              "x": 30,
+              "y": -10,
+              "zoom": 1.05
+            }
+          ],
+          "shake": {
+            "amp": 20,
+            "freq": 7,
+            "t0": 2,
+            "t1": 4,
+            "seed": 5,
+            "decay": "out"
+          }
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "rain-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "rain-sky-gradient",
+                "name": "Градиент неба",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {}
+              }
+            ]
+          },
+          {
+            "id": "s3-clouds",
+            "name": "Тучи",
+            "depth": 0.2,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s3-cloud-1",
+                "name": "Туча 1",
+                "kind": "cloud",
+                "x": -120,
+                "y": -330,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.8,
+                "params": {
+                  "w": 900,
+                  "h": 230,
+                  "seed": 17,
+                  "puffs": 11,
+                  "lit": "haze",
+                  "shade": "near",
+                  "haze": 0.35
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 5,
+                    "vy": 0
+                  }
+                ]
+              },
+              {
+                "id": "s3-cloud-2",
+                "name": "Туча 2",
+                "kind": "cloud",
+                "x": 240,
+                "y": -230,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.7,
+                "params": {
+                  "w": 760,
+                  "h": 190,
+                  "seed": 23,
+                  "puffs": 10,
+                  "lit": "haze",
+                  "shade": "near",
+                  "haze": 0.3
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 3,
+                    "vy": 0
+                  }
+                ]
+              },
+              {
+                "id": "s3-cloud-3",
+                "name": "Туча 3",
+                "kind": "cloud",
+                "x": -260,
+                "y": -170,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.55,
+                "params": {
+                  "w": 620,
+                  "h": 150,
+                  "seed": 29,
+                  "puffs": 8,
+                  "lit": "haze",
+                  "shade": "near",
+                  "haze": 0.4
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 4,
+                    "vy": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "rain-far-skyline",
+            "name": "Дальный город",
+            "depth": 0.3,
+            "visible": true,
+            "objects": [
+              {
+                "id": "rain-far-skyline-mesh",
+                "name": "Силуэт",
+                "kind": "skyline",
+                "x": 0,
+                "y": 260,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3200,
+                  "minH": 60,
+                  "maxH": 220,
+                  "seed": 5,
+                  "lit": 0.05,
+                  "windows": true,
+                  "haze": 0.3
+                }
+              }
+            ]
+          },
+          {
+            "id": "rain-near-skyline",
+            "name": "Ближний город",
+            "depth": 0.6,
+            "visible": true,
+            "objects": [
+              {
+                "id": "rain-near-skyline-mesh",
+                "name": "Силуэт",
+                "kind": "skyline",
+                "x": 0,
+                "y": 380,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3600,
+                  "minH": 100,
+                  "maxH": 340,
+                  "seed": 9,
+                  "lit": 0.14,
+                  "windows": true,
+                  "haze": 0.1
+                }
+              }
+            ]
+          },
+          {
+            "id": "rain-overlay",
+            "name": "Дождь",
+            "depth": 1.2,
+            "visible": true,
+            "objects": [
+              {
+                "id": "rain-overlay-particles",
+                "name": "Капли",
+                "kind": "rain",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2600,
+                  "h": 1400,
+                  "count": 900,
+                  "seed": 21,
+                  "speed": 1600,
+                  "angle": 12,
+                  "len": 34,
+                  "width": 1.5,
+                  "alpha": 0.55,
+                  "color": "#cfe0ff"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "s4",
+      "name": "Масштаб",
+      "transition": {
+        "type": "slide",
+        "duration": 0.8,
+        "dir": "left"
+      },
+      "scene": {
+        "version": 1,
+        "title": "Масштаб",
+        "duration": 7,
+        "world": {
+          "unitsPerMeter": 16
+        },
+        "palette": {
+          "sky": [
+            "#7fbdf0",
+            "#b8e0ff",
+            "#f7e9c9"
+          ],
+          "sun": "#fff3c8",
+          "haze": "#e8dec6",
+          "far": "#8fa7b8",
+          "mid": "#64828b",
+          "near": "#3f6357",
+          "whale": "#2f4a5c",
+          "belly": "#496b7d",
+          "rim": "#fff2b8",
+          "cloudLight": "#ffffff",
+          "cloudShadow": "#c7d6e0",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.03,
+          "vignette": 0.18,
+          "preset": "day"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": 0,
+              "y": 0,
+              "zoom": 0.72
+            },
+            {
+              "t": 7,
+              "x": 0,
+              "y": -6,
+              "zoom": 0.76
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "scale-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "scale-sky-gradient",
+                "name": "Градиент неба",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {}
+              }
+            ]
+          },
+          {
+            "id": "scale-glow",
+            "name": "Солнце",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "scale-sun-glow",
+                "name": "Свечение",
+                "kind": "glow",
+                "x": 620,
+                "y": -330,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "r": 460,
+                  "color": "sun",
+                  "a": 0.5
+                }
+              }
+            ]
+          },
+          {
+            "id": "scale-far",
+            "name": "Дальний план",
+            "depth": 0.3,
+            "visible": true,
+            "objects": [
+              {
+                "id": "scale-far-hills",
+                "name": "Дальние холмы",
+                "kind": "hills",
+                "x": 0,
+                "y": 120,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3600,
+                  "amp": 32,
+                  "waves": 3,
+                  "seed": 4,
+                  "color": "far",
+                  "haze": 0.35
+                }
+              }
+            ]
+          },
+          {
+            "id": "scale-ground",
+            "name": "Земля",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "scale-ground-hills",
+                "name": "Земля",
+                "kind": "hills",
+                "x": 0,
+                "y": 292,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3600,
+                  "amp": 14,
+                  "waves": 2,
+                  "seed": 11,
+                  "color": "near",
+                  "haze": 0.05
+                }
+              }
+            ]
+          },
+          {
+            "id": "scale-objects",
+            "name": "Эталоны",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "scale-human",
+                "name": "Человек",
+                "kind": "asset",
+                "asset": "human",
+                "x": -310,
+                "y": 260,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "sizeM": 1.75
+                }
+              },
+              {
+                "id": "scale-house",
+                "name": "Дом",
+                "kind": "asset",
+                "asset": "house",
+                "x": -180,
+                "y": 260,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "sizeM": 7
+                }
+              },
+              {
+                "id": "scale-whale",
+                "name": "Кит",
+                "kind": "asset",
+                "asset": "whale",
+                "x": 20,
+                "y": 20,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "sizeM": 6.58
+                }
+              },
+              {
+                "id": "scale-plane",
+                "name": "Самолёт",
+                "kind": "asset",
+                "asset": "plane",
+                "x": 110,
+                "y": -230,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "sizeM": 12
+                }
+              }
+            ]
+          },
+          {
+            "id": "scale-labels",
+            "name": "Подписи",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "scale-label-human",
+                "name": "Подпись человека",
+                "kind": "text",
+                "x": -310,
+                "y": 310,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "text": "1,75 м",
+                  "size": 40,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "sun",
+                  "stroke": 2,
+                  "strokeColor": "#2f4a5c",
+                  "shadow": 6,
+                  "maxWidth": 260,
+                  "lineHeight": 1.2
+                }
+              },
+              {
+                "id": "scale-label-house",
+                "name": "Подпись дома",
+                "kind": "text",
+                "x": -180,
+                "y": 310,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "text": "7 м",
+                  "size": 40,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "sun",
+                  "stroke": 2,
+                  "strokeColor": "#2f4a5c",
+                  "shadow": 6,
+                  "maxWidth": 260,
+                  "lineHeight": 1.2
+                }
+              },
+              {
+                "id": "scale-label-plane",
+                "name": "Подпись самолёта",
+                "kind": "text",
+                "x": 170,
+                "y": -60,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "text": "37 м",
+                  "size": 40,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "sun",
+                  "stroke": 2,
+                  "strokeColor": "#2f4a5c",
+                  "shadow": 6,
+                  "maxWidth": 260,
+                  "lineHeight": 1.2
+                }
+              },
+              {
+                "id": "s4-counter",
+                "name": "Счётчик 15 м",
+                "kind": "counter",
+                "x": 20,
+                "y": 150,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "from": 0,
+                  "to": 15,
+                  "t0": 0.4,
+                  "t1": 3,
+                  "ease": "inOut",
+                  "decimals": 0,
+                  "thousands": "",
+                  "prefix": "",
+                  "suffix": " м",
+                  "size": 72,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "sun",
+                  "stroke": 3,
+                  "strokeColor": "#2f4a5c",
+                  "shadow": 10,
+                  "maxWidth": 600,
+                  "lineHeight": 1.2
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "s5",
+      "name": "Титр",
+      "transition": {
+        "type": "fade",
+        "duration": 0.8,
+        "color": "#000000"
+      },
+      "scene": {
+        "version": 1,
+        "title": "Титр",
+        "duration": 7,
+        "palette": {
+          "sky": [
+            "#1c2240",
+            "#5a3f62",
+            "#c06a63",
+            "#ffc98a"
+          ],
+          "sun": "#ffe6b0",
+          "haze": "#d89a83",
+          "far": "#8a6478",
+          "mid": "#5b3f5c",
+          "near": "#241f33",
+          "whale": "#2a2535",
+          "belly": "#453b4d",
+          "rim": "#ffcf9a",
+          "cloudLight": "#ffe0b5",
+          "cloudShadow": "#996a80",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.05,
+          "vignette": 0.4,
+          "preset": "dawn"
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": 0,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 7,
+              "x": 20,
+              "y": -10,
+              "zoom": 1.06
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "title-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "title-sky-gradient",
+                "name": "Градиент неба",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {}
+              }
+            ]
+          },
+          {
+            "id": "title-glow",
+            "name": "Свечение",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "title-glow-sun",
+                "name": "Свечение",
+                "kind": "glow",
+                "x": 300,
+                "y": -260,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "r": 480,
+                  "color": "sun",
+                  "a": 0.55
+                }
+              }
+            ]
+          },
+          {
+            "id": "s5-clouds",
+            "name": "Облака",
+            "depth": 0.25,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s5-cloud-1",
+                "name": "Облако 1",
+                "kind": "cloud",
+                "x": -250,
+                "y": 120,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.85,
+                "params": {
+                  "w": 440,
+                  "h": 150,
+                  "seed": 31,
+                  "puffs": 9,
+                  "lit": "cloudLight",
+                  "shade": "cloudShadow",
+                  "haze": 0.25
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 4,
+                    "vy": 0
+                  }
+                ]
+              },
+              {
+                "id": "s5-cloud-2",
+                "name": "Облако 2",
+                "kind": "cloud",
+                "x": 280,
+                "y": 160,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.8,
+                "params": {
+                  "w": 460,
+                  "h": 160,
+                  "seed": 44,
+                  "puffs": 9,
+                  "lit": "cloudLight",
+                  "shade": "cloudShadow",
+                  "haze": 0.3
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 3,
+                    "vy": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "title-far",
+            "name": "Дальние горы",
+            "depth": 0.4,
+            "visible": true,
+            "objects": [
+              {
+                "id": "title-mountains",
+                "name": "Горы",
+                "kind": "mountains",
+                "x": 0,
+                "y": 380,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2800,
+                  "minH": 80,
+                  "maxH": 220,
+                  "peaks": 7,
+                  "rough": 0.45,
+                  "seed": 5,
+                  "color": "far",
+                  "haze": 0.35,
+                  "snow": 0.3
+                }
+              }
+            ]
+          },
+          {
+            "id": "title-near",
+            "name": "Холмы",
+            "depth": 0.8,
+            "visible": true,
+            "objects": [
+              {
+                "id": "title-hills",
+                "name": "Холмы",
+                "kind": "hills",
+                "x": 0,
+                "y": 560,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 3600,
+                  "amp": 70,
+                  "waves": 4,
+                  "seed": 9,
+                  "color": "near",
+                  "haze": 0.05
+                }
+              }
+            ]
+          },
+          {
+            "id": "title-text",
+            "name": "Титры",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "title-main",
+                "name": "Заголовок",
+                "kind": "text",
+                "x": 0,
+                "y": -100,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "text": "Что если бы киты летали?",
+                  "size": 60,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "sun",
+                  "stroke": 3,
+                  "strokeColor": "#1c2240",
+                  "shadow": 14,
+                  "maxWidth": 520,
+                  "lineHeight": 1.2
+                },
+                "anim": [
+                  {
+                    "type": "fade",
+                    "from": 0,
+                    "to": 1,
+                    "t0": 0.3,
+                    "t1": 1.5
+                  }
+                ]
+              },
+              {
+                "id": "title-sub",
+                "name": "Подзаголовок",
+                "kind": "text",
+                "x": 0,
+                "y": 30,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.95,
+                "params": {
+                  "text": "Первый ролик канала",
+                  "size": 30,
+                  "weight": 400,
+                  "align": "center",
+                  "color": "#fff4e2",
+                  "stroke": 2,
+                  "strokeColor": "#4a2f45",
+                  "shadow": 8,
+                  "maxWidth": 520,
+                  "lineHeight": 1.3
+                },
+                "anim": [
+                  {
+                    "type": "fade",
+                    "from": 0,
+                    "to": 1,
+                    "t0": 0.8,
+                    "t1": 2
+                  }
+                ]
+              },
+              {
+                "id": "title-footer",
+                "name": "Подпись",
+                "kind": "text",
+                "x": 0,
+                "y": 250,
+                "s": 1,
+                "rot": 0,
+                "alpha": 0.8,
+                "params": {
+                  "text": "animation motion · 2026",
+                  "size": 22,
+                  "weight": 400,
+                  "align": "center",
+                  "color": "#ffcf9a",
+                  "stroke": 2,
+                  "strokeColor": "#3a2a40",
+                  "shadow": 0,
+                  "maxWidth": 420,
+                  "lineHeight": 1.2
+                },
+                "anim": [
+                  {
+                    "type": "fade",
+                    "from": 0,
+                    "to": 1,
+                    "t0": 1.2,
+                    "t1": 2.4
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
