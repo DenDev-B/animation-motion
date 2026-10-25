@@ -32,7 +32,8 @@
     "check": "npm.cmd run typecheck && npm.cmd run build && npm.cmd run check:schema && npm.cmd run check:text && npm.cmd run check:catalog && npm.cmd run check:project && npm.cmd run check:transitions && npm.cmd run check:history && npm.cmd run check:names && npm.cmd run check:docs && npm.cmd run check:roundtrip && npm.cmd run check:units && npm.cmd run check:shake && npm.cmd run check:render && npm.cmd run compare:frames",
     "check:schema": "node tools/check-schema.ts",
     "project:bundle": "node tools/project-bundle.ts",
-    "credits": "node tools/credits.ts"
+    "credits": "node tools/credits.ts",
+    "catalog:add": "node tools/catalog-add.ts"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^1.0.13",
