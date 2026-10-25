@@ -33,5 +33,6 @@ const model = {
   parts: res.parts,
 };
 const r = addToCatalog(model, { id, dry: args.includes('--dry') });
-console.log(r.ok ? `import-svg OK id=${r.id}` : `FAIL: ${JSON.stringify(r.errors)}`);
+if (!r.ok) { console.error('Ошибки:', JSON.stringify(r.errors)); process.exit(1); }
+console.log(`import-svg OK id=${r.id}`);
 if (res.warnings.length) console.log('warnings:', res.warnings.join('; '));
