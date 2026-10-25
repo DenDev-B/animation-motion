@@ -113,7 +113,16 @@ export function validateAsset(json: unknown, options: { inline?: boolean } = {})
       const meta = asset.meta as Record<string, unknown>;
       if (typeof meta.view !== 'string' || !meta.view) err('meta.view', 'meta.view обязателен; пример: side');
       if (!isRecord(meta.license) || typeof meta.license.name !== 'string' || !meta.license.name) err('meta.license.name', 'meta.license.name обязателен; пример: own');
-      if (!asset.realSize && !meta.realSize) err('realSize', 'realSize обязателен (в корне или meta); пример: {"widthM":15}');
+      if (!(isRecord(asset.realSize) && (asset.realSize.heightM !== undefined || asset.realSize.widthM !== undefined)) && !(isRecord(meta.realSize) && (meta.realSize.heightM !== undefined || meta.realSize.widthM !== undefined))) err('realSize', 'realSize обязателен (в корне или meta); пример: {"widthM":15}');
+    }
+  }
+  if (asset.realSize !== undefined) {
+    if (!isRecord(asset.realSize)) err('realSize', 'realSize должен быть объектом; пример: {"widthM":15}');
+    else {
+      const rs = asset.realSize as Record<string, unknown>;
+      if (rs.heightM !== undefined && (!isFiniteNum(rs.heightM) || (rs.heightM as number) <= 0)) err('realSize.heightM', 'realSize.heightM должен быть >0; пример: 7');
+      if (rs.widthM !== undefined && (!isFiniteNum(rs.widthM) || (rs.widthM as number) <= 0)) err('realSize.widthM', 'realSize.widthM должен быть >0; пример: 15');
+      if (rs.heightM === undefined && rs.widthM === undefined) err('realSize', 'realSize не должен быть пустым; пример: {"widthM":15}');
     }
   }
   if (!Array.isArray(asset.parts) || asset.parts.length === 0) err('parts', 'parts должен быть непустым массивом; пример: [{"id":"body","d":"M 0 0 Z"}]');

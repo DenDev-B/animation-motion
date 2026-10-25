@@ -1,7 +1,7 @@
 [
   {
     "id": "house",
-    "name": "Р”РѕРј",
+    "name": "Дом",
     "file": "house.json",
     "tags": [
       "дом",
@@ -18,7 +18,7 @@
   },
   {
     "id": "human",
-    "name": "Р§РµР»РѕРІРµРє",
+    "name": "Человек",
     "file": "human.json",
     "tags": [
       "человек",
@@ -35,7 +35,7 @@
   },
   {
     "id": "plane",
-    "name": "РЎР°РјРѕР»С‘С‚",
+    "name": "Самолёт",
     "file": "plane.json",
     "tags": [
       "самолёт",
