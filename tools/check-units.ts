@@ -8,7 +8,7 @@ import type { CatalogAsset } from '../engine/schema.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalog: Record<string, CatalogAsset> = {};
-for (const file of fs.readdirSync(path.join(root, 'catalog')).filter((name) => name.endsWith('.json'))) {
+for (const file of fs.readdirSync(path.join(root, 'catalog')).filter((name) => name.endsWith('.json') && name !== 'index.json')) {
   const asset = JSON.parse(fs.readFileSync(path.join(root, 'catalog', file), 'utf8')) as CatalogAsset;
   const result = validateAsset(asset);
   assert.ok(result.ok, `${file}: ${JSON.stringify(result.errors)}`);
