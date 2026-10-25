@@ -7,7 +7,7 @@ import { extractDemoScene } from '../tools/extract-m0-scene.ts';
 import type { SceneV1 } from '../engine/schema.ts';
 
 const catalogDir = 'catalog';
-const catalog = Object.fromEntries(fs.readdirSync(catalogDir).filter((name) => name.endsWith('.json')).map((name) => {
+const catalog = Object.fromEntries(fs.readdirSync(catalogDir).filter((name) => name.endsWith('.json') && name !== 'index.json').map((name) => {
   const asset = JSON.parse(fs.readFileSync(path.join(catalogDir, name), 'utf8')) as { id: string };
   const result = validateAsset(asset);
   assert.ok(result.ok, `${name} не проходит validateAsset: ${JSON.stringify(result.errors)}`);
