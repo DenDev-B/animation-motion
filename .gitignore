@@ -5,3 +5,5 @@ out/
 docs/*.zip
 docs/*.plugin
 docs/*_files/
+
+.run/
