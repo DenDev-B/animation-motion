@@ -1,35 +1,53 @@
 [
   {
     "id": "house",
-    "name": "Дом",
+    "name": "Р”РѕРј",
     "file": "house.json",
-    "tags": [],
+    "tags": [
+      "дом",
+      "house",
+      "здание"
+    ],
+    "view": "front",
     "realSize": {
       "heightM": 7,
       "widthM": 9.8
     },
+    "license": "own",
     "attribution": false
   },
   {
     "id": "human",
-    "name": "Человек",
+    "name": "Р§РµР»РѕРІРµРє",
     "file": "human.json",
-    "tags": [],
+    "tags": [
+      "человек",
+      "human",
+      "фигура"
+    ],
+    "view": "side",
     "realSize": {
       "heightM": 1.75,
       "widthM": 0.875
     },
+    "license": "own",
     "attribution": false
   },
   {
     "id": "plane",
-    "name": "Самолёт",
+    "name": "РЎР°РјРѕР»С‘С‚",
     "file": "plane.json",
-    "tags": [],
+    "tags": [
+      "самолёт",
+      "plane",
+      "авиация"
+    ],
+    "view": "side",
     "realSize": {
       "heightM": 12,
       "widthM": 37
     },
+    "license": "own",
     "attribution": false
   },
   {

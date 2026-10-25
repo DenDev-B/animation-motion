@@ -1,69 +1,70 @@
 {
   "version": 1,
   "id": "house",
-  "name": "Дом",
+  "name": "Р”РѕРј",
   "bounds": [-70, -100, 140, 100],
-  "realSize": {"heightM": 7, "widthM": 9.8},
+  "realSize": {"heightM": 7, "widthM": 9.8}, "meta": {"view": "front", "tags": ["дом", "house", "здание"], "license": {"name": "own", "author": "project", "source": "project", "attribution": false}},
   "parts": [
     {
       "id": "walls",
-      "name": "Стены",
+      "name": "РЎС‚РµРЅС‹",
       "fill": "mid",
       "d": "M -60 0 L -60 -62 L 60 -62 L 60 0 Z"
     },
     {
       "id": "roof",
-      "name": "Крыша",
+      "name": "РљСЂС‹С€Р°",
       "fill": "whale",
       "d": "M -70 -60 L 0 -100 L 70 -60 Z"
     },
     {
       "id": "chimney",
-      "name": "Труба",
+      "name": "РўСЂСѓР±Р°",
       "fill": "near",
       "d": "M 26 -84 L 38 -84 L 38 -98 L 26 -98 Z"
     },
     {
       "id": "band",
-      "name": "Межэтажная полоса",
+      "name": "РњРµР¶СЌС‚Р°Р¶РЅР°СЏ РїРѕР»РѕСЃР°",
       "fill": "near",
       "d": "M -60 -33 L 60 -33 L 60 -30 L -60 -30 Z"
     },
     {
       "id": "door",
-      "name": "Дверь",
+      "name": "Р”РІРµСЂСЊ",
       "fill": "near",
       "d": "M -10 0 L -10 -28 L 10 -28 L 10 0 Z"
     },
     {
       "id": "window-ul",
-      "name": "Окно",
+      "name": "РћРєРЅРѕ",
       "fill": "window",
       "d": "M -44 -50 L -30 -50 L -30 -36 L -44 -36 Z"
     },
     {
       "id": "window-uc",
-      "name": "Окно",
+      "name": "РћРєРЅРѕ",
       "fill": "window",
       "d": "M -14 -50 L 0 -50 L 0 -36 L -14 -36 Z"
     },
     {
       "id": "window-ur",
-      "name": "Окно",
+      "name": "РћРєРЅРѕ",
       "fill": "window",
       "d": "M 16 -50 L 30 -50 L 30 -36 L 16 -36 Z"
     },
     {
       "id": "window-ll",
-      "name": "Окно",
+      "name": "РћРєРЅРѕ",
       "fill": "window",
       "d": "M -44 -24 L -30 -24 L -30 -10 L -44 -10 Z"
     },
     {
       "id": "window-lr",
-      "name": "Окно",
+      "name": "РћРєРЅРѕ",
       "fill": "window",
       "d": "M 16 -24 L 30 -24 L 30 -10 L 16 -10 Z"
     }
   ]
 }
+
