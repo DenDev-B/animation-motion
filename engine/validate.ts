@@ -92,18 +92,28 @@ export function validateAsset(json: unknown, options: { inline?: boolean } = {})
   if (options.inline && asset.name !== undefined && typeof asset.name !== 'string') err('name', 'name должен быть строкой; пример: Фигура');
   if (!Array.isArray(asset.bounds) || asset.bounds.length !== 4 || !asset.bounds.every(isFiniteNum)) err('bounds', 'bounds должны содержать 4 конечных числа; допустимо: [x, y, w>0, h>0]; пример: [0, 0, 100, 100]');
   else if (asset.bounds[2] <= 0 || asset.bounds[3] <= 0) err('bounds', 'ширина и высота bounds должны быть больше нуля; пример: [0, 0, 100, 100]');
-  if (asset.realSize !== undefined) {
-    if (!isRecord(asset.realSize)) err('realSize', 'realSize должен быть объектом {heightM?, widthM?}; пример: {"heightM":7}');
+  if (asset.meta !== undefined) {
+    if (!isRecord(asset.meta)) err('meta', 'meta должен быть объектом; пример: {"view":"side","license":{"name":"own"}}');
     else {
-      const realSize = asset.realSize;
-      checkUnknown(realSize, ['heightM', 'widthM'], 'realSize', warnings);
-      let hasSize = false;
-      for (const key of ['heightM', 'widthM']) {
-        if (realSize[key] === undefined) continue;
-        hasSize = true;
-        if (!isFiniteNum(realSize[key]) || (realSize[key] as number) <= 0) err(`realSize.${key}`, `${key} должен быть конечным числом больше нуля; пример: 7`);
+      const meta = asset.meta;
+      if (meta.view !== undefined && !['side','bottom','front','top','three-quarter'].includes(String(meta.view))) err('meta.view', 'meta.view должен быть side|bottom|front|top|three-quarter');
+      if (meta.facing !== undefined && !['left','right'].includes(String(meta.facing))) err('meta.facing', 'meta.facing должен быть left или right');
+      if (meta.license !== undefined) {
+        if (!isRecord(meta.license)) err('meta.license', 'meta.license должен быть объектом; пример: {"name":"own"}');
+        else if (typeof meta.license.name !== 'string' || !meta.license.name) err('meta.license.name', 'meta.license.name обязателен; пример: own');
       }
-      if (!hasSize) err('realSize', 'нужен хотя бы один размер heightM или widthM; пример: {"heightM":7}');
+      if (meta.realSize !== undefined) {
+        if (!isRecord(meta.realSize)) err('meta.realSize', 'meta.realSize должен быть объектом');
+      }
+    }
+  }
+  if (!options.inline) {
+    if (!isRecord(asset.meta)) err('meta', 'meta обязателен для модели каталога; пример: {"view":"side","license":{"name":"own"}}');
+    else {
+      const meta = asset.meta as Record<string, unknown>;
+      if (typeof meta.view !== 'string' || !meta.view) err('meta.view', 'meta.view обязателен; пример: side');
+      if (!isRecord(meta.license) || typeof meta.license.name !== 'string' || !meta.license.name) err('meta.license.name', 'meta.license.name обязателен; пример: own');
+      if (!asset.realSize && !meta.realSize) err('realSize', 'realSize обязателен (в корне или meta); пример: {"widthM":15}');
     }
   }
   if (!Array.isArray(asset.parts) || asset.parts.length === 0) err('parts', 'parts должен быть непустым массивом; пример: [{"id":"body","d":"M 0 0 Z"}]');
