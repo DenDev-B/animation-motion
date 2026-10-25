@@ -68,3 +68,4 @@ export type {
   AssetPart,
   Palette,
 };
+export * from './svg-import.ts';
