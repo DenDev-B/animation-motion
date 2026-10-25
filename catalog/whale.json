@@ -8,7 +8,7 @@
     581,
     255
   ],
-  "realSize": {"widthM": 15},
+  "realSize": {"widthM": 15}, "meta": {"view": "side", "facing": "right", "tags": ["кит", "whale", "море"], "license": {"name": "own", "attribution": false}},
   "parts": [
     {
       "id": "tail",

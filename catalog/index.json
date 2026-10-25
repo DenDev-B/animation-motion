@@ -1,0 +1,51 @@
+[
+  {
+    "id": "house",
+    "name": "Дом",
+    "file": "house.json",
+    "tags": [],
+    "realSize": {
+      "heightM": 7,
+      "widthM": 9.8
+    },
+    "attribution": false
+  },
+  {
+    "id": "human",
+    "name": "Человек",
+    "file": "human.json",
+    "tags": [],
+    "realSize": {
+      "heightM": 1.75,
+      "widthM": 0.875
+    },
+    "attribution": false
+  },
+  {
+    "id": "plane",
+    "name": "Самолёт",
+    "file": "plane.json",
+    "tags": [],
+    "realSize": {
+      "heightM": 12,
+      "widthM": 37
+    },
+    "attribution": false
+  },
+  {
+    "id": "whale",
+    "name": "Кит",
+    "file": "whale.json",
+    "tags": [
+      "кит",
+      "whale",
+      "море"
+    ],
+    "view": "side",
+    "realSize": {
+      "widthM": 15
+    },
+    "license": "own",
+    "attribution": false
+  }
+]

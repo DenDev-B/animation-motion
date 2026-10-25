@@ -64,6 +64,13 @@ export interface CatalogAsset {
   name: string;
   bounds: [number, number, number, number];
   realSize?: { heightM?: number; widthM?: number };
+  meta?: {
+    view?: 'side' | 'bottom' | 'front' | 'top' | 'three-quarter';
+    facing?: 'left' | 'right';
+    tags?: string[];
+    anchor?: [number, number];
+    license?: { name: string; author?: string; source?: string; url?: string; attribution?: boolean };
+  };
   parts: AssetPart[];
 }
 
