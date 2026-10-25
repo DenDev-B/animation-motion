@@ -36,7 +36,10 @@ if (requestedScene !== undefined) {
   scope = 'сцена';
 }
 const prompt = buildPrompt(target, { task, scope });
+const catalogIndex = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'catalog', 'index.json'), 'utf8'));
+const catalogBlock = '\n\nКаталог моделей (используй только эти id):\n' + catalogIndex.map((x: any) => `- ${x.id}: ${x.name}; теги: ${(x.tags || []).join(', ')}; realSize: ${JSON.stringify(x.realSize)}`).join('\n');
+const promptWithCatalog = prompt + catalogBlock;
 const output = path.resolve('out/ai/prompt.md');
 fs.mkdirSync(path.dirname(output), { recursive: true });
-fs.writeFileSync(output, prompt, 'utf8');
-console.log(`AI_PROMPT: ${output} (${Buffer.byteLength(prompt, 'utf8')} байт)`);
+fs.writeFileSync(output, promptWithCatalog, 'utf8');
+console.log(`AI_PROMPT: ${output} (${Buffer.byteLength(promptWithCatalog, 'utf8')} байт)`);
