@@ -64,6 +64,24 @@
         <div id="aiStatus" class="msg"></div>
         <ul id="aiErrors" class="errs"></ul>
         <ul id="aiWarnings" class="warns"></ul>
+        <h2 style="margin-top:10px">Новый проект из идеи</h2>
+        <div class="bar" style="margin-top:8px">
+          <label class="f">Идея<textarea id="ideaText" rows="2" placeholder="Например: Что если бы киты летали над городом"></textarea></label>
+          <label class="f">Сцен<input id="ideaScenes" type="number" value="5" min="2" max="12" style="width:70px"></label>
+          <label class="f">Секунд на сцену<input id="ideaSeconds" type="number" value="8" min="4" max="20" style="width:90px"></label>
+          <label class="f">Формат<select id="ideaFormat"><option>16:9</option><option>9:16</option></select></label>
+        </div>
+        <div class="btns">
+          <button id="ideaCopyPrompt">Копировать промт</button>
+        </div>
+        <textarea id="ideaResponse" spellcheck="false" rows="6" aria-label="Ответ ИИ для проекта" placeholder="Вставьте сюда JSON-ответ ИИ"></textarea>
+        <div class="btns">
+          <button id="ideaCreate" class="primary">Создать проект</button>
+          <button id="ideaFix" hidden>Копировать запрос на исправление</button>
+        </div>
+        <div id="ideaStatus" class="msg"></div>
+        <ul id="ideaErrors" class="errs"></ul>
+        <ul id="ideaWarnings" class="warns"></ul>
         <h2 style="margin-top:10px">Шаблоны объектов</h2>
         <div id="templates"></div>
         <p class="hint">Правки JSON применяются через историю: Ctrl+Z отменяет, Ctrl+Y повторяет.</p>

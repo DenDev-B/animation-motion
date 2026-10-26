@@ -1,7 +1,12 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions } from '../engine/index.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import whaleCatalog from '../catalog/whale.json';
+import catalogIndexRaw from '../catalog/index.json';
+import houseModel from '../catalog/house.json';
+import humanModel from '../catalog/human.json';
+import planeModel from '../catalog/plane.json';
+import whaleModel from '../catalog/whale.json';
 import type { CatalogAsset } from '../engine/schema.ts';
 import { EditorHistory } from './history.ts';
 import { applyTargetJson, targetJson, validateTargetJson, type JsonScope, type JsonTarget } from './json-patch.ts';
@@ -34,10 +39,36 @@ const aiErrors = document.getElementById('aiErrors') as HTMLUListElement | null;
 const aiWarnings = document.getElementById('aiWarnings') as HTMLUListElement | null;
 const templates = document.getElementById('templates') as HTMLElement | null;
 
+// Новый проект из идеи
+const ideaText = document.getElementById('ideaText') as HTMLTextAreaElement | null;
+const ideaScenes = document.getElementById('ideaScenes') as HTMLInputElement | null;
+const ideaSeconds = document.getElementById('ideaSeconds') as HTMLInputElement | null;
+const ideaFormat = document.getElementById('ideaFormat') as HTMLSelectElement | null;
+const ideaCopyPrompt = document.getElementById('ideaCopyPrompt') as HTMLButtonElement | null;
+const ideaResponse = document.getElementById('ideaResponse') as HTMLTextAreaElement | null;
+const ideaCreate = document.getElementById('ideaCreate') as HTMLButtonElement | null;
+const ideaFix = document.getElementById('ideaFix') as HTMLButtonElement | null;
+const ideaStatus = document.getElementById('ideaStatus') as HTMLElement | null;
+const ideaErrEl = document.getElementById('ideaErrList') as HTMLUListElement | null;
+const ideaWarnEl = document.getElementById('ideaWarnList') as HTMLUListElement | null;
+
 let project: ProjectV1 = structuredClone(demoProject) as unknown as ProjectV1;
 let activeSceneIndex = 0;
 let scene: SceneV1 = project.scenes[activeSceneIndex].scene;
 let catalog: Record<string, CatalogAsset> = { whale: whaleCatalog as unknown as CatalogAsset };
+const modelsByFile: Record<string, any> = { 'house.json': houseModel, 'human.json': humanModel, 'plane.json': planeModel, 'whale.json': whaleModel };
+const catalogIndex = (catalogIndexRaw as any[]).map((e: any) => {
+  const model = modelsByFile[e.file];
+  return {
+    id: e.id,
+    name: e.name,
+    tags: e.tags,
+    view: e.view,
+    realSize: e.realSize,
+    bounds: model?.bounds,
+    license: e.license?.name,
+  };
+});
 let t = 0;
 let duration = 12;
 let playing = true;
@@ -53,6 +84,8 @@ let jsonScope: JsonScope = 'scene';
 let pendingApply: { candidate: unknown; target: JsonTarget; label: string } | null = null;
 let fixCandidate: unknown;
 let fixErrors: ValidationError[] = [];
+let ideaCandidate: unknown;
+let ideaErrList: ValidationError[] = [];
 const SCOPE_LABELS: Record<JsonScope, string> = { scene: 'сцена', project: 'весь проект', object: 'выбранный объект' };
 
 function updateSavedLabel() {
@@ -134,6 +167,15 @@ function resetAiResult() {
   showList(aiWarnings, []);
   if (aiStatus) { aiStatus.textContent = ''; aiStatus.classList.remove('err'); }
 }
+function resetIdeaResult() {
+  ideaCandidate = undefined;
+  ideaErrList = [];
+  if (ideaCreate) ideaCreate.disabled = true;
+  if (ideaFix) ideaFix.hidden = true;
+  showList(ideaErrEl, []);
+  showList(ideaWarnEl, []);
+  if (ideaStatus) { ideaStatus.textContent = ''; ideaStatus.classList.remove('err'); }
+}
 function reportErrors(errors: readonly ValidationError[], candidate?: unknown) {
   pendingApply = null;
   if (aiApplyBtn) aiApplyBtn.disabled = true;
@@ -142,6 +184,20 @@ function reportErrors(errors: readonly ValidationError[], candidate?: unknown) {
   showList(aiErrors, errors);
   showList(aiWarnings, []);
   if (aiFixBtn) aiFixBtn.hidden = candidate === undefined || errors.length === 0;
+}
+function reportIdeaErrors(errors: readonly ValidationError[], candidate?: unknown) {
+  ideaCandidate = candidate;
+  ideaErrList = [...errors];
+  if (ideaCreate) ideaCreate.disabled = true;
+  if (ideaFix) ideaFix.hidden = candidate === undefined || errors.length === 0;
+  showList(ideaErrEl, errors);
+  showList(ideaWarnEl, []);
+  if (ideaStatus) { ideaStatus.textContent = errors.length ? `Ошибок: ${errors.length}. Исправьте ответ ИИ.` : ''; ideaStatus.classList.toggle('err', errors.length > 0); }
+}
+function setIdeaStatus(message: string, isError: boolean) {
+  if (!ideaStatus) return;
+  ideaStatus.textContent = message;
+  ideaStatus.classList.toggle('err', isError);
 }
 function applyCandidate(candidate: unknown, target: JsonTarget, label: string) {
   applyChange(label, () => {
@@ -153,6 +209,21 @@ function applyCandidate(candidate: unknown, target: JsonTarget, label: string) {
   });
   pendingApply = null;
   if (aiApplyBtn) aiApplyBtn.disabled = true;
+}
+function applyIdeaProject(candidate: unknown) {
+  if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
+  applyChange('new-project-from-idea', () => {
+    project = structuredClone(candidate as ProjectV1);
+    activeSceneIndex = 0;
+    scene = project.scenes[0].scene;
+    duration = scene.duration;
+    t = Math.min(t, duration);
+  });
+  ideaCandidate = undefined;
+  ideaErrList = [];
+  if (ideaCreate) ideaCreate.disabled = true;
+  if (ideaFix) ideaFix.hidden = true;
+  setStatus('Проект создан из идеи. Отмена — Ctrl+Z.', false);
 }
 function kindExample(kind: string): Record<string, unknown> {
   const spec = KIND_SPEC[kind as keyof typeof KIND_SPEC];
@@ -246,6 +317,39 @@ function checkAiResponse() {
   pendingApply = { candidate, target, label: 'apply-ai-json' };
   if (aiApplyBtn) aiApplyBtn.disabled = false;
   setStatus(result.warnings.length ? `ошибок нет; предупреждений: ${result.warnings.length}; можно применить.` : 'ошибок нет; можно применить.', false);
+}
+function checkIdeaResponse(): boolean {
+  if (!ideaResponse) return false;
+  const text = ideaResponse.value.trim();
+  if (!text) {
+    reportIdeaErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
+    setIdeaStatus('Ответ ИИ пуст.', true);
+    return false;
+  }
+  let candidate: unknown;
+  try {
+    candidate = extractJson(text);
+  } catch (error) {
+    reportIdeaErrors([{ path: '', message: error instanceof Error ? error.message : String(error) }]);
+    setIdeaStatus('Не удалось разобрать ответ ИИ.', true);
+    return false;
+  }
+  const reply = validateProjectReply(candidate, { catalogIds: Object.keys(catalog) });
+  ideaCandidate = candidate;
+  ideaErrList = [...reply.errors];
+  showList(ideaErrEl, reply.errors);
+  showList(ideaWarnEl, reply.warnings);
+  if (reply.errors.length === 0) {
+    if (ideaCreate) ideaCreate.disabled = false;
+    if (ideaFix) ideaFix.hidden = true;
+    setIdeaStatus(reply.warnings.length ? `ошибок нет; предупреждений: ${reply.warnings.length}; можно создать проект.` : 'ошибок нет; можно создать проект.', false);
+    if (reply.suggestions.length) console.log(formatSuggestions(reply.suggestions));
+    return true;
+  }
+  if (ideaCreate) ideaCreate.disabled = true;
+  if (ideaFix) ideaFix.hidden = false;
+  setIdeaStatus(`Ошибок: ${reply.errors.length}. Скопируйте запрос на исправление.`, true);
+  return false;
 }
 function makeEmptyScene(name: string): ProjectSceneV1 {
   const template = demoScene as unknown as SceneV1;
@@ -369,6 +473,7 @@ function renderTabs() {
   syncObjectOptions();
   refreshJson();
   resetAiResult();
+  resetIdeaResult();
 }
 function moveScene(index: number, delta: number) { const target = index + delta; applyChange('move-scene', () => { [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; }); }
 function updateProjectControls() { applyChange('project-settings', () => { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); }); }
@@ -407,6 +512,29 @@ if (aiApplyBtn) aiApplyBtn.onclick = () => {
 if (aiFixBtn) aiFixBtn.onclick = () => {
   if (fixCandidate === undefined || fixErrors.length === 0) return;
   void copyText(buildFixRequest(fixCandidate, fixErrors), 'Запрос на исправление');
+};
+if (ideaCopyPrompt) ideaCopyPrompt.onclick = () => {
+  const idea = ideaText?.value.trim() ?? '';
+  if (!idea) { setIdeaStatus('Введите идею.', true); return; }
+  try {
+    const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
+    const seconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
+    const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
+    const prompt = buildProjectPrompt({ idea, scenes, sceneSeconds: seconds, format, catalogIndex });
+    void copyText(prompt, 'Промт идеи→проект');
+    setIdeaStatus('Промт скопирован в буфер обмена.', false);
+  } catch (error) {
+    setIdeaStatus(error instanceof Error ? error.message : String(error), true);
+  }
+};
+if (ideaCreate) ideaCreate.onclick = () => {
+  if (!checkIdeaResponse()) return;
+  if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
+  applyIdeaProject(ideaCandidate!);
+};
+if (ideaFix) ideaFix.onclick = () => {
+  if (ideaCandidate === undefined || ideaErrList.length === 0) return;
+  void copyText(buildFixRequest(ideaCandidate, ideaErrList), 'Запрос на исправление');
 };
 jsonScopeSelect?.addEventListener('change', () => {
   jsonScope = (jsonScopeSelect.value as JsonScope) || 'scene';
