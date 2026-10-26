@@ -428,7 +428,7 @@ export function importSvg(src: string, opts: SvgImportOptions = {}): SvgImportRe
   const hw = (w * scale) / 2, hh = (h * scale) / 2;
   return {
     parts,
-    bounds: [Math.round(-hw * 100) / 100, Math.round(-hh * 100) / 100, Math.round(hw * 100) / 100, Math.round(hh * 100) / 100],
+    bounds: [Math.round(-hw * 100) / 100, Math.round(-hh * 100) / 100, Math.round(w * scale * 100) / 100, Math.round(h * scale * 100) / 100],
     aspect: h > 1e-9 ? w / h : 1,
     warnings,
   };

@@ -11,6 +11,13 @@ for (const f of files) {
   const r1 = importSvg(src, { colors: 'keep' });
   const r2 = importSvg(src, { colors: 'keep' });
   if (JSON.stringify(r1) !== JSON.stringify(r2)) { console.error(f, 'not reproducible'); errors++; }
+  const b = r1.bounds;
+  if (!Array.isArray(b) || b.length !== 4 || !b.every(Number.isFinite)) { console.error(f, 'bounds not [x,y,w,h]'); errors++; }
+  else {
+    const [x, y, w, h] = b;
+    if (w <= 0 || h <= 0) { console.error(f, 'bounds width/height not positive'); errors++; }
+    if (Math.abs(x - (-w / 2)) > 1e-6 || Math.abs(y - (-h / 2)) > 1e-6) { console.error(f, 'bounds not centered (x=-w/2, y=-h/2)'); errors++; }
+  }
   const model: any = { version: 1, id: 't', name: 't', bounds: r1.bounds, realSize: { heightM: 1, widthM: r1.aspect }, meta: { view: 'side', license: { name: 'own' } }, parts: r1.parts };
   const v = validateAsset(model);
   if (!v.ok) { console.error(f, 'invalid', JSON.stringify(v.errors)); errors++; }
