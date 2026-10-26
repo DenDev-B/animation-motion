@@ -1,0 +1,715 @@
+{
+  "version": 1,
+  "title": "Что если бы киты летали над городом",
+  "fps": 30,
+  "format": "16:9",
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Рассвет",
+      "scene": {
+        "version": 1,
+        "title": "Город на рассвете",
+        "duration": 8,
+        "palette": {
+          "sky": [
+            "#27345f",
+            "#7d6a9c",
+            "#f2b48a",
+            "#ffd9a0"
+          ],
+          "sun": "#ffd9a0",
+          "haze": "#9aa0c0",
+          "far": "#59638f",
+          "mid": "#3a4270",
+          "near": "#1f2442",
+          "whale": "#4b6a9b",
+          "belly": "#c9d6ea",
+          "rim": "#f4dfc0",
+          "cloudLight": "#f0e6dc",
+          "cloudShadow": "#a89cb8",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.08,
+          "vignette": 0.35
+        },
+        "world": {
+          "unitsPerMeter": 30
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": -60,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 8,
+              "x": 40,
+              "y": -10,
+              "zoom": 1.15
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "s1-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-sky-grad",
+                "name": "Небо",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1
+              }
+            ]
+          },
+          {
+            "id": "s1-sun",
+            "name": "Солнце",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-sun-glow",
+                "name": "Свечение",
+                "kind": "glow",
+                "x": 250,
+                "y": 60,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "r": 420,
+                  "color": "sun",
+                  "a": 0.8
+                }
+              }
+            ]
+          },
+          {
+            "id": "s1-far",
+            "name": "Дальний план",
+            "depth": 0.3,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-hills",
+                "name": "Холмы",
+                "kind": "hills",
+                "x": 0,
+                "y": 340,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2600,
+                  "amp": 60,
+                  "waves": 3,
+                  "seed": 3,
+                  "color": "far",
+                  "haze": 0.4
+                }
+              }
+            ]
+          },
+          {
+            "id": "s1-city",
+            "name": "Город",
+            "depth": 0.6,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-skyline",
+                "name": "Силуэт города",
+                "kind": "skyline",
+                "x": 0,
+                "y": 420,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2600,
+                  "seed": 5,
+                  "lit": 0.4,
+                  "haze": 0.2
+                }
+              }
+            ]
+          },
+          {
+            "id": "s1-act",
+            "name": "Действие",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-house",
+                "name": "Дом",
+                "kind": "asset",
+                "x": -380,
+                "y": 440,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "asset": "house",
+                "params": {
+                  "sizeM": 7
+                }
+              },
+              {
+                "id": "s1-human",
+                "name": "Человек",
+                "kind": "asset",
+                "x": -120,
+                "y": 440,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "asset": "human",
+                "params": {
+                  "sizeM": 1.75,
+                  "motion": {
+                    "preset": "walk"
+                  }
+                },
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      0,
+                      0
+                    ],
+                    "to": [
+                      180,
+                      0
+                    ],
+                    "t0": 0,
+                    "t1": 8,
+                    "ease": "lin"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "s1-title",
+            "name": "Титры",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s1-text",
+                "name": "Заголовок",
+                "kind": "text",
+                "x": 0,
+                "y": -330,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "text": "Что если бы киты летали",
+                  "size": 72,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "#ffffff",
+                  "stroke": 3,
+                  "strokeColor": "#27345f",
+                  "shadow": 8,
+                  "maxWidth": 1400
+                },
+                "anim": [
+                  {
+                    "type": "fade",
+                    "from": 0,
+                    "to": 1,
+                    "t0": 0,
+                    "t1": 1.5
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "transition": {
+        "type": "cut"
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Кит над крышами",
+      "scene": {
+        "version": 1,
+        "title": "Кит над крышами",
+        "duration": 8,
+        "palette": {
+          "sky": [
+            "#3f6fb0",
+            "#8fb8e0",
+            "#dff0ff"
+          ],
+          "sun": "#ffd9a0",
+          "haze": "#9aa0c0",
+          "far": "#59638f",
+          "mid": "#3a4270",
+          "near": "#1f2442",
+          "whale": "#4b6a9b",
+          "belly": "#c9d6ea",
+          "rim": "#f4dfc0",
+          "cloudLight": "#f0e6dc",
+          "cloudShadow": "#a89cb8",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.08,
+          "vignette": 0.35
+        },
+        "world": {
+          "unitsPerMeter": 40
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": 0,
+              "y": 0,
+              "zoom": 1
+            },
+            {
+              "t": 8,
+              "x": 80,
+              "y": -30,
+              "zoom": 1.2
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "s2-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s2-sky-grad",
+                "name": "Небо",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1
+              }
+            ]
+          },
+          {
+            "id": "s2-clouds",
+            "name": "Облака",
+            "depth": 0.25,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s2-cloud-1",
+                "name": "Облако 1",
+                "kind": "cloud",
+                "x": -420,
+                "y": -150,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 520,
+                  "h": 160,
+                  "puffs": 9,
+                  "seed": 2
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 10
+                  }
+                ]
+              },
+              {
+                "id": "s2-cloud-2",
+                "name": "Облако 2",
+                "kind": "cloud",
+                "x": 380,
+                "y": 20,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 420,
+                  "h": 140,
+                  "puffs": 8,
+                  "seed": 7
+                },
+                "anim": [
+                  {
+                    "type": "drift",
+                    "vx": 14
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "s2-city",
+            "name": "Город",
+            "depth": 0.6,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s2-skyline",
+                "name": "Силуэт города",
+                "kind": "skyline",
+                "x": 0,
+                "y": 460,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2600,
+                  "seed": 11,
+                  "lit": 0.1,
+                  "haze": 0.15
+                }
+              }
+            ]
+          },
+          {
+            "id": "s2-act",
+            "name": "Действие",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s2-whale",
+                "name": "Кит",
+                "kind": "asset",
+                "x": -100,
+                "y": -90,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "asset": "whale",
+                "params": {
+                  "sizeM": 6.6,
+                  "motion": {
+                    "preset": "swim",
+                    "speed": 0.8
+                  }
+                },
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      -300,
+                      40
+                    ],
+                    "to": [
+                      300,
+                      -40
+                    ],
+                    "t0": 0,
+                    "t1": 8,
+                    "ease": "sine"
+                  }
+                ]
+              },
+              {
+                "id": "s2-bird",
+                "name": "Птица",
+                "kind": "shape",
+                "x": 420,
+                "y": -250,
+                "s": 0.5,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "model": {
+                    "bounds": [
+                      -100,
+                      -50,
+                      200,
+                      100
+                    ],
+                    "parts": [
+                      {
+                        "id": "body",
+                        "name": "Тело",
+                        "fill": "#2b2b33",
+                        "d": "M -70 0 C -40 -30 40 -30 70 0 C 40 20 -40 20 -70 0 Z"
+                      },
+                      {
+                        "id": "wing",
+                        "name": "Крыло",
+                        "fill": "#3a3a46",
+                        "d": "M -10 -10 C 0 -60 40 -70 60 -45 C 30 -40 10 -25 -10 -10 Z"
+                      },
+                      {
+                        "id": "eye",
+                        "name": "Глаз",
+                        "type": "circle",
+                        "cx": 52,
+                        "cy": -4,
+                        "r": 4,
+                        "fill": "#ffffff"
+                      }
+                    ]
+                  },
+                  "motion": {
+                    "preset": "fly",
+                    "speed": 1.2
+                  }
+                },
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      200,
+                      0
+                    ],
+                    "to": [
+                      -400,
+                      30
+                    ],
+                    "t0": 0,
+                    "t1": 8,
+                    "ease": "lin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "transition": {
+        "type": "crossfade",
+        "duration": 1
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Закат",
+      "scene": {
+        "version": 1,
+        "title": "Закат",
+        "duration": 8,
+        "palette": {
+          "sky": [
+            "#2a1f4a",
+            "#8a3f6a",
+            "#f08a5a",
+            "#ffc98a"
+          ],
+          "sun": "#ffd9a0",
+          "haze": "#9aa0c0",
+          "far": "#59638f",
+          "mid": "#3a4270",
+          "near": "#1f2442",
+          "whale": "#4b6a9b",
+          "belly": "#c9d6ea",
+          "rim": "#f4dfc0",
+          "cloudLight": "#f0e6dc",
+          "cloudShadow": "#a89cb8",
+          "window": "#ffd27a"
+        },
+        "style": {
+          "grain": 0.08,
+          "vignette": 0.35
+        },
+        "world": {
+          "unitsPerMeter": 40
+        },
+        "camera": {
+          "verticalFit": 0.52,
+          "keys": [
+            {
+              "t": 0,
+              "x": 60,
+              "y": -20,
+              "zoom": 1.2
+            },
+            {
+              "t": 8,
+              "x": -40,
+              "y": 0,
+              "zoom": 1
+            }
+          ]
+        },
+        "assets": {},
+        "layers": [
+          {
+            "id": "s3-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s3-sky-grad",
+                "name": "Небо",
+                "kind": "sky",
+                "x": 0,
+                "y": 0,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1
+              }
+            ]
+          },
+          {
+            "id": "s3-stars",
+            "name": "Звёзды",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s3-stars-field",
+                "name": "Звёзды",
+                "kind": "stars",
+                "x": 0,
+                "y": -200,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2400,
+                  "h": 500,
+                  "count": 120,
+                  "seed": 4,
+                  "bias": 0.8
+                }
+              }
+            ]
+          },
+          {
+            "id": "s3-city",
+            "name": "Город",
+            "depth": 0.6,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s3-skyline",
+                "name": "Силуэт города",
+                "kind": "skyline",
+                "x": 0,
+                "y": 470,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "w": 2600,
+                  "seed": 5,
+                  "lit": 0.8,
+                  "haze": 0.1
+                }
+              }
+            ]
+          },
+          {
+            "id": "s3-act",
+            "name": "Действие",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s3-whale",
+                "name": "Кит",
+                "kind": "asset",
+                "x": 0,
+                "y": -60,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "asset": "whale",
+                "params": {
+                  "sizeM": 6.6,
+                  "motion": {
+                    "preset": "swim",
+                    "speed": 0.6
+                  }
+                },
+                "anim": [
+                  {
+                    "type": "move",
+                    "from": [
+                      -200,
+                      20
+                    ],
+                    "to": [
+                      260,
+                      -60
+                    ],
+                    "t0": 0,
+                    "t1": 8,
+                    "ease": "inOut"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "s3-title",
+            "name": "Титры",
+            "depth": 1,
+            "visible": true,
+            "objects": [
+              {
+                "id": "s3-text",
+                "name": "Финал",
+                "kind": "text",
+                "x": 0,
+                "y": -330,
+                "s": 1,
+                "rot": 0,
+                "alpha": 1,
+                "params": {
+                  "text": "Небо принадлежит всем",
+                  "size": 60,
+                  "weight": 700,
+                  "align": "center",
+                  "color": "#ffffff",
+                  "stroke": 3,
+                  "strokeColor": "#2a1f4a",
+                  "shadow": 8,
+                  "maxWidth": 1400
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "transition": {
+        "type": "dip",
+        "duration": 0.8,
+        "color": "#000000"
+      }
+    }
+  ],
+  "meta": {
+    "suggestions": [
+      {
+        "id": "bird",
+        "description": "Птица сбоку с поднятым крылом",
+        "view": "side",
+        "sizeM": 0.3
+      }
+    ]
+  }
+}

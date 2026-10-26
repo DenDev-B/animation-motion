@@ -71,3 +71,5 @@ export type {
   Palette,
 };
 export * from './svg-import.ts';
+export { buildProjectPrompt, validateProjectReply, uniqueProjectSlug, formatSuggestions, modelHeightM, PROJECT_PROMPT_MAX_BYTES } from './ai-project.ts';
+export type { CatalogEntry, ProjectPromptOptions, ProjectReplyResult, Suggestion } from './ai-project.ts';
