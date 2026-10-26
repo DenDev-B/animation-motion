@@ -7,3 +7,8 @@ docs/*.plugin
 docs/*_files/
 
 .run/
+
+# Скачанные владельцем SVG не попадают в git
+assets-src/downloads/
+# Собственные SVG агента отслеживаются
+!assets-src/own/*.svg

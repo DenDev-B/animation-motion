@@ -1,5 +1,5 @@
 // Импорт SVG в части модели каталога. Чистые функции: без DOM, без Math.random/Date.now.
-import type { AssetPart } from './schema.ts';
+import type { AssetPart, CatalogAsset } from './schema.ts';
 
 export type ColorMode = 'keep' | 'mono' | 'slots';
 
@@ -431,5 +431,45 @@ export function importSvg(src: string, opts: SvgImportOptions = {}): SvgImportRe
     bounds: [Math.round(-hw * 100) / 100, Math.round(-hh * 100) / 100, Math.round(w * scale * 100) / 100, Math.round(h * scale * 100) / 100],
     aspect: h > 1e-9 ? w / h : 1,
     warnings,
+  };
+}
+
+// ---------- общая сборка модели импорта ----------
+export interface BuildImportedModelOpts {
+  id: string;
+  name: string;
+  view: 'side' | 'bottom' | 'front' | 'top' | 'three-quarter';
+  facing?: 'left' | 'right';
+  sizeM: number;
+  sizeAxis?: 'height' | 'width';
+  tags?: string[];
+  license: { name: string; author?: string; source?: string; url?: string; attribution?: boolean };
+}
+
+export function buildImportedModel(res: SvgImportResult, opts: BuildImportedModelOpts): CatalogAsset {
+  const aspect = res.aspect || 1;
+  const sizeAxis = opts.sizeAxis ?? 'height';
+  let widthM: number, heightM: number;
+  if (sizeAxis === 'width') { widthM = opts.sizeM; heightM = opts.sizeM / aspect; }
+  else { heightM = opts.sizeM; widthM = opts.sizeM * aspect; }
+  return {
+    version: 1,
+    id: opts.id,
+    name: opts.name,
+    bounds: res.bounds,
+    realSize: { heightM, widthM },
+    meta: {
+      view: opts.view,
+      facing: opts.facing,
+      tags: opts.tags ?? [],
+      license: {
+        name: opts.license.name,
+        author: opts.license.author ?? '',
+        source: opts.license.source ?? '',
+        url: opts.license.url,
+        attribution: opts.license.attribution ?? false,
+      },
+    },
+    parts: res.parts,
   };
 }

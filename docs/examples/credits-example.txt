@@ -1,0 +1,3 @@
+tree-simple — Дерево (своё): собственная модель, автор project, источник project
+car-simple — Автомобиль (своё): собственная модель, автор project, источник project
+house-simple — Дом в разрезе (своё): собственная модель, автор project, источник project

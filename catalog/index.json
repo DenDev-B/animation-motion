@@ -65,5 +65,56 @@
     },
     "license": "own",
     "attribution": false
+  },
+  {
+    "id": "tree-simple",
+    "name": "Дерево (своё)",
+    "file": "tree-simple.json",
+    "tags": [
+      "дерево",
+      "tree",
+      "своё"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 8,
+      "widthM": 4.0701754385964914
+    },
+    "license": "own",
+    "attribution": false
+  },
+  {
+    "id": "car-simple",
+    "name": "Автомобиль (своё)",
+    "file": "car-simple.json",
+    "tags": [
+      "машина",
+      "car",
+      "своё"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.6666666666666665,
+      "widthM": 4.5
+    },
+    "license": "own",
+    "attribution": false
+  },
+  {
+    "id": "house-simple",
+    "name": "Дом в разрезе (своё)",
+    "file": "house-simple.json",
+    "tags": [
+      "дом",
+      "house",
+      "своё"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 7,
+      "widthM": 7.411764705882353
+    },
+    "license": "own",
+    "attribution": false
   }
 ]

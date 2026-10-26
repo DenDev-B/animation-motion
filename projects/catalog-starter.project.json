@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "title": "Стартовый набор каталога",
+  "fps": 30,
+  "format": "16:9",
+  "scenes": [
+    {
+      "id": "s1",
+      "name": "Стартовые модели",
+      "scene": {
+        "version": 1,
+        "title": "Стартовый набор каталога",
+        "duration": 8,
+        "world": {"unitsPerMeter": 16},
+        "palette": {
+          "sky": ["#7fbdf0", "#b8e0ff", "#f7e9c9"],
+          "sun": "#fff3c8",
+          "haze": "#e8dec6",
+          "far": "#8fa7b8",
+          "mid": "#64828b",
+          "near": "#3f6357",
+          "whale": "#2f4a5c",
+          "belly": "#496b7d",
+          "rim": "#fff2b8",
+          "cloudLight": "#ffffff",
+          "cloudShadow": "#c7d6e0",
+          "window": "#ffd27a"
+        },
+        "style": {"grain": 0.03, "vignette": 0.18, "preset": "day"},
+        "camera": {"verticalFit": 0.52, "keys": [{"t": 0, "x": 0, "y": 0, "zoom": 1}]},
+        "assets": {},
+        "layers": [
+          {
+            "id": "layer-sky",
+            "name": "Небо",
+            "depth": 0,
+            "visible": true,
+            "objects": [{"id": "obj-sky", "name": "Градиент неба", "kind": "sky", "x": 0, "y": 0, "s": 1, "rot": 0, "alpha": 1, "params": {}}]
+          },
+          {
+            "id": "layer-sun",
+            "name": "Солнце",
+            "depth": 0.05,
+            "visible": true,
+            "objects": [{"id": "obj-sun", "name": "Солнце", "kind": "glow", "x": 500, "y": -300, "s": 1, "rot": 0, "alpha": 1, "params": {"r": 400, "color": "sun", "a": 0.5}}]
+          },
+          {
+            "id": "layer-ground",
+            "name": "Земля",
+            "depth": 0.25,
+            "visible": true,
+            "objects": [{"id": "obj-hills", "name": "Холмы", "kind": "hills", "x": 0, "y": 292, "s": 1, "rot": 0, "alpha": 1, "params": {"w": 3600, "amp": 14, "waves": 2, "seed": 11, "color": "near", "haze": 0.05}}]
+          },
+          {
+            "id": "layer-models",
+            "name": "Модели каталога",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {"id": "obj-tree", "name": "Дерево", "kind": "asset", "asset": "tree-simple", "x": -430, "y": 260, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 8}},
+              {"id": "obj-car", "name": "Автомобиль", "kind": "asset", "asset": "car-simple", "x": 0, "y": 300, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 4.5}},
+              {"id": "obj-house", "name": "Дом", "kind": "asset", "asset": "house-simple", "x": 430, "y": 260, "s": 1, "rot": 0, "alpha": 1, "params": {"sizeM": 7}}
+            ]
+          },
+          {
+            "id": "layer-labels",
+            "name": "Подписи",
+            "depth": 0,
+            "visible": true,
+            "objects": [
+              {"id": "label-tree", "name": "Подпись дерева", "kind": "text", "x": -430, "y": 340, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "дерево 8 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}},
+              {"id": "label-car", "name": "Подпись машины", "kind": "text", "x": 0, "y": 340, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "машина 4.5 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}},
+              {"id": "label-house", "name": "Подпись дома", "kind": "text", "x": 430, "y": 340, "s": 1, "rot": 0, "alpha": 1, "params": {"text": "дом 7 м", "size": 40, "weight": 700, "align": "center", "color": "sun", "stroke": 2, "strokeColor": "#2f4a5c", "shadow": 6, "maxWidth": 260, "lineHeight": 1.2}}
+            ]
+          }
+        ]
+      },
+      "transition": { "type": "cut" }
+    }
+  ]
+}
