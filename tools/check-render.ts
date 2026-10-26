@@ -19,7 +19,7 @@ function log(m: string) { process.stdout.write(m + '\n'); }
 
 const scene = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scenes', 'whale-demo.json'), 'utf8')) as unknown as SceneV1;
 const catalog: Record<string, CatalogAsset> = {};
-for (const file of fs.readdirSync(path.join(__dirname, '..', 'catalog')).filter((name) => name.endsWith('.json'))) {
+for (const file of fs.readdirSync(path.join(__dirname, '..', 'catalog')).filter((name) => name.endsWith('.json') && name !== 'index.json')) {
   const asset = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'catalog', file), 'utf8')) as CatalogAsset;
   catalog[asset.id] = asset;
 }

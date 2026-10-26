@@ -57,7 +57,7 @@ async function main() {
   const catalogDir = path.join(__dirname, '..', 'catalog');
   const catalog: Record<string, CatalogAsset> = {};
   for (const f of fs.readdirSync(catalogDir)) {
-    if (!f.endsWith('.json')) continue;
+    if (!f.endsWith('.json') || f === 'index.json') continue;
     const c = JSON.parse(fs.readFileSync(path.join(catalogDir, f), 'utf8')) as CatalogAsset;
     const validation = validateAsset(c);
     if (!validation.ok) fail(`модель каталога ${f} не прошла валидацию: ${validation.errors.map(({ path: p, message }) => `${p}: ${message}`).join('; ')}`);

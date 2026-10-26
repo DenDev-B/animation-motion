@@ -24,7 +24,7 @@ if (!Number.isFinite(step) || step <= 0 || !Number.isInteger(cols) || cols <= 0 
 const project = JSON.parse(fs.readFileSync(path.resolve(projectPath), 'utf8')) as unknown;
 const catalogDir = path.join(root, 'catalog');
 const catalog: Record<string, CatalogAsset> = {};
-for (const file of fs.readdirSync(catalogDir).filter((name) => name.endsWith('.json'))) {
+for (const file of fs.readdirSync(catalogDir).filter((name) => name.endsWith('.json') && name !== 'index.json')) {
   const asset = JSON.parse(fs.readFileSync(path.join(catalogDir, file), 'utf8')) as CatalogAsset;
   const assetValidation = validateAsset(asset);
   if (!assetValidation.ok) fail(`модель каталога ${file} не прошла валидацию: ${assetValidation.errors.map(({ path: p, message }) => `${p}: ${message}`).join('; ')}`);

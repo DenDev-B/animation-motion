@@ -1,4 +1,4 @@
-export type SpecType = 'number' | 'int' | 'bool' | 'string' | 'color' | 'enum' | 'array' | 'object';
+export type SpecType = 'number' | 'int' | 'bool' | 'string' | 'color' | 'enum' | 'array' | 'object' | 'any';
 
 export interface FieldSpec {
   name: string;
@@ -99,6 +99,7 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
   ] },
   asset: { description: 'Модель из scene.assets или catalog/.', params: [
     { name: 'sizeM', type: 'number', min: 0, exclusiveMin: true, description: 'Высота bounds в метрах; требует scene.world.unitsPerMeter.' },
+    { name: 'motion', type: 'any', description: 'Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}.' },
   ] },
   mountains: { description: 'Детерминированный горный хребет одним замкнутым контуром.', params: [
     { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 2400, description: 'Ширина хребта (> 0).' },
@@ -132,6 +133,7 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
   ] },
   shape: { description: 'Модель прямо в scene (params.model). Рендерится через drawAsset.', params: [
     { name: 'model', type: 'object', description: 'Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны.' },
+    { name: 'motion', type: 'any', description: 'Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}.' },
   ] },
   rain: { description: 'Детерминированный дождь: чистые частицы без состояния между кадрами.', params: [
     { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 1600, description: 'Ширина области (> 0).' },

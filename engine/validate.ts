@@ -1,3 +1,4 @@
+import { validateMotion } from './motion.ts';
 import { ANIM_SPEC, KIND_SPEC, PALETTE_SLOTS, SPEC_KEYS } from './spec.ts';
 
 export interface ValidateOpts { catalogIds?: string[]; }
@@ -287,6 +288,9 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       if (object.partAnim !== undefined) {
         if (!isRecord(object.partAnim)) err(`${objectPath}.partAnim`, 'partAnim должен быть объектом; пример: {}');
         else for (const [id, anims] of Object.entries(object.partAnim)) validateAnimations(anims, `${objectPath}.partAnim.${id}`, errors, warnings, duration);
+      }
+      if ((object.kind === 'asset' || object.kind === 'shape') && isRecord(object.params) && object.params.motion !== undefined) {
+        for (const issue of validateMotion(object.params.motion, `${objectPath}.params.motion`)) err(issue.path, issue.message);
       }
       if (object.kind === 'asset') {
         if (typeof object.asset !== 'string' || !object.asset) err(`${objectPath}.asset`, 'asset обязателен для kind asset; пример: whale');

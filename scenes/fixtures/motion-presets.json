@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "title": "Пресеты движения",
+  "duration": 6,
+  "palette": {
+    "sky": [
+      "#1d2a4d",
+      "#3d4f86",
+      "#8a8fb8",
+      "#e8c9a0"
+    ],
+    "sun": "#ffd9a0",
+    "haze": "#9aa0c0",
+    "far": "#59638f",
+    "mid": "#3a4270",
+    "near": "#1f2442",
+    "whale": "#4b6a9b",
+    "belly": "#c9d6ea",
+    "rim": "#f4dfc0",
+    "cloudLight": "#f0e6dc",
+    "cloudShadow": "#a89cb8",
+    "window": "#ffd27a"
+  },
+  "style": {
+    "grain": 0.08,
+    "vignette": 0.35
+  },
+  "camera": {
+    "verticalFit": 0.52,
+    "keys": [
+      {
+        "t": 0,
+        "x": 0,
+        "y": 0,
+        "zoom": 1
+      }
+    ]
+  },
+  "assets": {},
+  "layers": [
+    {
+      "id": "l-sky",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+        {
+          "id": "o-sky",
+          "name": "Небо",
+          "kind": "sky"
+        }
+      ]
+    },
+    {
+      "id": "l-act",
+      "name": "Действие",
+      "depth": 1,
+      "visible": true,
+      "objects": [
+        {
+          "id": "o-whale",
+          "name": "Кит: swim",
+          "kind": "asset",
+          "asset": "whale",
+          "x": -560,
+          "y": -120,
+          "s": 0.45,
+          "params": {
+            "motion": {
+              "preset": "swim"
+            }
+          }
+        },
+        {
+          "id": "o-plane",
+          "name": "Самолёт: fly",
+          "kind": "asset",
+          "asset": "plane",
+          "x": -190,
+          "y": -230,
+          "s": 0.55,
+          "params": {
+            "motion": {
+              "preset": "fly"
+            }
+          }
+        },
+        {
+          "id": "o-house",
+          "name": "Дом: sway",
+          "kind": "asset",
+          "asset": "house",
+          "x": 150,
+          "y": 150,
+          "s": 1.1,
+          "params": {
+            "motion": {
+              "preset": "sway",
+              "amp": 1.5
+            }
+          }
+        },
+        {
+          "id": "o-walk",
+          "name": "Человек: walk",
+          "kind": "asset",
+          "asset": "human",
+          "x": -420,
+          "y": 230,
+          "s": 1.0,
+          "params": {
+            "motion": {
+              "preset": "walk"
+            }
+          }
+        },
+        {
+          "id": "o-run",
+          "name": "Человек: run",
+          "kind": "asset",
+          "asset": "human",
+          "x": -230,
+          "y": 230,
+          "s": 1.0,
+          "params": {
+            "motion": {
+              "preset": "run"
+            }
+          }
+        },
+        {
+          "id": "o-hop",
+          "name": "Человек: hop",
+          "kind": "asset",
+          "asset": "human",
+          "x": -40,
+          "y": 230,
+          "s": 1.0,
+          "params": {
+            "motion": {
+              "preset": "hop"
+            }
+          }
+        },
+        {
+          "id": "o-multi",
+          "name": "Человек: walk+sway",
+          "kind": "asset",
+          "asset": "human",
+          "x": 450,
+          "y": 230,
+          "s": 1.0,
+          "params": {
+            "motion": [
+              {
+                "preset": "walk",
+                "speed": 1.5
+              },
+              {
+                "preset": "sway",
+                "amp": 0.5,
+                "phase": 0.3
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
