@@ -55,8 +55,8 @@ function catalogBlock(index: readonly CatalogEntry[]): string {
   if (index.length === 0) return '(каталог пуст: все объекты рисуй через kind "shape" и предложи их в meta.suggestions)';
   return index.map((e) => {
     const h = modelHeightM(e);
-    const w = e.realSize?.widthM;
-    return `- ${e.id}: ${e.name}; вид: ${e.view ?? '?'}; высота ${h !== undefined ? `${h} м` : 'неизвестна'}${w !== undefined ? `, ширина ${w} м` : ''}; теги: ${(e.tags ?? []).join(', ')}`;
+    const w = e.realSize?.widthM !== undefined ? Math.round(e.realSize.widthM * 100) / 100 : undefined;
+    return `- ${e.id}: ${e.name}; вид: ${e.view ?? '?'}; высота ${h !== undefined ? `${Math.round(h * 100) / 100} м` : 'неизвестна'}${w !== undefined ? `, ширина ${w} м` : ''}; теги: ${(e.tags ?? []).join(', ')}`;
   }).join('\n');
 }
 

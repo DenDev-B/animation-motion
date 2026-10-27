@@ -562,6 +562,8 @@ if (ideaPromptSelectAll) ideaPromptSelectAll.onclick = () => {
 };
 if (ideaResponse) {
   ideaResponse.addEventListener('input', () => {
+    if (!ideaResponse) return;
+    const text = ideaResponse.value.trim();
     if (ideaStatus) { ideaStatus.textContent = ''; ideaStatus.classList.remove('err'); }
     if (ideaCreate) ideaCreate.disabled = true;
     showList(ideaErrEl, []);
@@ -569,21 +571,26 @@ if (ideaResponse) {
     if (ideaFix) ideaFix.hidden = true;
     ideaCandidate = undefined;
     ideaErrList = [];
+    if (!text) {
+      return;
+    }
+    if (!text.includes('{')) {
+      reportIdeaErrors([{ path: '', message: 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ' }]);
+      setIdeaStatus('Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ', true);
+      if (ideaCreate) ideaCreate.disabled = true;
+      return;
+    }
+    void checkIdeaResponse();
   });
 }
 if (ideaCreate) ideaCreate.onclick = () => {
   if (!ideaResponse) return;
   const text = ideaResponse.value.trim();
   if (!text) {
-    reportIdeaErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
-    setIdeaStatus('Ответ ИИ пуст.', true);
     if (ideaCreate) ideaCreate.disabled = true;
     return;
   }
   if (!text.includes('{')) {
-    reportIdeaErrors([{ path: '', message: 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ' }]);
-    setIdeaStatus('Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ', true);
-    if (ideaCreate) ideaCreate.disabled = true;
     return;
   }
   if (!checkIdeaResponse()) return;

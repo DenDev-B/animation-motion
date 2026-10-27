@@ -19,6 +19,7 @@ for (const format of ['16:9', '9:16'] as const) {
   if (bytes > PROJECT_PROMPT_MAX_BYTES) fail(`промт ${format} ${bytes} байт > ${PROJECT_PROMPT_MAX_BYTES}`);
   for (const e of catalogIndex) if (!prompt.includes(`- ${e.id}:`)) fail(`в промте нет модели ${e.id}`);
   for (const must of ['unitsPerMeter', 'sizeM', 'suggestions', 'transition', 'skyline', 'swim', 'crossfade', 'Что если бы киты летали над городом']) if (!prompt.includes(must)) fail(`в промте нет «${must}»`);
+  if (/\d+\.\d{4,}/.test(prompt)) fail('в промте есть числа с >=4 знаками после запятой');
 }
 let emptyIdeaFailed = false;
 try { buildProjectPrompt({ idea: '   ', catalogIndex }); } catch { emptyIdeaFailed = true; }
