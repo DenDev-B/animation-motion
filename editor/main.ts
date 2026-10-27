@@ -1,12 +1,7 @@
 import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions } from '../engine/index.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
-import whaleCatalog from '../catalog/whale.json';
 import catalogIndexRaw from '../catalog/index.json';
-import houseModel from '../catalog/house.json';
-import humanModel from '../catalog/human.json';
-import planeModel from '../catalog/plane.json';
-import whaleModel from '../catalog/whale.json';
 import type { CatalogAsset } from '../engine/schema.ts';
 import { EditorHistory } from './history.ts';
 import { applyTargetJson, targetJson, validateTargetJson, type JsonScope, type JsonTarget } from './json-patch.ts';
@@ -59,10 +54,17 @@ const ideaWarnEl = document.getElementById('ideaWarnings') as HTMLUListElement |
 let project: ProjectV1 = structuredClone(demoProject) as unknown as ProjectV1;
 let activeSceneIndex = 0;
 let scene: SceneV1 = project.scenes[activeSceneIndex].scene;
-let catalog: Record<string, CatalogAsset> = { whale: whaleCatalog as unknown as CatalogAsset };
-const modelsByFile: Record<string, any> = { 'house.json': houseModel, 'human.json': humanModel, 'plane.json': planeModel, 'whale.json': whaleModel };
+const catalogModules = import.meta.glob('../catalog/*.json', { eager: true, import: 'default' }) as Record<string, CatalogAsset>;
+const catalog: Record<string, CatalogAsset> = {};
+for (const [path, mod] of Object.entries(catalogModules)) {
+  const file = path.split('/').pop() ?? path;
+  if (file === 'index.json') continue;
+  if (mod && typeof mod === 'object' && 'id' in mod) {
+    catalog[(mod as CatalogAsset).id] = mod as CatalogAsset;
+  }
+}
 const catalogIndex = (catalogIndexRaw as any[]).map((e: any) => {
-  const model = modelsByFile[e.file];
+  const model = catalog[e.id];
   return {
     id: e.id,
     name: e.name,
