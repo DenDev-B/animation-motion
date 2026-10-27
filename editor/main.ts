@@ -45,12 +45,16 @@ const ideaScenes = document.getElementById('ideaScenes') as HTMLInputElement | n
 const ideaSeconds = document.getElementById('ideaSeconds') as HTMLInputElement | null;
 const ideaFormat = document.getElementById('ideaFormat') as HTMLSelectElement | null;
 const ideaCopyPrompt = document.getElementById('ideaCopyPrompt') as HTMLButtonElement | null;
+const ideaPromptFallback = document.getElementById('ideaPromptFallback') as HTMLElement | null;
+const ideaPromptOut = document.getElementById('ideaPromptOut') as HTMLTextAreaElement | null;
+const ideaPromptSelectAll = document.getElementById('ideaPromptSelectAll') as HTMLButtonElement | null;
+const ideaCopyStatus = document.getElementById('ideaCopyStatus') as HTMLElement | null;
 const ideaResponse = document.getElementById('ideaResponse') as HTMLTextAreaElement | null;
 const ideaCreate = document.getElementById('ideaCreate') as HTMLButtonElement | null;
 const ideaFix = document.getElementById('ideaFix') as HTMLButtonElement | null;
 const ideaStatus = document.getElementById('ideaStatus') as HTMLElement | null;
-const ideaErrEl = document.getElementById('ideaErrList') as HTMLUListElement | null;
-const ideaWarnEl = document.getElementById('ideaWarnList') as HTMLUListElement | null;
+const ideaErrEl = document.getElementById('ideaErrors') as HTMLUListElement | null;
+const ideaWarnEl = document.getElementById('ideaWarnings') as HTMLUListElement | null;
 
 let project: ProjectV1 = structuredClone(demoProject) as unknown as ProjectV1;
 let activeSceneIndex = 0;
@@ -194,6 +198,11 @@ function reportIdeaErrors(errors: readonly ValidationError[], candidate?: unknow
   showList(ideaWarnEl, []);
   if (ideaStatus) { ideaStatus.textContent = errors.length ? `Ошибок: ${errors.length}. Исправьте ответ ИИ.` : ''; ideaStatus.classList.toggle('err', errors.length > 0); }
 }
+function setIdeaCopyStatus(message: string, isError: boolean) {
+  if (!ideaCopyStatus) return;
+  ideaCopyStatus.textContent = message;
+  ideaCopyStatus.classList.toggle('err', isError);
+}
 function setIdeaStatus(message: string, isError: boolean) {
   if (!ideaStatus) return;
   ideaStatus.textContent = message;
@@ -324,6 +333,13 @@ function checkIdeaResponse(): boolean {
   if (!text) {
     reportIdeaErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
     setIdeaStatus('Ответ ИИ пуст.', true);
+    if (ideaCreate) ideaCreate.disabled = true;
+    return false;
+  }
+  if (!text.includes('{')) {
+    reportIdeaErrors([{ path: '', message: 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ' }]);
+    setIdeaStatus('Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ', true);
+    if (ideaCreate) ideaCreate.disabled = true;
     return false;
   }
   let candidate: unknown;
@@ -332,13 +348,14 @@ function checkIdeaResponse(): boolean {
   } catch (error) {
     reportIdeaErrors([{ path: '', message: error instanceof Error ? error.message : String(error) }]);
     setIdeaStatus('Не удалось разобрать ответ ИИ.', true);
+    if (ideaCreate) ideaCreate.disabled = true;
     return false;
   }
   const reply = validateProjectReply(candidate, { catalogIds: Object.keys(catalog) });
   ideaCandidate = candidate;
   ideaErrList = [...reply.errors];
   showList(ideaErrEl, reply.errors);
-  showList(ideaWarnEl, reply.warnings);
+  showList(ideaWarnEl, []);
   if (reply.errors.length === 0) {
     if (ideaCreate) ideaCreate.disabled = false;
     if (ideaFix) ideaFix.hidden = true;
@@ -513,21 +530,62 @@ if (aiFixBtn) aiFixBtn.onclick = () => {
   if (fixCandidate === undefined || fixErrors.length === 0) return;
   void copyText(buildFixRequest(fixCandidate, fixErrors), 'Запрос на исправление');
 };
-if (ideaCopyPrompt) ideaCopyPrompt.onclick = () => {
+if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
   const idea = ideaText?.value.trim() ?? '';
-  if (!idea) { setIdeaStatus('Введите идею.', true); return; }
+  if (!idea) { setIdeaCopyStatus('Введите идею.', true); setIdeaStatus('', false); return; }
   try {
     const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
     const seconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
     const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
     const prompt = buildProjectPrompt({ idea, scenes, sceneSeconds: seconds, format, catalogIndex });
-    void copyText(prompt, 'Промт идеи→проект');
-    setIdeaStatus('Промт скопирован в буфер обмена.', false);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      if (ideaPromptFallback) ideaPromptFallback.hidden = true;
+      const bytes = new TextEncoder().encode(prompt).length;
+      const kb = (bytes / 1024).toFixed(1);
+      setIdeaCopyStatus(`Скопировано (${kb} КБ). Вставьте в чат ИИ`, false);
+      setIdeaStatus('', false);
+    } catch {
+      if (ideaPromptOut) ideaPromptOut.value = prompt;
+      if (ideaPromptFallback) ideaPromptFallback.hidden = false;
+      setIdeaCopyStatus('Буфер недоступен. Покажите промт в поле ниже.', true);
+      setIdeaStatus('', false);
+    }
   } catch (error) {
-    setIdeaStatus(error instanceof Error ? error.message : String(error), true);
+    setIdeaCopyStatus(error instanceof Error ? error.message : String(error), true);
   }
 };
+if (ideaPromptSelectAll) ideaPromptSelectAll.onclick = () => {
+  if (!ideaPromptOut) return;
+  ideaPromptOut.focus();
+  ideaPromptOut.select();
+};
+if (ideaResponse) {
+  ideaResponse.addEventListener('input', () => {
+    if (ideaStatus) { ideaStatus.textContent = ''; ideaStatus.classList.remove('err'); }
+    if (ideaCreate) ideaCreate.disabled = true;
+    showList(ideaErrEl, []);
+    showList(ideaWarnEl, []);
+    if (ideaFix) ideaFix.hidden = true;
+    ideaCandidate = undefined;
+    ideaErrList = [];
+  });
+}
 if (ideaCreate) ideaCreate.onclick = () => {
+  if (!ideaResponse) return;
+  const text = ideaResponse.value.trim();
+  if (!text) {
+    reportIdeaErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
+    setIdeaStatus('Ответ ИИ пуст.', true);
+    if (ideaCreate) ideaCreate.disabled = true;
+    return;
+  }
+  if (!text.includes('{')) {
+    reportIdeaErrors([{ path: '', message: 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ' }]);
+    setIdeaStatus('Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ', true);
+    if (ideaCreate) ideaCreate.disabled = true;
+    return;
+  }
   if (!checkIdeaResponse()) return;
   if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
   applyIdeaProject(ideaCandidate!);

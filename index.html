@@ -50,11 +50,42 @@
           <button id="apply" class="primary">Применить JSON</button>
           <button id="reset">Сбросить к демо</button>
         </div>
+        <h2 style="margin-top:10px">Новый проект из идеи</h2>
+        <div class="hint" style="margin-bottom:6px">1. Опишите идею и скопируйте промт.<br>2. Вставьте промт в любой чат с ИИ (Claude, Gemini, ChatGPT), скопируйте его ответ.<br>3. Вставьте ответ сюда и нажмите «Создать проект».</div>
+        <div class="bar" style="margin-top:8px; align-items:flex-start">
+          <label class="f" style="flex:1 1 100%">Идея<textarea id="ideaText" rows="4" placeholder="Например: Что если бы киты летали над городом"></textarea></label>
+        </div>
+        <div class="bar" style="margin-top:8px">
+          <label class="f">Сцен<input id="ideaScenes" type="number" value="5" min="2" max="12" style="width:70px"></label>
+          <label class="f">Секунд на сцену<input id="ideaSeconds" type="number" value="8" min="4" max="20" style="width:90px"></label>
+          <label class="f">Формат<select id="ideaFormat"><option>16:9</option><option>9:16</option></select></label>
+        </div>
+        <div class="btns">
+          <button id="ideaCopyPrompt">1. Скопировать промт для ИИ</button>
+        </div>
+        <div id="ideaPromptFallback" hidden style="margin-top:6px">
+          <textarea id="ideaPromptOut" spellcheck="false" rows="6" readonly style="width:100%"></textarea>
+          <div class="btns" style="margin-top:6px">
+            <button id="ideaPromptSelectAll">Выделить всё</button>
+          </div>
+          <div class="hint">Буфер обмена недоступен. Скопируйте промт из поля выше.</div>
+        </div>
+        <div id="ideaCopyStatus" class="msg"></div>
+        <div style="margin-top:10px" class="f">2. Вставьте ответ ИИ (JSON)</div>
+        <textarea id="ideaResponse" spellcheck="false" rows="10" aria-label="Ответ ИИ для проекта" placeholder="Вставьте сюда ответ ИИ целиком, он начинается с {" style="border:2px solid #b8531f"></textarea>
+        <div class="btns">
+          <button id="ideaCreate" class="primary" disabled>3. Создать проект</button>
+          <button id="ideaFix" hidden>Копировать запрос на исправление</button>
+        </div>
+        <div id="ideaStatus" class="msg"></div>
+        <ul id="ideaErrors" class="errs"></ul>
+        <ul id="ideaWarnings" class="warns"></ul>
+        <h2 style="margin-top:10px">Править текущую сцену через ИИ</h2>
         <div class="bar" style="margin-top:8px">
           <input id="aiTask" placeholder="Задача для ИИ (необязательно)" style="flex:1">
           <button id="copyAi">Копировать для ИИ</button>
         </div>
-        <h2 style="margin-top:10px">Ответ ИИ</h2>
+        <h3 style="margin:10px 0 6px; font-size:12px">Ответ ИИ</h3>
         <textarea id="aiResponse" spellcheck="false" rows="6" aria-label="Ответ ИИ" placeholder="Вставьте сюда ответ ИИ"></textarea>
         <div class="btns">
           <button id="aiCheck">Вставить ответ ИИ</button>
@@ -64,24 +95,6 @@
         <div id="aiStatus" class="msg"></div>
         <ul id="aiErrors" class="errs"></ul>
         <ul id="aiWarnings" class="warns"></ul>
-        <h2 style="margin-top:10px">Новый проект из идеи</h2>
-        <div class="bar" style="margin-top:8px">
-          <label class="f">Идея<textarea id="ideaText" rows="2" placeholder="Например: Что если бы киты летали над городом"></textarea></label>
-          <label class="f">Сцен<input id="ideaScenes" type="number" value="5" min="2" max="12" style="width:70px"></label>
-          <label class="f">Секунд на сцену<input id="ideaSeconds" type="number" value="8" min="4" max="20" style="width:90px"></label>
-          <label class="f">Формат<select id="ideaFormat"><option>16:9</option><option>9:16</option></select></label>
-        </div>
-        <div class="btns">
-          <button id="ideaCopyPrompt">Копировать промт</button>
-        </div>
-        <textarea id="ideaResponse" spellcheck="false" rows="6" aria-label="Ответ ИИ для проекта" placeholder="Вставьте сюда JSON-ответ ИИ"></textarea>
-        <div class="btns">
-          <button id="ideaCreate" class="primary">Создать проект</button>
-          <button id="ideaFix" hidden>Копировать запрос на исправление</button>
-        </div>
-        <div id="ideaStatus" class="msg"></div>
-        <ul id="ideaErrors" class="errs"></ul>
-        <ul id="ideaWarnings" class="warns"></ul>
         <h2 style="margin-top:10px">Шаблоны объектов</h2>
         <div id="templates"></div>
         <p class="hint">Правки JSON применяются через историю: Ctrl+Z отменяет, Ctrl+Y повторяет.</p>
