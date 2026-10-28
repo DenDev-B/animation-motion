@@ -58,6 +58,25 @@ const badRun = run(badPath);
 if (badRun.status === 0 || !/FIX_REQUEST/.test(badRun.stderr)) fail(`неверный диапазон должен давать fix-request: ${badRun.stderr}`);
 if (files.length === 2 && fs.readdirSync(tmp).filter((n) => n.endsWith('.project.json')).length !== 2) fail('при ошибках файл проекта не должен создаваться');
 
+
+// 6. типичные ошибки ИИ: абсолютные координаты в move, verticalFit
+{
+  const absMove = JSON.parse(exampleText) as { scenes: Array<{ scene: { camera: { verticalFit?: number }; layers: Array<{ objects: Array<Record<string, unknown>> }> } }> };
+  const car = absMove.scenes[0].scene.layers.flatMap((l) => l.objects).find((o) => Array.isArray(o.anim) && (o.anim as Array<{ type: string }>).some((a) => a.type === 'move'));
+  if (!car) fail('в примере нет объекта с move');
+  else {
+    car.x = -420; car.y = 280;
+    (car.anim as Array<{ type: string; from: number[]; to: number[] }>)[0].from = [-420, 280];
+    (car.anim as Array<{ type: string; from: number[]; to: number[] }>)[0].to = [420, 280];
+    const r = validateProjectReply(absMove, { catalogIds: readCatalogIds() });
+    if (r.ok || !r.errors.some((e) => /смещения/.test(e.message))) fail('абсолютные координаты в move должны давать ошибку про смещения');
+  }
+  const vf = JSON.parse(exampleText) as { scenes: Array<{ scene: { camera: { verticalFit?: number } } }> };
+  vf.scenes[0].scene.camera.verticalFit = 1000;
+  const r2 = validateProjectReply(vf, { catalogIds: readCatalogIds() });
+  if (r2.ok || !r2.errors.some((e) => /verticalFit/.test(e.path))) fail('verticalFit 1000 должен давать ошибку');
+}
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(errors === 0 ? 'check:project-roundtrip OK' : `check:project-roundtrip FAILED: ${errors}`);
 process.exit(errors === 0 ? 0 : 1);

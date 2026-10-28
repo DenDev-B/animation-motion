@@ -78,7 +78,7 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     `Проект: version 1, title на русском, fps ${fps}, format "${format}", ровно ${scenes} сцен(ы) по ~${sec} секунд (допустимо 4..20, сумма по смыслу истории). У каждой сцены: id ("s1", "s2"...), name на русском, scene (полная сцена формата v1) и transition (у первой сцены {"type":"cut"}).`,
     tone(opts.tone),
     '## Формат сцены v1',
-    `Сцена: version 1, title, duration (сек, >0), palette, style {grain 0..1, vignette 0..1}, world {unitsPerMeter}, camera {verticalFit, keys:[{t,x,y,zoom>0}], shake?}, assets {} (оставь пустым), layers (от дальнего к ближнему).`,
+    `Сцена: version 1, title, duration (сек, >0), palette, style {grain 0.03..0.10 (по умолчанию 0.06; больше выглядит грязно), vignette 0.1..0.4}, world {unitsPerMeter}, camera {verticalFit, keys:[{t,x,y,zoom>0}], shake?}, assets {} (оставь пустым), layers (от дальнего к ближнему).`,
     `palette: sky (массив минимум из 2 hex-цветов, градиент сверху вниз) и необязательные слоты-цвета: ${PALETTE_SLOTS.filter((s) => s !== 'sky').join(', ')}. Цвета только hex (#rgb, #rrggbb, #rrggbbaa) или имя слота. Для каждой сцены своя палитра по настроению (рассвет, день, закат, ночь, туман...), но всё в одной стилистике.`,
     `Слой: {id, name, depth (параллакс: 0 фон, 1 действие, >1 передний план), visible: true, objects}. Объект: {id, name, kind, x, y, s (масштаб >0), rot (градусы), alpha 0..1, color?, asset?, params?, anim?}. Все id уникальны во всём проекте (добавляй номер сцены: "s2-cloud-1").`,
     `Координаты: единицы виртуального кадра высотой 1000, центр (0,0), ось Y вниз. ${portrait ? 'Формат вертикальный: видимая ширина примерно ±280, ключевые объекты держи в x от -250 до 250, камеру приближай осторожно.' : 'Формат горизонтальный: видно примерно x от -890 до 890, y от -500 до 500.'}`,
@@ -86,8 +86,9 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     kinds,
     '## Анимации объекта (anim — массив)',
     anims,
+    'ВАЖНО про anim move: from и to это СМЕЩЕНИЯ от позиции объекта (x, y), а не абсолютные координаты. Объект стоит в (x, y), а анимация добавляет к ним смещение. Чтобы машина проехала слева направо по дороге на y=280: поставь x: 0, y: 280 и anim {"type":"move","from":[-420,0],"to":[420,0],"t0":0,"t1":8}. Если поставить x: -420 и from [-420,280], объект улетит за кадр.',
     `Пресет движения для asset и shape: params.motion = {preset: ${MOTION_PRESETS.join('|')}, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1} или массив таких. Пресет «оживляет» тело на месте (шаг, взмах, плавание); перемещение по сцене задавай отдельно anim move.`,
-    `Камера: keys по времени, например [{"t":0,"x":-60,"y":0,"zoom":1},{"t":${sec},"x":60,"y":-10,"zoom":1.2}]. В каждой сцене лёгкое движение камеры (медленный наезд или сдвиг); тряску shake используй только для ударов и взрывов.`,
+    `Камера: verticalFit всегда 0.52 (не меняй, это масштаб для вертикального кадра), keys по времени, например [{"t":0,"x":-60,"y":0,"zoom":1},{"t":${sec},"x":60,"y":-10,"zoom":1.2}]. В каждой сцене лёгкое движение камеры (медленный наезд или сдвиг); тряску shake используй только для ударов и взрывов.`,
     `Переходы transition между сценами: type ${TRANSITION_TYPES.join('|')}; duration в секундах (не больше половины меньшей из двух соседних сцен), dir ${TRANSITION_DIRS.join('|')} для slide/wipe, color hex для dip. Чередуй переходы по смыслу (crossfade для плавной смены, dip для смены времени, slide/wipe для динамики).`,
     '## Масштаб в метрах',
     'Задай в каждой сцене world.unitsPerMeter (типично 16 для городской сцены; меньше число значит крупный план, больше значит дальний). Для объектов kind asset укажи params.sizeM: ВЫСОТА модели в метрах (не ширина). Размеры берутся из списка каталога ниже; тогда объекты получаются в правильных пропорциях друг к другу.',
@@ -128,12 +129,47 @@ export interface ProjectReplyResult {
 
 const SUGGESTION_ID_RE = /^[a-z][a-z0-9-]{0,39}$/;
 
+/** Типичные ошибки ИИ, которые валидатор схемы пропускает: абсолютные координаты в move и странный verticalFit. */
+function checkSceneSanity(json: unknown, errors: ValidationError[]): void {
+  const scenes = json && typeof json === 'object' ? (json as Record<string, unknown>).scenes : undefined;
+  if (!Array.isArray(scenes)) return;
+  scenes.forEach((entry, si) => {
+    const scene = entry && typeof entry === 'object' ? (entry as Record<string, unknown>).scene as Record<string, unknown> | undefined : undefined;
+    if (!scene || typeof scene !== 'object') return;
+    const cam = scene.camera as Record<string, unknown> | undefined;
+    if (cam && typeof cam.verticalFit === 'number' && (cam.verticalFit < 0.2 || cam.verticalFit > 1.2)) {
+      errors.push({ path: `scenes[${si}].scene.camera.verticalFit`, message: `verticalFit должен быть от 0.2 до 1.2 (обычно 0.52), получено ${cam.verticalFit}; пример: 0.52` });
+    }
+    const layers = Array.isArray(scene.layers) ? scene.layers : [];
+    layers.forEach((layer, li) => {
+      const objects = layer && typeof layer === 'object' && Array.isArray((layer as Record<string, unknown>).objects) ? (layer as { objects: unknown[] }).objects : [];
+      objects.forEach((o, oi) => {
+        if (!o || typeof o !== 'object') return;
+        const obj = o as Record<string, unknown>;
+        const x = typeof obj.x === 'number' ? obj.x : 0;
+        const y = typeof obj.y === 'number' ? obj.y : 0;
+        if (!Array.isArray(obj.anim)) return;
+        obj.anim.forEach((a, ai) => {
+          if (!a || typeof a !== 'object') return;
+          const m = a as Record<string, unknown>;
+          if (m.type !== 'move' || !Array.isArray(m.from) || m.from.length !== 2) return;
+          const fx = m.from[0], fy = m.from[1];
+          if ((x !== 0 || y !== 0) && typeof fx === 'number' && typeof fy === 'number' && Math.abs(fx - x) < 1 && Math.abs(fy - y) < 1) {
+            errors.push({ path: `scenes[${si}].scene.layers[${li}].objects[${oi}].anim[${ai}].from`, message: 'move.from и move.to это смещения от x,y объекта, а не абсолютные координаты (здесь from равен самой позиции объекта, и объект улетит за кадр); поставь x и y в точку покоя, а from/to задай смещениями, например from [-400,0], to [400,0]' });
+          }
+        });
+      });
+    });
+  });
+}
+
 /** Проверка ответа ИИ: валидатор проекта плюс необязательное поле meta.suggestions. */
 export function validateProjectReply(json: unknown, opts: ValidateOpts = {}): ProjectReplyResult {
   const base = validateProject(json, opts);
   const errors = [...base.errors];
   const warnings = [...base.warnings];
   const suggestions: Suggestion[] = [];
+  checkSceneSanity(json, errors);
   const meta = json && typeof json === 'object' ? (json as Record<string, unknown>).meta : undefined;
   if (meta !== undefined) {
     if (!meta || typeof meta !== 'object' || Array.isArray(meta)) errors.push({ path: 'meta', message: 'meta должен быть объектом; пример: {"suggestions":[{"id":"dog","description":"собака сбоку"}]}' });
