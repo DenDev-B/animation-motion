@@ -73,3 +73,6 @@ export type {
 export * from './svg-import.ts';
 export { buildProjectPrompt, validateProjectReply, uniqueProjectSlug, formatSuggestions, modelHeightM, PROJECT_PROMPT_MAX_BYTES } from './ai-project.ts';
 export type { CatalogEntry, ProjectPromptOptions, ProjectReplyResult, Suggestion } from './ai-project.ts';
+export { buildModelPrompt, MODEL_PROMPT_MAX_BYTES, MODEL_SAMPLE } from './ai-model.ts';
+export type { ModelPromptOptions } from './ai-model.ts';
+export { NO_TEXT_KINDS } from './ai-project.ts';

@@ -77,6 +77,23 @@ if (files.length === 2 && fs.readdirSync(tmp).filter((n) => n.endsWith('.project
   if (r2.ok || !r2.errors.some((e) => /verticalFit/.test(e.path))) fail('verticalFit 1000 должен давать ошибку');
 }
 
+// 7. текст и счётчики ИИ не генерирует; ответ приходит в блоке ```json
+{
+  const prompt = buildProjectPrompt({ idea: 'тест', catalogIndex });
+  if (!prompt.includes('```json')) fail('в промте нет требования блока json-кода');
+  if (/^- text:/m.test(prompt) || /^- counter:/m.test(prompt)) fail('в справочнике промта не должно быть kind text и counter');
+  if (!/Не создавай объекты kind "text"/.test(prompt)) fail('в промте нет запрета на text и counter');
+  const withText = JSON.parse(exampleText) as { scenes: Array<{ scene: { layers: Array<{ objects: Array<Record<string, unknown>> }> } }> };
+  withText.scenes[0].scene.layers[0].objects.push({ id: 'zz-text', name: 'Титр', kind: 'text', x: 0, y: 0, params: { text: 'Привет' } });
+  const rt = validateProjectReply(withText, { catalogIds: readCatalogIds() });
+  if (rt.ok || !rt.errors.some((e) => /kind "text"/.test(e.message))) fail('объект kind text должен давать ошибку');
+  const fenced = 'Вот проект:\n```json\n' + exampleText + '\n```';
+  const fencedPath = path.join(tmp, 'fenced.txt');
+  fs.writeFileSync(fencedPath, fenced, 'utf8');
+  const fr = run(fencedPath);
+  if (fr.status !== 0) fail('ответ в блоке json-кода не принят: ' + fr.stderr);
+}
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(errors === 0 ? 'check:project-roundtrip OK' : `check:project-roundtrip FAILED: ${errors}`);
 process.exit(errors === 0 ? 0 : 1);

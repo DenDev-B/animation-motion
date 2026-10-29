@@ -201,44 +201,6 @@
                 ]
               }
             ]
-          },
-          {
-            "id": "s1-title",
-            "name": "Титры",
-            "depth": 1,
-            "visible": true,
-            "objects": [
-              {
-                "id": "s1-text",
-                "name": "Заголовок",
-                "kind": "text",
-                "x": 0,
-                "y": -330,
-                "s": 1,
-                "rot": 0,
-                "alpha": 1,
-                "params": {
-                  "text": "Что если бы киты летали",
-                  "size": 72,
-                  "weight": 700,
-                  "align": "center",
-                  "color": "#ffffff",
-                  "stroke": 3,
-                  "strokeColor": "#27345f",
-                  "shadow": 8,
-                  "maxWidth": 1400
-                },
-                "anim": [
-                  {
-                    "type": "fade",
-                    "from": 0,
-                    "to": 1,
-                    "t0": 0,
-                    "t1": 1.5
-                  }
-                ]
-              }
-            ]
           }
         ]
       },
@@ -661,35 +623,6 @@
                     "ease": "inOut"
                   }
                 ]
-              }
-            ]
-          },
-          {
-            "id": "s3-title",
-            "name": "Титры",
-            "depth": 1,
-            "visible": true,
-            "objects": [
-              {
-                "id": "s3-text",
-                "name": "Финал",
-                "kind": "text",
-                "x": 0,
-                "y": -330,
-                "s": 1,
-                "rot": 0,
-                "alpha": 1,
-                "params": {
-                  "text": "Небо принадлежит всем",
-                  "size": 60,
-                  "weight": 700,
-                  "align": "center",
-                  "color": "#ffffff",
-                  "stroke": 3,
-                  "strokeColor": "#2a1f4a",
-                  "shadow": 8,
-                  "maxWidth": 1400
-                }
               }
             ]
           }

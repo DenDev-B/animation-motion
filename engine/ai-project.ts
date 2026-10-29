@@ -27,6 +27,9 @@ export interface ProjectPromptOptions {
   catalogIndex: readonly CatalogEntry[];
 }
 
+/** Текст и счётчики ИИ не генерирует: автор добавляет титры в видеоредакторе (например CapCut). */
+export const NO_TEXT_KINDS: readonly string[] = ['text', 'counter'];
+
 export const PROJECT_PROMPT_MAX_BYTES = 20 * 1024;
 export const IDEA_MAX_CHARS = 2000;
 
@@ -69,11 +72,11 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
   const fps = opts.fps ?? 30;
   const portrait = format === '9:16';
 
-  const kinds = Object.entries(KIND_SPEC).map(([k, s]) => `- ${k}: ${s.description} ${s.params.length ? `Параметры: ${s.params.map(fieldLine).join('; ')}.` : 'Параметров нет.'}`).join('\n');
+  const kinds = Object.entries(KIND_SPEC).filter(([k]) => !NO_TEXT_KINDS.includes(k)).map(([k, s]) => `- ${k}: ${s.description} ${s.params.length ? `Параметры: ${s.params.map(fieldLine).join('; ')}.` : 'Параметров нет.'}`).join('\n');
   const anims = Object.entries(ANIM_SPEC).map(([t, f]) => `- ${t}: ${f.map(fieldLine).join('; ')}`).join('\n');
 
   const text = [
-    'Роль: ты сценарист-режиссёр и редактор JSON-проектов для программы animation-motion. По идее ты делаешь короткий ролик из нескольких сцен, которые вместе рассказывают одну историю (завязка, развитие, финал). Весь ответ: один полный JSON-объект проекта, без Markdown, без пояснений и без комментариев в JSON.',
+    'Роль: ты сценарист-режиссёр и редактор JSON-проектов для программы animation-motion. По идее ты делаешь короткий ролик из нескольких сцен, которые вместе рассказывают одну историю (завязка, развитие, финал). Весь ответ: один полный JSON-объект проекта внутри одного блока кода ```json ... ``` (в чате у блока кода есть кнопка «Копировать»), без пояснений и без комментариев в JSON.',
     '## Что нужно сделать',
     `Проект: version 1, title на русском, fps ${fps}, format "${format}", ровно ${scenes} сцен(ы) по ~${sec} секунд (допустимо 4..20, сумма по смыслу истории). У каждой сцены: id ("s1", "s2"...), name на русском, scene (полная сцена формата v1) и transition (у первой сцены {"type":"cut"}).`,
     tone(opts.tone),
@@ -99,9 +102,9 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     'Нарисуй её сам через kind "shape": params.model = {"bounds":[x,y,w,h],"parts":[{"id":"body","name":"Тело","fill":"#hex","d":"M 0 0 C ... Z"}]}. bounds в формате [x, y, ширина, высота] с центром модели в (0,0), модель высотой около 200 единиц; d это SVG-путь (команды M L C Q Z), 1..10 частей, простые узнаваемые силуэты; цвета только hex. Типы частей: path (по умолчанию), circle (cx, cy, r), line. Для shape sizeM не используется: размер задай полем s.',
     'Каждую такую модель добавь в meta проекта: "meta": {"suggestions": [{"id": "dog", "description": "что это за модель", "view": "side", "sizeM": 0.6}]} (id латиницей через дефис). Если всё есть в каталоге, meta не нужен.',
     '## Жёсткие правила',
-    '- Ответ только JSON проекта, один объект, без обрамления Markdown и без текста до или после.',
+    '- Ответ: один блок кода ```json с JSON проекта (один объект) и больше ничего: ни текста до блока, ни после, ни нескольких блоков. Если ответ длинный, не сокращай и не пиши «...»: JSON должен быть полным.',
     '- В каждой сцене: kind "sky" (фон), фон по смыслу (mountains, hills, skyline, cloud, stars, rain, snow), 1..3 смысловых объекта, лёгкое движение камеры. Не перегружай: до 25 объектов в сцене.',
-    '- Подписи и титры только через kind "text" (до 400 символов), числа через "counter", размер текста для читаемости не меньше 40.',
+    '- Не создавай объекты kind "text" и "counter": титры и подписи автор добавит позже в видеоредакторе. Смысл сцены передавай картинкой, объектами и движением.',
     '- Никакой случайности: геометрия задаётся seed (целое число), анимации только из списка выше.',
     '- Все числа конечные и в допустимых диапазонах; id сцен, слоёв и объектов уникальны во всём проекте.',
     '- Не придумывай kind, поля, переходы и id моделей, которых нет в справочнике выше.',
@@ -146,6 +149,9 @@ function checkSceneSanity(json: unknown, errors: ValidationError[]): void {
       objects.forEach((o, oi) => {
         if (!o || typeof o !== 'object') return;
         const obj = o as Record<string, unknown>;
+        if (typeof obj.kind === 'string' && NO_TEXT_KINDS.includes(obj.kind)) {
+          errors.push({ path: `scenes[${si}].scene.layers[${li}].objects[${oi}].kind`, message: `объекты kind "${obj.kind}" не нужны: титры добавляются позже в видеоредакторе; удали этот объект (и пустой слой, если в нём больше ничего нет)` });
+        }
         const x = typeof obj.x === 'number' ? obj.x : 0;
         const y = typeof obj.y === 'number' ? obj.y : 0;
         if (!Array.isArray(obj.anim)) return;
