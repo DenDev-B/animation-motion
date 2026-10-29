@@ -80,6 +80,10 @@
         <div id="ideaStatus" class="msg"></div>
         <ul id="ideaErrors" class="errs"></ul>
         <ul id="ideaWarnings" class="warns"></ul>
+        <div id="ideaSuggestions" hidden style="margin-top:10px;border:1px solid #ddd5ca;border-radius:6px;padding:8px">
+          <div style="font-weight:700;margin-bottom:4px">Предложено добавить в каталог:</div>
+          <div id="ideaSuggestionsList" style="display:flex;flex-direction:column;gap:4px"></div>
+        </div>
         <h2 style="margin-top:10px">Править текущую сцену через ИИ</h2>
         <div class="bar" style="margin-top:8px">
           <input id="aiTask" placeholder="Задача для ИИ (необязательно)" style="flex:1">
@@ -99,8 +103,103 @@
         <div id="templates"></div>
         <p class="hint">Правки JSON применяются через историю: Ctrl+Z отменяет, Ctrl+Y повторяет.</p>
       </div>
+      <div class="box">
+        <h2>Каталог</h2>
+        <div class="bar" id="catalogTabBar"></div>
+
+        <div id="catalogPanelList">
+          <div class="bar" style="margin-bottom:6px; align-items:flex-start; gap:8px; flex-wrap:wrap">
+            <label class="f" style="flex:1 1 240px">Поиск по названию, id, тегам<input id="catalogSearch" style="width:100%"></label>
+            <label class="f">Вид<select id="catalogView"><option>все</option><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
+            <span id="catalogCount" class="hint"></span>
+          </div>
+          <div id="catalogList" style="display:flex;flex-direction:column;gap:6px"></div>
+          <div id="catalogEmpty" class="hint" hidden>Подходящих моделей нет.</div>
+        </div>
+
+        <div id="catalogPanelPreview" hidden>
+          <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:center">
+            <label class="f">Модель<select id="catalogPreviewModel"></select></label>
+            <label class="f">Движение<select id="catalogPreset"><option value="none">без</option><option value="walk">walk</option><option value="run">run</option><option value="fly">fly</option><option value="swim">swim</option><option value="hop">hop</option><option value="sway">sway</option></select></label>
+            <button id="catalogPlay" class="primary">Играть</button>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <canvas id="catalogPreview" width="280" height="280" style="border:1px solid #ddd5ca;border-radius:4px;background:#000"></canvas>
+            <div style="flex:1;min-width:0">
+              <label class="f">Время<input id="catalogTime" type="range" min="0" max="8" step="0.1" style="width:100%"></label>
+              <span id="catalogTimeText" class="hint">0.0 / 8.0 с</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="catalogPanelNewJson" hidden>
+          <div class="hint" style="margin-bottom:6px">Вставьте JSON модели целиком и нажмите «Проверить». Сохранение скачивает файл `catalog/<id>.json` и добавляет модель в список сеанса без перезагрузки.</div>
+          <textarea id="catalogNewJson" spellcheck="false" rows="8" style="width:100%"></textarea>
+          <div class="btns" style="margin-top:6px">
+            <button id="catalogCheckJson">Проверить</button>
+            <button id="catalogCopyFixJson" hidden>Копировать запрос на исправление</button>
+            <button id="catalogSaveJson" class="primary" disabled>Сохранить в каталог</button>
+          </div>
+          <div id="catalogNewJsonStatus" class="msg"></div>
+          <ul id="catalogNewJsonErrors" class="errs"></ul>
+          <ul id="catalogNewJsonWarnings" class="warns"></ul>
+        </div>
+
+        <div id="catalogPanelSvg" hidden>
+          <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:flex-start">
+            <label class="f" style="flex:1 1 220px">Файл SVG<input id="catalogSvgFile" type="file" accept=".svg,image/svg+xml"></label>
+          </div>
+          <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap">
+            <label class="f">id<input id="catalogSvgId"></label>
+            <label class="f">Название<input id="catalogSvgName"></label>
+            <label class="f">Вид<select id="catalogSvgView"><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
+            <label class="f">Размер, м<input id="catalogSvgSizeM" type="number" step="0.01"></label>
+            <label class="f">Ось размера<select id="catalogSvgAxis"><option>height</option><option>width</option></select></label>
+          </div>
+          <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap">
+            <label class="f">Теги<input id="catalogSvgTags" placeholder="через запятую"></label>
+            <label class="f">Лицензия<input id="catalogSvgLicense" value="own"></label>
+            <label class="f">Автор<input id="catalogSvgAuthor"></label>
+            <label class="f">Источник<input id="catalogSvgSource"></label>
+            <label class="f">Ссылка<input id="catalogSvgUrl"></label>
+            <label class="f" style="align-self:flex-end"><input type="checkbox" id="catalogSvgAttribution"> Указывать автора</label>
+          </div>
+          <div class="btns" style="margin-top:6px">
+            <button id="catalogImportSvg">Импортировать</button>
+            <button id="catalogCopyFixSvg" hidden>Копировать запрос на исправление</button>
+          </div>
+          <div id="catalogSvgStatus" class="msg"></div>
+          <ul id="catalogSvgWarnings" class="warns"></ul>
+        </div>
+
+        <div id="catalogPanelModelPrompt" hidden>
+          <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:flex-start">
+            <label class="f" style="flex:1 1 100%">Описание<textarea id="catalogModelDesc" rows="3" placeholder="Например: собака сбоку, смотрит вправо"></textarea></label>
+          </div>
+          <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap">
+            <label class="f">Вид<select id="catalogModelView"><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
+            <label class="f">Размер, м<input id="catalogModelSizeM" type="number" step="0.01"></label>
+          </div>
+          <div class="btns" style="margin-top:6px">
+            <button id="catalogCopyModelPrompt">Копировать промт</button>
+            <span id="catalogModelPromptStatus" class="hint"></span>
+          </div>
+          <div class="hint" style="margin:10px 0 6px">Ответ ИИ (JSON модели)</div>
+          <textarea id="catalogModelResponse" spellcheck="false" rows="8" style="width:100%"></textarea>
+          <div class="btns" style="margin-top:6px">
+            <button id="catalogSaveModel" class="primary" disabled>Сохранить в каталог</button>
+          </div>
+          <div id="catalogModelStatus" class="msg"></div>
+          <ul id="catalogModelErrors" class="errs"></ul>
+          <ul id="catalogModelWarnings" class="warns"></ul>
+        </div>
+
+        <div id="catalogPanelCredits" hidden>
+          <div class="btns" style="margin-bottom:6px"><button id="catalogShowCredits">Показать/Копировать титры</button></div>
+          <pre id="catalogCreditsOut" spellcheck="false" style="white-space:pre-wrap;font-family:inherit;font-size:12px;border:1px solid #ddd5ca;border-radius:6px;padding:8px;max-height:260px;overflow:auto" hidden></pre>
+        </div>
+      </div>
     </div>
   </div>
-  <script type="module" src="/editor/main.ts"></script>
 </body>
 </html>
