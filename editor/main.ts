@@ -465,6 +465,10 @@ function fillSvgFields(asset: CatalogAsset) {
 function checkCatalogSvg() {
   const file = catalogSvgFile?.files?.[0];
   if (!file) return;
+  const baseName = file.name.replace(/\.[^.]+$/, '');
+  const slug = baseName.toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '') || 'model';
+  if (catalogSvgId && !catalogSvgId.value.trim()) catalogSvgId.value = slug;
+  if (catalogSvgName && !catalogSvgName.value.trim()) catalogSvgName.value = baseName;
   void file.text().then((text) => {
     const fields = readSvgFields();
     const result = buildSvgModel(text, fields);
@@ -482,9 +486,12 @@ function checkCatalogSvg() {
 
 function importSvgToCatalog() {
   if (!svgCandidate || !svgCandidate.asset) return;
+  const importedId = svgCandidate.asset.id;
   saveCatalogModel(svgCandidate.asset);
   svgCandidate = null;
   if (catalogSvgFile) catalogSvgFile.value = '';
+  if (catalogImportSvg) catalogImportSvg.disabled = true;
+  setCatalogStatus(catalogSvgStatus, `Импортировано как ${importedId}: модель в списке «Список», файл скачан. Положите его в папку catalog/ и выполните npm run catalog:add, чтобы она осталась навсегда.`, false);
 }
 
 function updateCatalogModelPrompt() {
@@ -576,8 +583,8 @@ function previewTick(ts: number) {
   if (!previewPlaying) { lastPreviewTs = ts; previewRaf = requestAnimationFrame(previewTick); return; }
   previewTs = (previewTs + (ts - lastPreviewTs) / 1000) % previewDuration;
   lastPreviewTs = ts;
+  if (catalogTime) catalogTime.value = previewTs.toFixed(2);
   renderPreviewFrame();
-  if (catalogTime) catalogTime.value = (previewTs / previewDuration).toFixed(2);
   previewRaf = requestAnimationFrame(previewTick);
 }
 
@@ -1037,6 +1044,7 @@ if (catalogNewJson) catalogNewJson.addEventListener('input', checkCatalogNewJson
 if (catalogCopyFixJson) catalogCopyFixJson.onclick = () => { if (newJsonCandidate === undefined || newJsonErrors.length === 0) return; void copyText(buildFixRequest(newJsonCandidate, newJsonErrors), 'Запрос на исправление'); };
 if (catalogSaveJson) catalogSaveJson.onclick = () => { const candidate = newJsonCandidate; if (!candidate) return; saveCatalogModel(candidate); };
 if (catalogSvgFile) catalogSvgFile.addEventListener('change', checkCatalogSvg);
+for (const el of document.querySelectorAll('#catalogPanelSvg input, #catalogPanelSvg select')) { if (el !== catalogSvgFile) el.addEventListener('input', checkCatalogSvg); }
 if (catalogImportSvg) catalogImportSvg.onclick = importSvgToCatalog;
 if (catalogCopyFixSvg) catalogCopyFixSvg.onclick = () => { if (!svgCandidate || !svgCandidate.asset) return; void copyText(buildFixRequest(svgCandidate.asset, svgCandidate.errors), 'Запрос на исправление'); };
 if (catalogModelDesc) catalogModelDesc.addEventListener('input', updateCatalogModelPrompt);
@@ -1047,7 +1055,7 @@ if (catalogModelResponse) catalogModelResponse.addEventListener('input', checkCa
 if (catalogSaveModel) catalogSaveModel.onclick = () => { const candidate = modelCandidate; if (!candidate) return; saveCatalogModel(candidate as CatalogAsset); };
 if (catalogShowCredits) catalogShowCredits.onclick = () => { renderCatalogCredits(); if (catalogCreditsOut) { catalogCreditsOut.hidden = false; void copyText(catalogCreditsOut.textContent ?? '', 'Титры проекта'); } };
 if (catalogPlay) catalogPlay.onclick = () => setPreviewPlaying(!previewPlaying);
-if (catalogTime) catalogTime.addEventListener('input', (e) => { setPreviewPlaying(false); previewTs = Number((e.target as HTMLInputElement).value) * previewDuration; renderPreviewFrame(); });
+if (catalogTime) catalogTime.addEventListener('input', (e) => { setPreviewPlaying(false); previewTs = Number((e.target as HTMLInputElement).value); renderPreviewFrame(); });
 if (catalogPreviewModel) catalogPreviewModel.addEventListener('change', () => { setPreviewPlaying(false); renderPreviewFrame(); });
 if (catalogPreset) catalogPreset.addEventListener('change', () => { setPreviewPlaying(false); renderPreviewFrame(); });
 

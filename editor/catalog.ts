@@ -1,6 +1,7 @@
 // Каталог редактора: чистая логика без DOM (импорт.meta.glob каталога остаётся в editor/main.ts).
 import type { CatalogAsset, SceneObject, SceneV1 } from '../engine/schema.ts';
 import { validateAsset, type ValidationError } from '../engine/validate.ts';
+import { extractJson } from '../engine/ai-io.ts';
 import { importSvg, buildImportedModel } from '../engine/svg-import.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import type { ModelPromptOptions } from '../engine/ai-model.ts';
@@ -102,7 +103,7 @@ export interface CheckModelJsonResult {
 
 export function checkModelJsonText(text: string): CheckModelJsonResult {
   let candidate: unknown;
-  try { candidate = JSON.parse(text); } catch (error) {
+  try { candidate = extractJson(text); } catch (error) {
     return { ok: false, errors: [{ path: '', message: `Не удалось разобрать JSON: ${error instanceof Error ? error.message : String(error)}` }], warnings: [] };
   }
   const validation = validateAsset(candidate);
