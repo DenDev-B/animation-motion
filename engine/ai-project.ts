@@ -38,6 +38,7 @@ export const NO_TEXT_KINDS: readonly string[] = ['text', 'counter'];
 
 export const PROJECT_PROMPT_MAX_BYTES = 28 * 1024;
 export const IDEA_MAX_CHARS = 2000;
+export const CATALOG_MAX_LINES = 30;
 
 const clampInt = (v: number | undefined, lo: number, hi: number, def: number): number => {
   if (v === undefined || !Number.isFinite(v)) return def;
@@ -60,12 +61,40 @@ export function modelHeightM(e: CatalogEntry): number | undefined {
   return undefined;
 }
 
-export function catalogBlock(index: readonly CatalogEntry[]): string {
+export interface CatalogBlockOptions {
+  /** Слова идеи и ТЗ: по ним отбираются модели, если каталог больше 30 строк. */
+  idea?: string;
+  brief?: string;
+}
+
+const catalogWords = (text: string): string[] => (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).filter((word) => word.length >= 3);
+
+function entryMatches(entry: CatalogEntry, words: readonly string[]): boolean {
+  const own = [...catalogWords(entry.name), ...(entry.tags ?? []).flatMap(catalogWords)];
+  return own.some((a) => words.some((b) => a.startsWith(b) || b.startsWith(a)));
+}
+
+export function catalogBlock(index: readonly CatalogEntry[], opts: CatalogBlockOptions = {}): string {
   if (index.length === 0) return '(каталог пуст: все объекты рисуй через kind "shape" и предложи их в meta.suggestions)';
-  return index.map((e) => {
+  let rows: readonly CatalogEntry[] = index;
+  if (index.length > CATALOG_MAX_LINES) {
+    const words = [...new Set([...catalogWords(opts.idea ?? ''), ...catalogWords(opts.brief ?? '')])];
+    const selected = new Set<CatalogEntry>();
+    if (words.length) for (const entry of index) {
+      if (selected.size >= CATALOG_MAX_LINES) break;
+      if (entryMatches(entry, words)) selected.add(entry);
+    }
+    let extras = 0;
+    for (const entry of index) {
+      if (selected.size >= CATALOG_MAX_LINES || extras >= 10) break;
+      if (!selected.has(entry)) { selected.add(entry); extras++; }
+    }
+    rows = index.filter((entry) => selected.has(entry));
+  }
+  return rows.map((e) => {
     const h = modelHeightM(e);
-    const w = e.realSize?.widthM !== undefined ? Math.round(e.realSize.widthM * 100) / 100 : undefined;
-    return `- ${e.id}: ${e.name}; вид: ${e.view ?? '?'}; высота ${h !== undefined ? `${Math.round(h * 100) / 100} м` : 'неизвестна'}${w !== undefined ? `, ширина ${w} м` : ''}; теги: ${(e.tags ?? []).join(', ')}`;
+    const tags = (e.tags ?? []).slice(0, 4);
+    return `- ${e.id} | ${e.name} | ${e.view ?? '?'} | ${h !== undefined ? `${Math.round(h * 100) / 100} м` : '?'} | ${tags.join(', ')}`;
   }).join('\n');
 }
 
@@ -114,7 +143,7 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     '## Масштаб в метрах',
     'Задай в каждой сцене world.unitsPerMeter (типично 16 для городской сцены; меньше число значит крупный план, больше значит дальний). Для объектов kind asset укажи params.sizeM: ВЫСОТА модели в метрах (не ширина). Размеры берутся из списка каталога ниже; тогда объекты получаются в правильных пропорциях друг к другу.',
     '## Модели каталога (используй только эти id в asset)',
-    catalogBlock(opts.catalogIndex),
+    catalogBlock(opts.catalogIndex, { idea, brief }),
     'Для kind "asset" пиши "asset": "<id из списка>". Выбирай вид модели под сцену (side для движения вбок).',
     '## Если нужной модели нет в каталоге',
     'Нарисуй её сам через kind "shape": params.model = {"bounds":[x,y,w,h],"parts":[{"id":"body","name":"Тело","fill":"#hex","d":"M 0 0 C ... Z"}]}. bounds в формате [x, y, ширина, высота] с центром модели в (0,0), модель высотой около 200 единиц; d это SVG-путь (команды M L C Q Z), 1..10 частей, простые узнаваемые силуэты; цвета только hex. Типы частей: path (по умолчанию), circle (cx, cy, r), line. Для shape sizeM не используется: размер задай полем s.',

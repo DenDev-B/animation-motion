@@ -116,5 +116,54 @@
     },
     "license": "own",
     "attribution": false
+  },
+  {
+    "id": "car-sport-red",
+    "name": "Красный спорткар",
+    "file": "car-sport-red.json",
+    "tags": [
+      "машина",
+      "car",
+      "спорткар",
+      "красный"
+    ],
+    "view": "side",
+    "realSize": {
+      "widthM": 4.5
+    },
+    "license": "own",
+    "attribution": false
+  },
+  {
+    "id": "street-lamp",
+    "name": "Уличный фонарь",
+    "file": "street-lamp.json",
+    "tags": [
+      "фонарь",
+      "lamp",
+      "улица"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 6
+    },
+    "license": "own",
+    "attribution": false
+  },
+  {
+    "id": "moon",
+    "name": "Луна (условный размер)",
+    "file": "moon.json",
+    "tags": [
+      "луна",
+      "moon",
+      "ночь"
+    ],
+    "view": "front",
+    "realSize": {
+      "widthM": 40
+    },
+    "license": "own",
+    "attribution": false
   }
 ]

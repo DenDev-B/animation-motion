@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "id": "street-lamp",
+  "name": "Уличный фонарь",
+  "bounds": [
+    -40,
+    -300,
+    80,
+    300
+  ],
+  "realSize": {
+    "heightM": 6
+  },
+  "meta": {
+    "view": "side",
+    "tags": [
+      "фонарь",
+      "lamp",
+      "улица"
+    ],
+    "license": {
+      "name": "own",
+      "author": "project",
+      "source": "project",
+      "url": "",
+      "attribution": false
+    }
+  },
+  "parts": [
+    {
+      "id": "pole",
+      "fill": "#30394d",
+      "d": "M -4 0 L 4 0 L 4 -270 L -4 -270 Z",
+      "name": "pole"
+    },
+    {
+      "id": "arm",
+      "fill": "#30394d",
+      "d": "M -4 -270 L 40 -262 L 40 -256 L -4 -262 Z",
+      "name": "arm"
+    },
+    {
+      "id": "head",
+      "fill": "#ffe9b0",
+      "d": "M 26 -262 L 52 -262 L 48 -254 L 30 -254 Z",
+      "name": "head"
+    }
+  ]
+}

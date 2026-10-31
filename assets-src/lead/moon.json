@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "id": "moon",
+  "name": "Луна (условный размер)",
+  "bounds": [
+    -60,
+    -60,
+    120,
+    120
+  ],
+  "meta": {
+    "view": "front",
+    "tags": [
+      "луна",
+      "moon",
+      "ночь"
+    ],
+    "license": {
+      "name": "own",
+      "author": "project",
+      "source": "project",
+      "url": "",
+      "attribution": false
+    }
+  },
+  "parts": [
+    {
+      "id": "d",
+      "type": "circle",
+      "fill": "#fff3d0",
+      "cx": 0,
+      "cy": 0,
+      "r": 46,
+      "name": "d"
+    },
+    {
+      "id": "c1",
+      "type": "circle",
+      "fill": "#e6d6aa",
+      "cx": -14,
+      "cy": -8,
+      "r": 9,
+      "name": "c1"
+    },
+    {
+      "id": "c2",
+      "type": "circle",
+      "fill": "#e6d6aa",
+      "cx": 16,
+      "cy": 14,
+      "r": 6,
+      "name": "c2"
+    }
+  ],
+  "realSize": {
+    "widthM": 40
+  }
+}

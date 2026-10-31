@@ -5,7 +5,7 @@ import { MOTION_PRESETS } from './motion.ts';
 import { getStyle, STYLE_PRESETS, styleBlock } from './styles.ts';
 import type { ValidationError } from './validate.ts';
 
-export const BRIEF_MAX_CHARS = 8000;
+export const BRIEF_MAX_CHARS = 6000;
 
 export const BRIEF_SECTIONS = [
   '1. Настроение и референсы',
@@ -74,7 +74,7 @@ export function buildBriefPrompt(opts: BriefPromptOptions): string {
     '- Текст, титры и подписи не планируй: их добавляют позже в видеоредакторе.',
     '- Не придумывай новые kinds, переходы, поля и пресеты движения: только из списков выше.',
     '## Каталог моделей',
-    catalogBlock(opts.catalogIndex),
+    catalogBlock(opts.catalogIndex, { idea }),
     'Для моделей из каталога используй их id. Если подходящей модели нет, опиши её словами в разделе 7 и укажи, что её нарисуют через kind "shape".',
   ];
 
@@ -114,7 +114,7 @@ export function validateBrief(text: string, opts: { scenes?: number } = {}): { o
   const warnings: ValidationError[] = [];
   const source = (text ?? '').trim();
   if (!source) {
-    return { ok: false, errors: [{ path: '', message: 'ТЗ пустое: вставьте ответ ИИ целиком, он начинается с блока ```markdown' }], warnings };
+    return { ok: false, errors: [{ path: '', message: 'ТЗ пустое: вставьте ответ ИИ целиком, можно без блока кода.' }], warnings };
   }
   if (source.length > BRIEF_MAX_CHARS) {
     errors.push({ path: '', message: `ТЗ длиннее ${BRIEF_MAX_CHARS} символов (${source.length}). Попросите ИИ сократить текст, оставив все 7 разделов и шоты.` });
@@ -122,9 +122,6 @@ export function validateBrief(text: string, opts: { scenes?: number } = {}): { o
   const fences = (source.match(/```/g) ?? []).length;
   if (fences % 2 !== 0) {
     errors.push({ path: '', message: 'Блок кода обрезан: не хватает закрывающего ```. Скопируйте ответ ИИ целиком или попросите «продолжи и верни ТЗ целиком».' });
-  }
-  if (fences === 0) {
-    errors.push({ path: '', message: 'Нет блока кода ```markdown. Попросите ИИ вернуть ТЗ одним блоком ```markdown ... ``` без текста вокруг.' });
   }
   if (/```json/i.test(source)) {
     errors.push({ path: '', message: 'В ТЗ не должно быть блока ```json: это документ Markdown, а не проект. Уберите JSON и оставьте только ТЗ.' });

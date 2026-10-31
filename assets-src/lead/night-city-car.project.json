@@ -1,0 +1,586 @@
+{
+ "version": 1,
+ "title": "Красная машина, ночной город (эталон)",
+ "fps": 30,
+ "format": "16:9",
+ "scenes": [
+  {
+   "id": "s1",
+   "name": "Ночная улица",
+   "scene": {
+    "version": 1,
+    "title": "Красная машина, ночной город",
+    "duration": 10,
+    "world": {
+     "unitsPerMeter": 70
+    },
+    "palette": {
+     "sky": [
+      "#080d20",
+      "#141c3c",
+      "#252b50"
+     ],
+     "sun": "#f2e8c8",
+     "haze": "#3a3f6a",
+     "far": "#1b2340",
+     "mid": "#11182d",
+     "near": "#0a0f1e",
+     "whale": "#c0392b",
+     "belly": "#1b2631",
+     "rim": "#e5223d",
+     "cloudLight": "#2a3156",
+     "cloudShadow": "#141a33",
+     "window": "#ffd98a"
+    },
+    "style": {
+     "grain": 0.06,
+     "vignette": 0.3,
+     "preset": "night"
+    },
+    "camera": {
+     "verticalFit": 0.52,
+     "keys": [
+      {
+       "t": 0,
+       "x": -60,
+       "y": 0,
+       "zoom": 1
+      },
+      {
+       "t": 10,
+       "x": 60,
+       "y": 0,
+       "zoom": 1.1
+      }
+     ]
+    },
+    "assets": {},
+    "layers": [
+     {
+      "id": "l1",
+      "name": "Небо",
+      "depth": 0,
+      "visible": true,
+      "objects": [
+       {
+        "id": "o1",
+        "name": "Небо",
+        "kind": "sky"
+       },
+       {
+        "id": "o2",
+        "name": "Звёзды",
+        "kind": "stars",
+        "x": 0,
+        "y": -150,
+        "params": {
+         "w": 2400,
+         "h": 600,
+         "count": 160,
+         "seed": 4
+        }
+       }
+      ]
+     },
+     {
+      "id": "l2",
+      "name": "Луна",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+       {
+        "id": "o3",
+        "name": "Свет луны",
+        "kind": "glow",
+        "x": 420,
+        "y": -300,
+        "params": {
+         "r": 260,
+         "color": "sun",
+         "a": 0.6
+        }
+       }
+      ]
+     },
+     {
+      "id": "moonL",
+      "name": "Луна",
+      "depth": 0.05,
+      "visible": true,
+      "objects": [
+       {
+        "id": "moon",
+        "name": "Луна",
+        "kind": "asset",
+        "x": 420,
+        "y": -290,
+        "params": {},
+        "asset": "moon",
+        "s": 1
+       }
+      ]
+     },
+     {
+      "id": "l3",
+      "name": "Дальний город",
+      "depth": 0.2,
+      "visible": true,
+      "objects": [
+       {
+        "id": "o4",
+        "name": "Дальний город",
+        "kind": "skyline",
+        "x": 0,
+        "y": 190,
+        "params": {
+         "w": 3200,
+         "minH": 120,
+         "maxH": 420,
+         "seed": 3,
+         "windows": true,
+         "haze": 0.35,
+         "lit": 0.32
+        }
+       }
+      ]
+     },
+     {
+      "id": "l4",
+      "name": "Средний город",
+      "depth": 0.5,
+      "visible": true,
+      "objects": [
+       {
+        "id": "o5",
+        "name": "Средний город",
+        "kind": "skyline",
+        "x": 0,
+        "y": 260,
+        "params": {
+         "w": 3200,
+         "minH": 100,
+         "maxH": 320,
+         "seed": 8,
+         "windows": true,
+         "haze": 0.1,
+         "lit": 0.32
+        }
+       }
+      ]
+     },
+     {
+      "id": "l5",
+      "name": "Дорога",
+      "depth": 1,
+      "visible": true,
+      "objects": [
+       {
+        "id": "o6",
+        "name": "Дорога",
+        "kind": "shape",
+        "x": 0,
+        "y": 290,
+        "params": {
+         "model": {
+          "bounds": [
+           -1800,
+           -60,
+           3600,
+           280
+          ],
+          "parts": [
+           {
+            "id": "roadbase",
+            "fill": "#141a28",
+            "d": "M -1800 -60 L 1800 -60 L 1800 220 L -1800 220 Z"
+           },
+           {
+            "id": "curb",
+            "fill": "#2a3348",
+            "d": "M -1800 -60 L 1800 -60 L 1800 -44 L -1800 -44 Z"
+           },
+           {
+            "id": "dash-14",
+            "fill": "#c5cbd5cc",
+            "d": "M -1680 62 L -1616 62 L -1620 70 L -1684 70 Z"
+           },
+           {
+            "id": "dash-13",
+            "fill": "#c5cbd5cc",
+            "d": "M -1560 62 L -1496 62 L -1500 70 L -1564 70 Z"
+           },
+           {
+            "id": "dash-12",
+            "fill": "#c5cbd5cc",
+            "d": "M -1440 62 L -1376 62 L -1380 70 L -1444 70 Z"
+           },
+           {
+            "id": "dash-11",
+            "fill": "#c5cbd5cc",
+            "d": "M -1320 62 L -1256 62 L -1260 70 L -1324 70 Z"
+           },
+           {
+            "id": "dash-10",
+            "fill": "#c5cbd5cc",
+            "d": "M -1200 62 L -1136 62 L -1140 70 L -1204 70 Z"
+           },
+           {
+            "id": "dash-9",
+            "fill": "#c5cbd5cc",
+            "d": "M -1080 62 L -1016 62 L -1020 70 L -1084 70 Z"
+           },
+           {
+            "id": "dash-8",
+            "fill": "#c5cbd5cc",
+            "d": "M -960 62 L -896 62 L -900 70 L -964 70 Z"
+           },
+           {
+            "id": "dash-7",
+            "fill": "#c5cbd5cc",
+            "d": "M -840 62 L -776 62 L -780 70 L -844 70 Z"
+           },
+           {
+            "id": "dash-6",
+            "fill": "#c5cbd5cc",
+            "d": "M -720 62 L -656 62 L -660 70 L -724 70 Z"
+           },
+           {
+            "id": "dash-5",
+            "fill": "#c5cbd5cc",
+            "d": "M -600 62 L -536 62 L -540 70 L -604 70 Z"
+           },
+           {
+            "id": "dash-4",
+            "fill": "#c5cbd5cc",
+            "d": "M -480 62 L -416 62 L -420 70 L -484 70 Z"
+           },
+           {
+            "id": "dash-3",
+            "fill": "#c5cbd5cc",
+            "d": "M -360 62 L -296 62 L -300 70 L -364 70 Z"
+           },
+           {
+            "id": "dash-2",
+            "fill": "#c5cbd5cc",
+            "d": "M -240 62 L -176 62 L -180 70 L -244 70 Z"
+           },
+           {
+            "id": "dash-1",
+            "fill": "#c5cbd5cc",
+            "d": "M -120 62 L -56 62 L -60 70 L -124 70 Z"
+           },
+           {
+            "id": "dash0",
+            "fill": "#c5cbd5cc",
+            "d": "M 0 62 L 64 62 L 60 70 L -4 70 Z"
+           },
+           {
+            "id": "dash1",
+            "fill": "#c5cbd5cc",
+            "d": "M 120 62 L 184 62 L 180 70 L 116 70 Z"
+           },
+           {
+            "id": "dash2",
+            "fill": "#c5cbd5cc",
+            "d": "M 240 62 L 304 62 L 300 70 L 236 70 Z"
+           },
+           {
+            "id": "dash3",
+            "fill": "#c5cbd5cc",
+            "d": "M 360 62 L 424 62 L 420 70 L 356 70 Z"
+           },
+           {
+            "id": "dash4",
+            "fill": "#c5cbd5cc",
+            "d": "M 480 62 L 544 62 L 540 70 L 476 70 Z"
+           },
+           {
+            "id": "dash5",
+            "fill": "#c5cbd5cc",
+            "d": "M 600 62 L 664 62 L 660 70 L 596 70 Z"
+           },
+           {
+            "id": "dash6",
+            "fill": "#c5cbd5cc",
+            "d": "M 720 62 L 784 62 L 780 70 L 716 70 Z"
+           },
+           {
+            "id": "dash7",
+            "fill": "#c5cbd5cc",
+            "d": "M 840 62 L 904 62 L 900 70 L 836 70 Z"
+           },
+           {
+            "id": "dash8",
+            "fill": "#c5cbd5cc",
+            "d": "M 960 62 L 1024 62 L 1020 70 L 956 70 Z"
+           },
+           {
+            "id": "dash9",
+            "fill": "#c5cbd5cc",
+            "d": "M 1080 62 L 1144 62 L 1140 70 L 1076 70 Z"
+           },
+           {
+            "id": "dash10",
+            "fill": "#c5cbd5cc",
+            "d": "M 1200 62 L 1264 62 L 1260 70 L 1196 70 Z"
+           },
+           {
+            "id": "dash11",
+            "fill": "#c5cbd5cc",
+            "d": "M 1320 62 L 1384 62 L 1380 70 L 1316 70 Z"
+           },
+           {
+            "id": "dash12",
+            "fill": "#c5cbd5cc",
+            "d": "M 1440 62 L 1504 62 L 1500 70 L 1436 70 Z"
+           },
+           {
+            "id": "dash13",
+            "fill": "#c5cbd5cc",
+            "d": "M 1560 62 L 1624 62 L 1620 70 L 1556 70 Z"
+           },
+           {
+            "id": "dash14",
+            "fill": "#c5cbd5cc",
+            "d": "M 1680 62 L 1744 62 L 1740 70 L 1676 70 Z"
+           },
+           {
+            "id": "refl0",
+            "fill": "#ffd98a22",
+            "d": "M -526 -40 L -514 -40 L -506 200 L -534 200 Z"
+           },
+           {
+            "id": "refl1",
+            "fill": "#ffd98a22",
+            "d": "M -186 -40 L -174 -40 L -166 200 L -194 200 Z"
+           },
+           {
+            "id": "refl2",
+            "fill": "#ffd98a22",
+            "d": "M 254 -40 L 266 -40 L 274 200 L 246 200 Z"
+           },
+           {
+            "id": "refl3",
+            "fill": "#ffd98a22",
+            "d": "M 554 -40 L 566 -40 L 574 200 L 546 200 Z"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     },
+     {
+      "id": "lampsL",
+      "name": "Фонари",
+      "depth": 0.9,
+      "visible": true,
+      "objects": [
+       {
+        "id": "lampG0",
+        "name": "Свет фонаря",
+        "kind": "glow",
+        "x": -520,
+        "y": 170,
+        "params": {
+         "r": 230,
+         "color": "#ffd98a",
+         "a": 0.55
+        }
+       },
+       {
+        "id": "lampP0",
+        "name": "Фонарь",
+        "kind": "asset",
+        "x": -520,
+        "y": 290,
+        "params": {
+         "sizeM": 4.3
+        },
+        "asset": "street-lamp",
+        "s": 1
+       },
+       {
+        "id": "lampG1",
+        "name": "Свет фонаря",
+        "kind": "glow",
+        "x": -180,
+        "y": 170,
+        "params": {
+         "r": 230,
+         "color": "#ffd98a",
+         "a": 0.55
+        }
+       },
+       {
+        "id": "lampP1",
+        "name": "Фонарь",
+        "kind": "asset",
+        "x": -180,
+        "y": 290,
+        "params": {
+         "sizeM": 4.3
+        },
+        "asset": "street-lamp",
+        "s": 1
+       },
+       {
+        "id": "lampG2",
+        "name": "Свет фонаря",
+        "kind": "glow",
+        "x": 260,
+        "y": 170,
+        "params": {
+         "r": 230,
+         "color": "#ffd98a",
+         "a": 0.55
+        }
+       },
+       {
+        "id": "lampP2",
+        "name": "Фонарь",
+        "kind": "asset",
+        "x": 260,
+        "y": 290,
+        "params": {
+         "sizeM": 4.3
+        },
+        "asset": "street-lamp",
+        "s": 1
+       },
+       {
+        "id": "lampG3",
+        "name": "Свет фонаря",
+        "kind": "glow",
+        "x": 560,
+        "y": 170,
+        "params": {
+         "r": 230,
+         "color": "#ffd98a",
+         "a": 0.55
+        }
+       },
+       {
+        "id": "lampP3",
+        "name": "Фонарь",
+        "kind": "asset",
+        "x": 560,
+        "y": 290,
+        "params": {
+         "sizeM": 4.3
+        },
+        "asset": "street-lamp",
+        "s": 1
+       }
+      ]
+     },
+     {
+      "id": "carL",
+      "name": "Машина",
+      "depth": 1,
+      "visible": true,
+      "objects": [
+       {
+        "id": "carRef",
+        "name": "Красный отсвет",
+        "kind": "glow",
+        "x": 0,
+        "y": 330,
+        "params": {
+         "r": 190,
+         "color": "#ff2a46",
+         "a": 0.35
+        },
+        "anim": [
+         {
+          "type": "move",
+          "from": [
+           -300,
+           0
+          ],
+          "to": [
+           300,
+           0
+          ],
+          "t0": 0,
+          "t1": 10
+         }
+        ]
+       },
+       {
+        "id": "beam",
+        "name": "Свет фар",
+        "kind": "shape",
+        "x": 0,
+        "y": 298,
+        "params": {
+         "model": {
+          "bounds": [
+           0,
+           -40,
+           520,
+           160
+          ],
+          "parts": [
+           {
+            "id": "b",
+            "fill": "#fff0b02e",
+            "d": "M 8 -2 L 520 -50 L 520 110 L 8 20 Z"
+           }
+          ]
+         }
+        },
+        "s": 1,
+        "anim": [
+         {
+          "type": "move",
+          "from": [
+           -300,
+           0
+          ],
+          "to": [
+           300,
+           0
+          ],
+          "t0": 0,
+          "t1": 10
+         }
+        ]
+       },
+       {
+        "id": "car",
+        "name": "Красный спорткар",
+        "kind": "asset",
+        "x": 0,
+        "y": 300,
+        "s": 1,
+        "params": {
+         "sizeM": 1.68
+        },
+        "anim": [
+         {
+          "type": "move",
+          "from": [
+           -300,
+           0
+          ],
+          "to": [
+           300,
+           0
+          ],
+          "t0": 0,
+          "t1": 10
+         }
+        ],
+        "asset": "car-sport-red"
+       }
+      ]
+     }
+    ]
+   },
+   "transition": {
+    "type": "cut"
+   }
+  }
+ ]
+}

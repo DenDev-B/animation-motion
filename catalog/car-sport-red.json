@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "id": "car-sport-red",
+  "name": "Красный спорткар",
+  "bounds": [
+    -300,
+    -95,
+    600,
+    190
+  ],
+  "realSize": {
+    "widthM": 4.5
+  },
+  "meta": {
+    "view": "side",
+    "tags": [
+      "машина",
+      "car",
+      "спорткар",
+      "красный"
+    ],
+    "license": {
+      "name": "own",
+      "author": "project",
+      "source": "project",
+      "url": "",
+      "attribution": false
+    }
+  },
+  "parts": [
+    {
+      "id": "shadow",
+      "fill": "#00000055",
+      "d": "M -280 58 L 280 58 L 270 70 L -270 70 Z",
+      "name": "shadow"
+    },
+    {
+      "id": "body",
+      "fill": "#d71935",
+      "d": "M -285 52 L -292 8 C -292 -6 -280 -14 -255 -18 L -205 -24 C -170 -30 -150 -58 -112 -72 C -90 -80 -60 -82 -20 -82 C 30 -82 80 -80 118 -66 C 150 -52 172 -34 200 -26 C 245 -20 280 -10 291 12 L 294 40 C 294 50 288 54 278 54 Z",
+      "name": "body"
+    },
+    {
+      "id": "hi",
+      "fill": "#ff6b7e66",
+      "d": "M -270 -6 C -100 -24 120 -24 272 2 L 272 8 C 120 -14 -100 -14 -270 2 Z",
+      "name": "hi"
+    },
+    {
+      "id": "sill",
+      "fill": "#7a1020",
+      "d": "M -272 38 L 276 38 L 280 54 L -282 54 Z",
+      "name": "sill"
+    },
+    {
+      "id": "glass",
+      "fill": "#16202c",
+      "d": "M -148 -36 L -118 -64 C -100 -72 -70 -74 -45 -74 L 38 -74 C 68 -72 92 -64 118 -50 L 138 -36 Z",
+      "name": "glass"
+    },
+    {
+      "id": "glassHi",
+      "fill": "#7aa6c855",
+      "d": "M -112 -62 C -95 -69 -70 -71 -48 -71 L -30 -71 L -62 -38 L -128 -38 Z",
+      "name": "glassHi"
+    },
+    {
+      "id": "pillar",
+      "fill": "#a8122b",
+      "d": "M -12 -74 L 0 -74 L 8 -36 L -6 -36 Z",
+      "name": "pillar"
+    },
+    {
+      "id": "door",
+      "fill": "#5a0c1a88",
+      "d": "M -92 -34 L -88 -34 L -88 38 L -92 38 Z",
+      "name": "door"
+    },
+    {
+      "id": "door2",
+      "fill": "#5a0c1a88",
+      "d": "M 56 -34 L 60 -34 L 60 38 L 56 38 Z",
+      "name": "door2"
+    },
+    {
+      "id": "head",
+      "fill": "#fff3c0",
+      "d": "M 262 -8 L 290 4 L 292 12 L 258 10 Z",
+      "name": "head"
+    },
+    {
+      "id": "tail",
+      "fill": "#ff3b4e",
+      "d": "M -293 -2 L -268 -6 L -268 12 L -291 10 Z",
+      "name": "tail"
+    },
+    {
+      "id": "archR",
+      "type": "circle",
+      "fill": "#0b0e16",
+      "cx": -175,
+      "cy": 52,
+      "r": 54,
+      "name": "archR"
+    },
+    {
+      "id": "archF",
+      "type": "circle",
+      "fill": "#0b0e16",
+      "cx": 175,
+      "cy": 52,
+      "r": 54,
+      "name": "archF"
+    },
+    {
+      "id": "tireR",
+      "type": "circle",
+      "fill": "#10131c",
+      "cx": -175,
+      "cy": 52,
+      "r": 46,
+      "name": "tireR"
+    },
+    {
+      "id": "tireF",
+      "type": "circle",
+      "fill": "#10131c",
+      "cx": 175,
+      "cy": 52,
+      "r": 46,
+      "name": "tireF"
+    },
+    {
+      "id": "rimR",
+      "type": "circle",
+      "fill": "#aeb9c8",
+      "cx": -175,
+      "cy": 52,
+      "r": 27,
+      "name": "rimR"
+    },
+    {
+      "id": "rimF",
+      "type": "circle",
+      "fill": "#aeb9c8",
+      "cx": 175,
+      "cy": 52,
+      "r": 27,
+      "name": "rimF"
+    },
+    {
+      "id": "hubR",
+      "type": "circle",
+      "fill": "#3a4254",
+      "cx": -175,
+      "cy": 52,
+      "r": 10,
+      "name": "hubR"
+    },
+    {
+      "id": "hubF",
+      "type": "circle",
+      "fill": "#3a4254",
+      "cx": 175,
+      "cy": 52,
+      "r": 10,
+      "name": "hubF"
+    }
+  ]
+}
