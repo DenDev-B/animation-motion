@@ -3,6 +3,8 @@ import { ANIM_SPEC, KIND_SPEC, PALETTE_SLOTS, TRANSITION_DIRS, TRANSITION_TYPES,
 import { MOTION_PRESETS } from './motion.ts';
 import { validateProject, type ProjectV1 } from './project.ts';
 import type { ValidateOpts, ValidationError } from './validate.ts';
+import { BRIEF_MAX_CHARS } from './ai-brief.ts';
+import { getStyle, STYLE_PRESETS, styleBlock } from './styles.ts';
 
 export interface CatalogEntry {
   id: string;
@@ -24,13 +26,17 @@ export interface ProjectPromptOptions {
   /** 4..20, по умолчанию 8. */
   sceneSeconds?: number;
   tone?: string;
+  /** Готовое ТЗ режиссёра (Markdown после extractBrief), не длиннее BRIEF_MAX_CHARS. */
+  brief?: string;
+  /** id пресета из engine/styles.ts. */
+  styleId?: string;
   catalogIndex: readonly CatalogEntry[];
 }
 
 /** Текст и счётчики ИИ не генерирует: автор добавляет титры в видеоредакторе (например CapCut). */
 export const NO_TEXT_KINDS: readonly string[] = ['text', 'counter'];
 
-export const PROJECT_PROMPT_MAX_BYTES = 20 * 1024;
+export const PROJECT_PROMPT_MAX_BYTES = 28 * 1024;
 export const IDEA_MAX_CHARS = 2000;
 
 const clampInt = (v: number | undefined, lo: number, hi: number, def: number): number => {
@@ -54,7 +60,7 @@ export function modelHeightM(e: CatalogEntry): number | undefined {
   return undefined;
 }
 
-function catalogBlock(index: readonly CatalogEntry[]): string {
+export function catalogBlock(index: readonly CatalogEntry[]): string {
   if (index.length === 0) return '(каталог пуст: все объекты рисуй через kind "shape" и предложи их в meta.suggestions)';
   return index.map((e) => {
     const h = modelHeightM(e);
@@ -71,6 +77,17 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
   const format = opts.format ?? '16:9';
   const fps = opts.fps ?? 30;
   const portrait = format === '9:16';
+
+  const brief = (opts.brief ?? '').trim();
+  if (brief.length > BRIEF_MAX_CHARS) throw new Error(`ТЗ длиннее ${BRIEF_MAX_CHARS} символов (${brief.length}): сократите текст до вставки в промт.`);
+  if (opts.styleId && !getStyle(opts.styleId)) throw new Error(`Неизвестный стиль "${opts.styleId}". Доступные: ${STYLE_PRESETS.map((p) => p.id).join(', ')}`);
+  const briefSection = brief
+    ? ['## ТЗ режиссёра (следуй ему)', brief, 'Правила: один шот = одна сцена по порядку; палитра из hex шота; длительность, камера, переход — из шота; при нехватке kind бери ближайший.']
+    : [];
+  const style = opts.styleId ? getStyle(opts.styleId)! : undefined;
+  const styleSection = style
+    ? ['## Стиль ролика', styleBlock(style.id), `В каждой сцене: style.preset = "${style.id}", style.grain = ${style.grain}, style.vignette = ${style.vignette}; палитры — в характере стиля.`]
+    : [];
 
   const kinds = Object.entries(KIND_SPEC).filter(([k]) => !NO_TEXT_KINDS.includes(k)).map(([k, s]) => `- ${k}: ${s.description} ${s.params.length ? `Параметры: ${s.params.map(fieldLine).join('; ')}.` : 'Параметров нет.'}`).join('\n');
   const anims = Object.entries(ANIM_SPEC).map(([t, f]) => `- ${t}: ${f.map(fieldLine).join('; ')}`).join('\n');
@@ -109,6 +126,8 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     '- Никакой случайности: геометрия задаётся seed (целое число), анимации только из списка выше.',
     '- Все числа конечные и в допустимых диапазонах; id сцен, слоёв и объектов уникальны во всём проекте.',
     '- Не придумывай kind, поля, переходы и id моделей, которых нет в справочнике выше.',
+    ...briefSection,
+    ...styleSection,
     '## Идея ролика',
     idea,
   ].filter(Boolean).join('\n\n');

@@ -1,5 +1,7 @@
 import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, locateFrame, composeFrame } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
+import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
+import { STYLE_PRESETS } from '../engine/styles.ts';
 import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
@@ -107,6 +109,12 @@ const ideaText = document.getElementById('ideaText') as HTMLTextAreaElement | nu
 const ideaScenes = document.getElementById('ideaScenes') as HTMLInputElement | null;
 const ideaSeconds = document.getElementById('ideaSeconds') as HTMLInputElement | null;
 const ideaFormat = document.getElementById('ideaFormat') as HTMLSelectElement | null;
+const ideaStyle = document.getElementById('ideaStyle') as HTMLSelectElement | null;
+const ideaCopyBrief = document.getElementById('ideaCopyBrief') as HTMLButtonElement | null;
+const ideaBrief = document.getElementById('ideaBrief') as HTMLTextAreaElement | null;
+const ideaBriefStatus = document.getElementById('ideaBriefStatus') as HTMLElement | null;
+const briefErrEl = document.getElementById('briefErrors') as HTMLUListElement | null;
+const briefWarnEl = document.getElementById('briefWarnings') as HTMLUListElement | null;
 const ideaCopyPrompt = document.getElementById('ideaCopyPrompt') as HTMLButtonElement | null;
 const ideaPromptFallback = document.getElementById('ideaPromptFallback') as HTMLElement | null;
 const ideaPromptOut = document.getElementById('ideaPromptOut') as HTMLTextAreaElement | null;
@@ -118,6 +126,19 @@ const ideaFix = document.getElementById('ideaFix') as HTMLButtonElement | null;
 const ideaStatus = document.getElementById('ideaStatus') as HTMLElement | null;
 const ideaErrEl = document.getElementById('ideaErrors') as HTMLUListElement | null;
 const ideaWarnEl = document.getElementById('ideaWarnings') as HTMLUListElement | null;
+
+if (ideaStyle) {
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = 'без стиля';
+  ideaStyle.appendChild(none);
+  for (const preset of STYLE_PRESETS) {
+    const option = document.createElement('option');
+    option.value = preset.id;
+    option.textContent = preset.name;
+    ideaStyle.appendChild(option);
+  }
+}
 
 let project: ProjectV1 = structuredClone(demoProject) as unknown as ProjectV1;
 let activeSceneIndex = 0;
@@ -302,6 +323,33 @@ function setIdeaStatus(message: string, isError: boolean) {
   if (!ideaStatus) return;
   ideaStatus.textContent = message;
   ideaStatus.classList.toggle('err', isError);
+}
+function setIdeaBriefStatus(message: string, isError: boolean) {
+  if (!ideaBriefStatus) return;
+  ideaBriefStatus.textContent = message;
+  ideaBriefStatus.classList.toggle('err', isError);
+}
+function selectedStyleId(): string | undefined {
+  return ideaStyle?.value || undefined;
+}
+function checkBriefField(): boolean {
+  const text = ideaBrief?.value.trim() ?? '';
+  if (!text) {
+    showList(briefErrEl, []);
+    showList(briefWarnEl, []);
+    if (ideaCopyPrompt) ideaCopyPrompt.disabled = false;
+    setIdeaBriefStatus('', false);
+    return true;
+  }
+  const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
+  const result = validateBrief(text, { scenes });
+  showList(briefErrEl, result.errors);
+  showList(briefWarnEl, result.warnings);
+  if (ideaCopyPrompt) ideaCopyPrompt.disabled = !result.ok;
+  setIdeaBriefStatus(result.ok
+    ? (result.warnings.length ? `ТЗ принято; предупреждений: ${result.warnings.length}. Можно копировать промт проекта.` : 'ТЗ принято. Можно копировать промт проекта.')
+    : `Ошибок ТЗ: ${result.errors.length}. Исправьте ТЗ или очистите поле.`, !result.ok);
+  return result.ok;
 }
 
 function setCatalogStatus(element: HTMLElement | null, message: string, isError: boolean) {
@@ -875,7 +923,18 @@ function applyCandidate(candidate: unknown, target: JsonTarget, label: string) {
 function applyIdeaProject(candidate: unknown) {
   if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
   applyChange('new-project-from-idea', () => {
-    project = structuredClone(candidate as ProjectV1);
+    const next = structuredClone(candidate as ProjectV1);
+    const briefText = ideaBrief?.value.trim() ?? '';
+    const styleId = selectedStyleId();
+    const briefOk = briefText ? validateBrief(briefText, { scenes: ideaScenes ? Number(ideaScenes.value) : 5 }).ok : false;
+    if (briefOk || styleId) {
+      next.meta = {
+        ...(next.meta ?? {}),
+        ...(briefOk ? { brief: extractBrief(briefText) } : {}),
+        ...(styleId ? { styleId } : {}),
+      };
+    }
+    project = next;
     activeSceneIndex = 0;
     scene = project.scenes[0].scene;
     duration = scene.duration;
@@ -1203,14 +1262,37 @@ if (aiFixBtn) aiFixBtn.onclick = () => {
   if (fixCandidate === undefined || fixErrors.length === 0) return;
   void copyText(buildFixRequest(fixCandidate, fixErrors), 'Запрос на исправление');
 };
-if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
+if (ideaCopyBrief) ideaCopyBrief.onclick = async () => {
   const idea = ideaText?.value.trim() ?? '';
-  if (!idea) { setIdeaCopyStatus('Введите идею.', true); setIdeaStatus('', false); return; }
+  if (!idea) { setIdeaBriefStatus('Введите идею.', true); return; }
   try {
     const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
     const seconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
     const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
-    const prompt = buildProjectPrompt({ idea, scenes, sceneSeconds: seconds, format, catalogIndex });
+    const prompt = buildBriefPrompt({ idea, scenes, sceneSeconds: seconds, format, styleId: selectedStyleId(), catalogIndex });
+    await navigator.clipboard.writeText(prompt);
+    const kb = (new TextEncoder().encode(prompt).length / 1024).toFixed(1);
+    setIdeaBriefStatus(`Запрос на ТЗ скопирован (${kb} КБ). Вставьте его в чат ИИ.`, false);
+  } catch (error) {
+    setIdeaBriefStatus(error instanceof Error ? error.message : String(error), true);
+  }
+};
+if (ideaBrief) ideaBrief.addEventListener('input', () => { checkBriefField(); });
+if (ideaScenes) ideaScenes.addEventListener('change', () => { if (ideaBrief?.value.trim()) checkBriefField(); });
+if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
+  const idea = ideaText?.value.trim() ?? '';
+  if (!idea) { setIdeaCopyStatus('Введите идею.', true); setIdeaStatus('', false); return; }
+  if (!checkBriefField()) { setIdeaCopyStatus('В ТЗ есть ошибки: исправьте их или очистите поле.', true); return; }
+  try {
+    const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
+    const seconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
+    const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
+    const briefText = ideaBrief?.value.trim();
+    const prompt = buildProjectPrompt({
+      idea, scenes, sceneSeconds: seconds, format, catalogIndex,
+      ...(briefText ? { brief: extractBrief(briefText) } : {}),
+      ...(selectedStyleId() ? { styleId: selectedStyleId() } : {}),
+    });
     try {
       await navigator.clipboard.writeText(prompt);
       if (ideaPromptFallback) ideaPromptFallback.hidden = true;

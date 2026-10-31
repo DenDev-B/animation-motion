@@ -248,6 +248,11 @@ export const TRANSITION_SPEC: readonly FieldSpec[] = [
   { name: 'color', type: 'color', default: '#000', description: 'Цвет для fade и dip.' },
 ];
 
+export const PROJECT_META_SPEC: readonly FieldSpec[] = [
+  { name: 'brief', type: 'string', description: 'ТЗ режиссёра в Markdown, до 8000 символов; необязательное.' },
+  { name: 'styleId', type: 'string', description: 'id пресета стиля из engine/styles.ts; необязательное.' },
+];
+
 export const SPEC_KEYS = {
   scene: SCENE_SPEC.fields.map(({ name }) => name),
   layer: SCENE_SPEC.layer.map(({ name }) => name),

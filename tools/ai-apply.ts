@@ -3,10 +3,11 @@ import path from 'node:path';
 import { buildFixRequest, extractJson, validateObject, validateProject, validateScene, type ProjectV1, type ValidationError } from '../engine/index.ts';
 import { readCatalogIds } from './catalog-ids.ts';
 import { validateProjectReply, uniqueProjectSlug, formatSuggestions } from '../engine/ai-project.ts';
+import { extractBrief } from '../engine/ai-brief.ts';
 
 const args = process.argv.slice(2);
 const responsePath = args.find((value) => !value.startsWith('--'));
-if (!responsePath) throw new Error('Использование: npm run ai:apply -- <ответ-ИИ.txt|json> [--into <файл>] [--scene N] | --new [--name slug] [--dir папка]');
+if (!responsePath) throw new Error('Использование: npm run ai:apply -- <ответ-ИИ.txt|json> [--into <файл>] [--scene N] | --new [--name slug] [--dir папка] [--brief <ТЗ.md>] [--style id]');
 const option = (name: string) => { const index = args.indexOf(name); return index < 0 ? undefined : args[index + 1]; };
 const intoPath = option('--into');
 const sceneNumber = option('--scene') === undefined ? undefined : Number(option('--scene'));
@@ -22,6 +23,18 @@ let finalJson: unknown = candidate;
 let validation: { ok: boolean; errors: ValidationError[]; warnings: ValidationError[] };
 if (makeNew) {
   if (!(candidate && typeof candidate === 'object' && 'scenes' in candidate)) { console.error('--new ожидает проект целиком (объект с полем scenes)'); process.exit(1); }
+  const briefPath = option('--brief');
+  const styleId = option('--style');
+  if (briefPath !== undefined || styleId !== undefined) {
+    const withMeta = structuredClone(candidate) as Record<string, unknown>;
+    const rawMeta = withMeta.meta;
+    const meta = rawMeta && typeof rawMeta === 'object' && !Array.isArray(rawMeta) ? rawMeta as Record<string, unknown> : {};
+    if (briefPath !== undefined) meta.brief = extractBrief(fs.readFileSync(path.resolve(briefPath), 'utf8'));
+    if (styleId !== undefined) meta.styleId = styleId;
+    withMeta.meta = meta;
+    candidate = withMeta;
+    finalJson = withMeta;
+  }
   const reply = validateProjectReply(candidate, { catalogIds });
   suggestions = reply.suggestions;
   validation = reply;

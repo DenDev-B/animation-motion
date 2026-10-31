@@ -1,6 +1,8 @@
 import { validateScene, type ValidateOpts, type ValidationError } from './validate.ts';
 import { TRANSITION_DIRS, TRANSITION_TYPES } from './spec.ts';
 import type { SceneV1 } from './schema.ts';
+import { BRIEF_MAX_CHARS } from './ai-brief.ts';
+import { getStyle, STYLE_PRESETS } from './styles.ts';
 
 export type TransitionType = typeof TRANSITION_TYPES[number];
 export type TransitionDir = typeof TRANSITION_DIRS[number];
@@ -45,12 +47,20 @@ function validateTransition(value: unknown, index: number, duration: number | un
   }
 }
 
+export interface ProjectMetaV1 {
+  /** ТЗ режиссёра в Markdown, до BRIEF_MAX_CHARS символов. */
+  brief?: string;
+  /** id пресета из engine/styles.ts. */
+  styleId?: string;
+}
+
 export interface ProjectV1 {
   version: 1;
   title: string;
   fps: number;
   format: '16:9' | '9:16';
   scenes: ProjectSceneV1[];
+  meta?: ProjectMetaV1;
 }
 
 export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: boolean; errors: ValidationError[]; warnings: ValidationError[] } {
@@ -83,6 +93,20 @@ export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: b
       validateTransition(entry.transition, index, sceneDuration, previousDuration, `${base}.transition`, err);
       if (sceneDuration !== undefined) previousDuration = sceneDuration;
     });
+  }
+  if (project.meta !== undefined) {
+    if (!isRecord(project.meta)) err('meta', 'meta должен быть объектом; пример: {"brief":"# ТЗ режиссёра: ...","styleId":"warm-dusk"}');
+    else {
+      const meta = project.meta;
+      if (meta.brief !== undefined) {
+        if (typeof meta.brief !== 'string') err('meta.brief', 'meta.brief должен быть строкой (Markdown ТЗ)');
+        else if (meta.brief.length > BRIEF_MAX_CHARS) err('meta.brief', `meta.brief длиннее ${BRIEF_MAX_CHARS} символов (${meta.brief.length}); сократите ТЗ`);
+      }
+      if (meta.styleId !== undefined) {
+        if (typeof meta.styleId !== 'string') err('meta.styleId', 'meta.styleId должен быть строкой (id пресета стиля)');
+        else if (!getStyle(meta.styleId)) warnings.push({ path: 'meta.styleId', message: `стиль "${meta.styleId}" неизвестен; доступные id: ${STYLE_PRESETS.map((p) => p.id).join(', ')}` });
+      }
+    }
   }
   return { ok: errors.length === 0, errors, warnings };
 }
