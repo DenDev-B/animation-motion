@@ -22,6 +22,7 @@
     "check:project-roundtrip": "node tools/check-project-roundtrip.ts",
     "check:model-prompt": "node tools/check-model-prompt.ts",
     "check:swing-range": "node tools/check-swing-range.ts",
+    "check:ui": "node tools/ui-smoke.mjs",
     "check:editor-html": "node tools/check-editor-html.ts",
     "check:roundtrip": "node tools/check-roundtrip.ts",
     "check:units": "node tools/check-units.ts",

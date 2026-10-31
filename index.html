@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>animation-motion</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/editor/style.css">
 </head>
 <body>
@@ -28,28 +29,16 @@
         <pre id="selftest" hidden></pre>
       </div>
     </div>
-    <div class="col">
+    <div class="col panels">
       <div class="box">
-        <h2>Проект</h2>
         <div class="bar"><button id="undo">Отмена</button><button id="redo">Повтор</button><span id="saveState" class="hint">Сохранено</span></div>
+        <div id="topTabs" class="tabs" style="margin-top:8px" role="tablist"></div>
+      </div>
+
+      <div id="panelProject" class="box">
+        <h2>Проект</h2>
         <div class="bar"><button id="newProject">Новый проект</button><button id="openProjectButton">Открыть</button><button id="saveProject">Сохранить</button><input id="openProject" type="file" accept=".json,application/json" hidden></div>
         <div class="bar" style="margin-top:8px"><label class="f">Название<input id="projectTitle"></label><label class="f">Формат<select id="projectFormat"><option>16:9</option><option>9:16</option></select></label><label class="f">FPS<select id="projectFps"><option>24</option><option>30</option><option>60</option></select></label></div>
-        <div id="sceneTabs" class="bar" style="margin-top:8px"></div>
-        <div class="btns"><button id="addScene">+ Сцена</button><button id="duplicateScene">Дублировать</button><button id="deleteScene">Удалить</button></div>
-        <div id="projectDuration" class="hint"></div>
-      </div>
-      <div class="box">
-        <h2>JSON</h2>
-        <div class="bar">
-          <label class="f">Область<select id="jsonScope"><option value="scene">Сцена</option><option value="project">Весь проект</option><option value="object">Выбранный объект</option></select></label>
-          <label class="f" id="objectRow" hidden>Объект<select id="objectSelect"></select></label>
-        </div>
-        <textarea id="json" spellcheck="false" rows="14" aria-label="JSON"></textarea>
-        <div class="btns">
-          <button id="copyJson">Копировать JSON</button>
-          <button id="apply" class="primary">Применить JSON</button>
-          <button id="reset">Сбросить к демо</button>
-        </div>
         <h2 style="margin-top:10px">Новый проект из идеи</h2>
         <div class="hint" style="margin-bottom:6px">1. Опишите идею и скопируйте промт.<br>2. Вставьте промт в любой чат с ИИ (Claude, Gemini, ChatGPT), скопируйте его ответ.<br>3. Вставьте ответ сюда и нажмите «Создать проект».</div>
         <div class="bar" style="margin-top:8px; align-items:flex-start">
@@ -84,6 +73,28 @@
           <div style="font-weight:700;margin-bottom:4px">Предложено добавить в каталог:</div>
           <div id="ideaSuggestionsList" style="display:flex;flex-direction:column;gap:4px"></div>
         </div>
+      </div>
+
+      <div id="panelScenes" class="box">
+        <h2>Сцены</h2>
+        <div id="sceneTabs" class="tabs" style="margin-bottom:8px"></div>
+        <div class="btns"><button id="addScene">+ Сцена</button><button id="duplicateScene">Дублировать</button><button id="deleteScene">Удалить</button></div>
+        <div id="projectDuration" class="hint"></div>
+        <div class="hint" style="margin-top:8px">Превью текущей сцены — слева.</div>
+        <h3 class="subhead">Слои и объекты</h3>
+        <div id="layerList" class="layerlist"></div>
+        <div class="hint">Выберите объект, чтобы править его параметры в JSON ниже.</div>
+        <h2 style="margin-top:10px">JSON</h2>
+        <div class="bar">
+          <label class="f">Область<select id="jsonScope"><option value="scene">Сцена</option><option value="project">Весь проект</option><option value="object">Выбранный объект</option></select></label>
+          <label class="f" id="objectRow" hidden>Объект<select id="objectSelect"></select></label>
+        </div>
+        <textarea id="json" spellcheck="false" rows="14" aria-label="JSON"></textarea>
+        <div class="btns">
+          <button id="copyJson">Копировать JSON</button>
+          <button id="apply" class="primary">Применить JSON</button>
+          <button id="reset">Сбросить к демо</button>
+        </div>
         <h2 style="margin-top:10px">Править текущую сцену через ИИ</h2>
         <div class="bar" style="margin-top:8px">
           <input id="aiTask" placeholder="Задача для ИИ (необязательно)" style="flex:1">
@@ -103,7 +114,25 @@
         <div id="templates"></div>
         <p class="hint">Правки JSON применяются через историю: Ctrl+Z отменяет, Ctrl+Y повторяет.</p>
       </div>
-      <div class="box">
+
+      <div id="panelSplice" class="box" hidden>
+        <h2>Склейка</h2>
+        <div class="hint">Порядок сцен и переходы между ними.</div>
+        <div id="sceneOrder" class="order"></div>
+        <h2 style="margin-top:10px">Предпросмотр проекта</h2>
+        <div class="splicepreview"><canvas id="projectPreview" width="320" height="180"></canvas></div>
+        <div class="bar" style="margin-top:8px">
+          <button id="projectPlay" class="primary" style="min-width:84px">Пауза</button>
+          <input type="range" id="projectScrub" min="0" max="1" step="0.01" value="0" aria-label="Время проекта">
+          <span class="time" id="projectTime">0.0 / 0.0 с</span>
+        </div>
+        <div class="btns">
+          <button id="exportMp4" disabled>Экспорт MP4</button>
+          <span id="exportHint" class="hint">MP4 собирается командой npm run export (Node + ffmpeg); в браузере экспорт не выполняется.</span>
+        </div>
+      </div>
+
+      <div id="panelCatalog" class="box" hidden>
         <h2>Каталог</h2>
         <div class="bar" id="catalogTabBar"></div>
 

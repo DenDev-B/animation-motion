@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, locateFrame, composeFrame } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
@@ -35,6 +35,17 @@ const aiStatus = document.getElementById('aiStatus') as HTMLElement | null;
 const aiErrors = document.getElementById('aiErrors') as HTMLUListElement | null;
 const aiWarnings = document.getElementById('aiWarnings') as HTMLUListElement | null;
 const templates = document.getElementById('templates') as HTMLElement | null;
+const topTabs = document.getElementById('topTabs') as HTMLElement | null;
+const panelProject = document.getElementById('panelProject') as HTMLElement | null;
+const panelScenes = document.getElementById('panelScenes') as HTMLElement | null;
+const panelSplice = document.getElementById('panelSplice') as HTMLElement | null;
+const panelCatalog = document.getElementById('panelCatalog') as HTMLElement | null;
+const layerList = document.getElementById('layerList') as HTMLElement | null;
+const sceneOrder = document.getElementById('sceneOrder') as HTMLElement | null;
+const projectPreviewEl = document.getElementById('projectPreview') as HTMLCanvasElement | null;
+const projectScrub = document.getElementById('projectScrub') as HTMLInputElement | null;
+const projectTime = document.getElementById('projectTime') as HTMLElement | null;
+const projectPlay = document.getElementById('projectPlay') as HTMLButtonElement | null;
 
 // Каталог: ссылки на элементы
 const catalogTabBar = document.getElementById('catalogTabBar') as HTMLElement | null;
@@ -167,6 +178,15 @@ let svgCandidate: ImportResult | null = null;
 let modelCandidate: unknown;
 let ideaSuggestions: Array<{ id: string; description: string; view?: string; sizeM?: number }> = [];
 
+type TopTab = 'project' | 'scenes' | 'splice' | 'catalog';
+const TOP_TABS: ReadonlyArray<readonly [TopTab, string]> = [['project', 'Проект'], ['scenes', 'Сцены'], ['splice', 'Склейка'], ['catalog', 'Каталог']];
+const TAB_KEY = 'animation-motion/tab/v1';
+const SCENE_TAB_KEY = 'animation-motion/scene-tab/v1';
+const TRANSITION_OPTIONS = ['cut', 'fade', 'crossfade', 'slide', 'wipe', 'dip'] as const;
+let activeTopTab: TopTab = 'project';
+let spliceT = 0;
+let splicePlaying = true;
+
 function updateSavedLabel() {
   const el = document.getElementById('saveState');
   if (el) el.textContent = hasUnsavedChanges ? 'Есть несохранённые изменения' : 'Сохранено';
@@ -290,6 +310,197 @@ function setCatalogStatus(element: HTMLElement | null, message: string, isError:
   element.classList.toggle('err', isError);
 }
 
+function storageGet(key: string): string | null {
+  try { return sessionStorage.getItem(key); } catch { return null; }
+}
+function storageSet(key: string, value: string): void {
+  try { sessionStorage.setItem(key, value); } catch {}
+}
+
+const PANELS: Record<TopTab, HTMLElement | null> = { project: panelProject, scenes: panelScenes, splice: panelSplice, catalog: panelCatalog };
+
+function renderTopTabs() {
+  if (!topTabs) return;
+  topTabs.innerHTML = '';
+  for (const [id, label] of TOP_TABS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.dataset.tab = id;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(id === activeTopTab));
+    button.classList.toggle('on', id === activeTopTab);
+    button.onclick = () => setTopTab(id);
+    topTabs.appendChild(button);
+  }
+}
+
+function setTopTab(tab: TopTab, persist = true) {
+  activeTopTab = tab;
+  for (const [id, panel] of Object.entries(PANELS)) if (panel) panel.hidden = id !== tab;
+  renderTopTabs();
+  if (persist) storageSet(TAB_KEY, tab);
+  if (tab === 'splice') { renderSceneOrder(); renderProjectPreview(); }
+  else if (tab === 'catalog') renderCatalogList();
+}
+
+function renderLayerList() {
+  if (!layerList) return;
+  layerList.innerHTML = '';
+  const layers = project.scenes[activeSceneIndex]?.scene.layers ?? [];
+  if (layers.length === 0) { layerList.textContent = 'Слоёв нет.'; return; }
+  layers.forEach((layer, layerIndex) => {
+    const block = document.createElement('div');
+    block.className = 'layer';
+    const title = document.createElement('div');
+    title.className = 'layer-name';
+    title.textContent = `${layer.name} · depth ${layer.depth}${layer.visible === false ? ' · скрыт' : ''}`;
+    block.appendChild(title);
+    layer.objects.forEach((object, objectIndex) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'layer-object';
+      button.textContent = `${object.name} (${object.kind})`;
+      button.classList.toggle('on', jsonScope === 'object' && objectSelect?.value === `${layerIndex}:${objectIndex}`);
+      button.onclick = () => selectObject(layerIndex, objectIndex);
+      block.appendChild(button);
+    });
+    layerList.appendChild(block);
+  });
+}
+
+function selectObject(layerIndex: number, objectIndex: number) {
+  jsonScope = 'object';
+  if (jsonScopeSelect) jsonScopeSelect.value = 'object';
+  syncScopeRow();
+  syncObjectOptions();
+  if (objectSelect) objectSelect.value = `${layerIndex}:${objectIndex}`;
+  refreshJson();
+  resetAiResult();
+  renderLayerList();
+}
+
+function transitionLimit(index: number): number {
+  const previous = project.scenes[index - 1]?.scene.duration ?? 0;
+  const current = project.scenes[index]?.scene.duration ?? 0;
+  return Math.max(0, Math.min(previous, current) / 2);
+}
+
+function applyTransition(index: number, type: string, duration: number) {
+  applyChange('transition', () => {
+    const entry = project.scenes[index];
+    if (!entry) return;
+    if (index === 0 || type === 'cut') { entry.transition = { type: 'cut' }; return; }
+    const limit = transitionLimit(index);
+    const value = Math.min(limit, Math.max(0, Number.isFinite(duration) ? duration : 0));
+    entry.transition = { type: type as ProjectV1['scenes'][number]['transition']['type'], duration: value };
+  });
+}
+
+function renderSceneOrder() {
+  if (!sceneOrder) return;
+  sceneOrder.innerHTML = '';
+  project.scenes.forEach((entry, index) => {
+    const row = document.createElement('div');
+    row.className = 'order-row';
+    const head = document.createElement('div');
+    head.className = 'order-head';
+    const name = document.createElement('div');
+    name.className = 'order-name';
+    name.textContent = `${index + 1}. ${entry.name}`;
+    const buttons = document.createElement('div');
+    buttons.className = 'order-buttons';
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.textContent = '↑';
+    up.title = 'Выше';
+    up.disabled = index === 0;
+    up.onclick = () => moveScene(index, -1);
+    const down = document.createElement('button');
+    down.type = 'button';
+    down.textContent = '↓';
+    down.title = 'Ниже';
+    down.disabled = index === project.scenes.length - 1;
+    down.onclick = () => moveScene(index, 1);
+    buttons.append(up, down);
+    head.append(name, buttons);
+    row.appendChild(head);
+    const transition = document.createElement('div');
+    transition.className = 'order-transition';
+    if (index === 0) {
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = 'Первый кадр, переход не нужен';
+      transition.appendChild(hint);
+    } else {
+      const type = entry.transition?.type ?? 'cut';
+      const limit = transitionLimit(index);
+      const typeLabel = document.createElement('label');
+      typeLabel.className = 'f';
+      typeLabel.textContent = 'Переход';
+      const select = document.createElement('select');
+      for (const value of TRANSITION_OPTIONS) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = type;
+      const durationLabel = document.createElement('label');
+      durationLabel.className = 'f';
+      durationLabel.textContent = 'Длительность, с';
+      const duration = document.createElement('input');
+      duration.type = 'number';
+      duration.min = '0';
+      duration.step = '0.1';
+      duration.max = String(limit);
+      duration.style.width = '80px';
+      duration.value = String(entry.transition?.duration ?? 0.8);
+      duration.disabled = type === 'cut';
+      select.onchange = () => applyTransition(index, select.value, Number(duration.value) || 0);
+      duration.onchange = () => applyTransition(index, select.value, Number(duration.value) || 0);
+      typeLabel.appendChild(select);
+      durationLabel.appendChild(duration);
+      transition.append(typeLabel, durationLabel);
+    }
+    row.appendChild(transition);
+    sceneOrder.appendChild(row);
+  });
+}
+
+function renderProjectPreview() {
+  const ctx = projectPreviewEl?.getContext('2d');
+  if (!projectPreviewEl || !ctx || project.scenes.length === 0) return;
+  const size = project.format === '9:16' ? { w: 180, h: 320 } : { w: 320, h: 180 };
+  if (projectPreviewEl.width !== size.w || projectPreviewEl.height !== size.h) {
+    projectPreviewEl.width = size.w;
+    projectPreviewEl.height = size.h;
+  }
+  const total = Math.max(1, projectFrameCount(project));
+  const seconds = total / project.fps;
+  spliceT = Math.min(Math.max(0, spliceT), Math.max(0, seconds - 1 / project.fps));
+  const globalIndex = Math.min(total - 1, Math.max(0, Math.round(spliceT * project.fps)));
+  const env = { createCanvas: (w: number, h: number) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }, catalog, cache };
+  const make = () => { const c = document.createElement('canvas'); c.width = size.w; c.height = size.h; return c; };
+  let location;
+  try { location = locateFrame(project, globalIndex); } catch { return; }
+  const first = project.scenes[location.frames[0].sceneIndex];
+  const a = make();
+  const actx = a.getContext('2d')!;
+  renderFrame(actx, first.scene, location.frames[0].t, size, env);
+  if (location.transition && location.frames[1]) {
+    const second = project.scenes[location.frames[1].sceneIndex];
+    const b = make();
+    const bctx = b.getContext('2d')!;
+    renderFrame(bctx, second.scene, location.frames[1].t, size, env);
+    composeFrame(ctx, actx, bctx, location.transition.type, location.transition.progress, size, { dir: second.transition.dir, color: second.transition.color });
+  } else {
+    ctx.drawImage(a, 0, 0);
+  }
+  if (projectScrub) projectScrub.value = seconds > 0 ? (spliceT / seconds).toFixed(2) : '0';
+  if (projectTime) projectTime.textContent = `${spliceT.toFixed(1)} / ${seconds.toFixed(1)} с`;
+}
+
 function renderCatalogTabs(active: string) {
   if (!catalogTabBar) return;
   catalogTabBar.innerHTML = '';
@@ -326,8 +537,24 @@ function thumbnailUrl(asset: CatalogAsset): string {
   c.width = 160;
   c.height = 160;
   const g = c.getContext('2d')!;
+  const bounds = Array.isArray(asset.bounds) && asset.bounds.length === 4 ? asset.bounds : [0, 0, 1, 1];
+  const bw = Math.max(1e-6, Math.abs(Number(bounds[2])) || 1);
+  const bh = Math.max(1e-6, Math.abs(Number(bounds[3])) || 1);
+  // Большая сторона bounds занимает ~80% кадра 160×160; unitsPerMeter фиксирован, поэтому realSize не влияет.
+  const k = 800 / Math.max(bw, bh);
+  const unitsPerMeter = 1000;
+  const scene = buildPreviewScene(asset, 'none', 1);
+  scene.palette = { sky: ['#f4f1ea', '#dcd6ca'] };
+  scene.world = { unitsPerMeter };
+  scene.layers.unshift({ id: 'thumb-bg', name: 'Фон', depth: 0, visible: true, objects: [{ id: 'thumb-bg', name: 'Фон', kind: 'sky', x: 0, y: 0, s: 1 }] });
+  const object = scene.layers[1]?.objects[0];
+  if (object) {
+    object.x = -(Number(bounds[0]) + bw / 2) * k;
+    object.y = -(Number(bounds[1]) + bh / 2) * k;
+    object.params = { ...(object.params ?? {}), sizeM: bh * k / unitsPerMeter };
+  }
   try {
-    renderFrame(g, buildPreviewScene(asset, 'none', 1), 0, { w: 160, h: 160 }, { createCanvas: (w: number, h: number) => { const cc = document.createElement('canvas'); cc.width = w; cc.height = h; return cc; }, catalog, cache });
+    renderFrame(g, scene, 0, { w: 160, h: 160 }, { createCanvas: (w: number, h: number) => { const cc = document.createElement('canvas'); cc.width = w; cc.height = h; return cc; }, catalog, cache });
   } catch {}
   const url = c.toDataURL('image/png');
   thumbCache.set(asset.id, url);
@@ -343,26 +570,24 @@ function renderCatalogList() {
   for (const entry of rows) {
     const asset = catalog[entry.id];
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:8px;align-items:center;border:1px solid #ddd5ca;border-radius:6px;padding:6px';
+    row.className = 'catalog-row';
     const img = document.createElement('img');
-    img.width = 80;
-    img.height = 80;
-    img.style.borderRadius = '4px';
+    img.className = 'catalog-thumb';
+    img.width = 64;
+    img.height = 64;
+    img.alt = '';
     img.src = asset ? thumbnailUrl(asset) : '';
     const info = document.createElement('div');
-    info.style.flex = '1';
-    info.style.minWidth = '0';
+    info.className = 'catalog-info';
     const name = document.createElement('div');
-    name.style.fontWeight = '700';
+    name.className = 'catalog-name';
     name.textContent = entry.name ?? entry.id;
     const meta = document.createElement('div');
-    meta.className = 'hint';
-    meta.style.fontSize = '11px';
+    meta.className = 'catalog-meta';
     meta.textContent = `${entry.id} · ${(entry.tags ?? []).join(', ')} · ${sizeTextM(entry)} · ${entry.license ?? '—'}`;
     info.append(name, meta);
     const actions = document.createElement('div');
-    actions.className = 'btns';
-    actions.style.marginLeft = 'auto';
+    actions.className = 'catalog-actions';
     const addBtn = document.createElement('button');
     addBtn.textContent = 'Добавить в сцену';
     const copyJsonBtn = document.createElement('button');
@@ -422,7 +647,7 @@ function saveCatalogModel(asset: CatalogAsset) {
   URL.revokeObjectURL(link.href);
   catalog[id] = out;
   catalogIndex.push({ id, name: out.name, tags: out.meta?.tags ?? [], view: out.meta?.view, realSize: out.realSize, bounds: out.bounds, license: out.meta?.license?.name });
-  thumbCache.delete(id);
+  thumbCache.clear();
   renderCatalogList();
   setCatalogStatus(catalogNewJsonStatus, `Сохранено в каталог как ${id} — файл ${id}.json скачан.`, false);
 }
@@ -838,10 +1063,15 @@ function frame() {
 }
 
 function loop(ts: number) {
-  if (!playing) { lastTs = ts; rafId = requestAnimationFrame(loop); return; }
-  t = (t + (ts - lastTs) / 1000) % duration;
+  if (lastTs === 0) lastTs = ts;
+  const dt = Math.max(0, (ts - lastTs) / 1000);
+  if (playing) { t = (t + dt) % duration; frame(); }
+  if (activeTopTab === 'splice' && splicePlaying) {
+    const seconds = Math.max(0.001, projectFrameCount(project) / project.fps);
+    spliceT = (spliceT + dt) % seconds;
+    renderProjectPreview();
+  }
   lastTs = ts;
-  frame();
   rafId = requestAnimationFrame(loop);
 }
 
@@ -866,6 +1096,18 @@ if (scrub) scrub.oninput = (e) => {
   frame();
 };
 if (playBtn) playBtn.onclick = () => setPlaying(!playing);
+if (projectPlay) projectPlay.onclick = () => {
+  splicePlaying = !splicePlaying;
+  projectPlay.textContent = splicePlaying ? 'Пауза' : 'Играть';
+  if (splicePlaying) renderProjectPreview();
+};
+if (projectScrub) projectScrub.oninput = (e) => {
+  splicePlaying = false;
+  if (projectPlay) projectPlay.textContent = 'Играть';
+  const seconds = Math.max(0, projectFrameCount(project) / project.fps);
+  spliceT = Number((e.target as HTMLInputElement).value) * seconds;
+  renderProjectPreview();
+};
 if (aspectH) aspectH.onclick = () => setAspect('h');
 if (aspectV) aspectV.onclick = () => setAspect('v');
 
@@ -895,6 +1137,9 @@ function renderTabs() {
   refreshJson();
   resetAiResult();
   resetIdeaResult();
+  renderLayerList();
+  renderSceneOrder();
+  storageSet(SCENE_TAB_KEY, String(activeSceneIndex));
 }
 function moveScene(index: number, delta: number) { const target = index + delta; applyChange('move-scene', () => { [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; }); }
 function updateProjectControls() { applyChange('project-settings', () => { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); }); }
@@ -1031,6 +1276,12 @@ document.getElementById('redo')?.addEventListener('click', redoChange);
 
 syncScopeRow();
 renderTemplates();
+const storedScene = Number(storageGet(SCENE_TAB_KEY));
+if (Number.isInteger(storedScene) && storedScene >= 0 && storedScene < project.scenes.length) {
+  activeSceneIndex = storedScene;
+  scene = project.scenes[storedScene].scene;
+  duration = scene.duration;
+}
 renderTabs();
 updateSavedLabel();
 
@@ -1069,6 +1320,8 @@ try {
 } catch {}
 
 // boot
+const storedTab = storageGet(TAB_KEY);
+setTopTab(TOP_TABS.some(([id]) => id === storedTab) ? storedTab as TopTab : 'project', false);
 setAspect('h');
 frame();
 rafId = requestAnimationFrame(loop);
