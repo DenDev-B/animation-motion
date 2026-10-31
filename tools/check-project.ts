@@ -24,5 +24,12 @@ expectError((value) => { value.scenes = []; }, 'scenes');
 expectError((value) => { value.fps = 25; }, 'fps');
 expectError((value) => { value.format = 'square'; }, 'format');
 expectError((value) => { value.scenes[1].scene.layers = 'broken'; }, 'scenes[1].scene.layers');
+expectError((value) => { value.meta = { story: 123 }; }, 'meta.story');
+expectError((value) => { value.meta = { story: 'x'.repeat(4001) }; }, 'meta.story');
+const withStory = structuredClone(project);
+withStory.meta = { story: 'Кит летит над ночным городом.' };
+assert.deepEqual(validateProject(withStory), { ok: true, errors: [], warnings: [] });
+delete withStory.meta;
+assert.deepEqual(validateProject(withStory), { ok: true, errors: [], warnings: [] });
 
 console.log('check:project PASS');

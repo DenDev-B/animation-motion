@@ -249,7 +249,8 @@ export const TRANSITION_SPEC: readonly FieldSpec[] = [
 ];
 
 export const PROJECT_META_SPEC: readonly FieldSpec[] = [
-  { name: 'brief', type: 'string', description: 'ТЗ режиссёра в Markdown, до 8000 символов; необязательное.' },
+  { name: 'brief', type: 'string', description: 'ТЗ режиссёра в Markdown, до 6000 символов; необязательное.' },
+  { name: 'story', type: 'string', description: 'Общий рассказ (идея ролика), до 4000 символов; необязательное.' },
   { name: 'styleId', type: 'string', description: 'id пресета стиля из engine/styles.ts; необязательное.' },
 ];
 

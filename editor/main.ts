@@ -38,6 +38,8 @@ const aiErrors = document.getElementById('aiErrors') as HTMLUListElement | null;
 const aiWarnings = document.getElementById('aiWarnings') as HTMLUListElement | null;
 const templates = document.getElementById('templates') as HTMLElement | null;
 const topTabs = document.getElementById('topTabs') as HTMLElement | null;
+const appEl = document.getElementById('app') as HTMLElement | null;
+const stageCol = document.getElementById('stageCol') as HTMLElement | null;
 const panelProject = document.getElementById('panelProject') as HTMLElement | null;
 const panelScenes = document.getElementById('panelScenes') as HTMLElement | null;
 const panelSplice = document.getElementById('panelSplice') as HTMLElement | null;
@@ -217,6 +219,7 @@ function saveAutosave() {
 }
 function applyChange(label: string, mutator: () => void) {
   mutator();
+  sceneThumbCache.clear();
   history.push(label, project);
   hasUnsavedChanges = true;
   updateSavedLabel();
@@ -226,6 +229,8 @@ function applyChange(label: string, mutator: () => void) {
 }
 function restoreProject(value: ProjectV1) {
   project = structuredClone(value); activeSceneIndex = 0; scene = project.scenes[0].scene; duration = scene.duration;
+  sceneThumbCache.clear();
+  syncStoryField();
   renderTabs(); frame();
 }
 function currentTarget(): JsonTarget {
@@ -386,10 +391,13 @@ function renderTopTabs() {
 function setTopTab(tab: TopTab, persist = true) {
   activeTopTab = tab;
   for (const [id, panel] of Object.entries(PANELS)) if (panel) panel.hidden = id !== tab;
+  if (stageCol) stageCol.hidden = tab !== 'scenes';
+  if (appEl) appEl.classList.toggle('full', tab !== 'scenes');
   renderTopTabs();
   if (persist) storageSet(TAB_KEY, tab);
   if (tab === 'splice') { renderSceneOrder(); renderProjectPreview(); }
   else if (tab === 'catalog') renderCatalogList();
+  else if (tab === 'scenes') frame();
 }
 
 function renderLayerList() {
@@ -445,73 +453,113 @@ function applyTransition(index: number, type: string, duration: number) {
   });
 }
 
+const sceneThumbCache = new Map<string, HTMLCanvasElement>();
+
+function sceneThumbnail(entry: ProjectSceneV1, index: number): HTMLCanvasElement {
+  const key = `${index}:${entry.id}`;
+  const cached = sceneThumbCache.get(key);
+  if (cached) return cached;
+  const w = 240;
+  const h = project.format === '9:16' ? Math.round(w * 16 / 9) : Math.round(w * 9 / 16);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.className = 'order-thumb';
+  const g = canvas.getContext('2d');
+  if (g) {
+    const env = { createCanvas: (cw: number, ch: number) => { const c = document.createElement('canvas'); c.width = cw; c.height = ch; return c; }, catalog, cache };
+    try { renderFrame(g, entry.scene, entry.scene.duration * 0.4, { w, h }, env); } catch {}
+  }
+  sceneThumbCache.set(key, canvas);
+  return canvas;
+}
+
+function focusSceneCard(index: number) {
+  requestAnimationFrame(() => {
+    const cards = sceneOrder?.querySelectorAll<HTMLElement>('.order-row');
+    cards?.[index]?.focus();
+  });
+}
+
+function transitionControl(index: number, entry: ProjectSceneV1): HTMLElement {
+  const transition = document.createElement('div');
+  transition.className = 'order-transition';
+  const type = entry.transition?.type ?? 'cut';
+  const limit = transitionLimit(index);
+  const typeLabel = document.createElement('label');
+  typeLabel.className = 'f';
+  typeLabel.textContent = 'Переход';
+  const select = document.createElement('select');
+  for (const value of TRANSITION_OPTIONS) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  }
+  select.value = type;
+  const durationLabel = document.createElement('label');
+  durationLabel.className = 'f';
+  durationLabel.textContent = 'Длительность, с';
+  const duration = document.createElement('input');
+  duration.type = 'number';
+  duration.min = '0';
+  duration.step = '0.1';
+  duration.max = String(limit);
+  duration.style.width = '80px';
+  duration.value = String(entry.transition?.duration ?? 0.8);
+  duration.disabled = type === 'cut';
+  select.onchange = () => applyTransition(index, select.value, Number(duration.value) || 0);
+  duration.onchange = () => applyTransition(index, select.value, Number(duration.value) || 0);
+  typeLabel.appendChild(select);
+  durationLabel.appendChild(duration);
+  transition.append(typeLabel, durationLabel);
+  return transition;
+}
+
 function renderSceneOrder() {
   if (!sceneOrder) return;
   sceneOrder.innerHTML = '';
   project.scenes.forEach((entry, index) => {
+    if (index > 0) sceneOrder.appendChild(transitionControl(index, entry));
     const row = document.createElement('div');
     row.className = 'order-row';
+    row.tabIndex = 0;
+    row.draggable = true;
+    row.dataset.index = String(index);
+    row.title = 'Перетащите карточку или нажмите Alt+←/→';
+    row.appendChild(sceneThumbnail(entry, index));
     const head = document.createElement('div');
     head.className = 'order-head';
     const name = document.createElement('div');
     name.className = 'order-name';
     name.textContent = `${index + 1}. ${entry.name}`;
-    const buttons = document.createElement('div');
-    buttons.className = 'order-buttons';
-    const up = document.createElement('button');
-    up.type = 'button';
-    up.textContent = '↑';
-    up.title = 'Выше';
-    up.disabled = index === 0;
-    up.onclick = () => moveScene(index, -1);
-    const down = document.createElement('button');
-    down.type = 'button';
-    down.textContent = '↓';
-    down.title = 'Ниже';
-    down.disabled = index === project.scenes.length - 1;
-    down.onclick = () => moveScene(index, 1);
-    buttons.append(up, down);
-    head.append(name, buttons);
+    const duration = document.createElement('div');
+    duration.className = 'order-duration';
+    duration.textContent = `${entry.scene.duration.toFixed(1)} с`;
+    head.append(name, duration);
     row.appendChild(head);
-    const transition = document.createElement('div');
-    transition.className = 'order-transition';
-    if (index === 0) {
-      const hint = document.createElement('span');
-      hint.className = 'hint';
-      hint.textContent = 'Первый кадр, переход не нужен';
-      transition.appendChild(hint);
-    } else {
-      const type = entry.transition?.type ?? 'cut';
-      const limit = transitionLimit(index);
-      const typeLabel = document.createElement('label');
-      typeLabel.className = 'f';
-      typeLabel.textContent = 'Переход';
-      const select = document.createElement('select');
-      for (const value of TRANSITION_OPTIONS) {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        select.appendChild(option);
-      }
-      select.value = type;
-      const durationLabel = document.createElement('label');
-      durationLabel.className = 'f';
-      durationLabel.textContent = 'Длительность, с';
-      const duration = document.createElement('input');
-      duration.type = 'number';
-      duration.min = '0';
-      duration.step = '0.1';
-      duration.max = String(limit);
-      duration.style.width = '80px';
-      duration.value = String(entry.transition?.duration ?? 0.8);
-      duration.disabled = type === 'cut';
-      select.onchange = () => applyTransition(index, select.value, Number(duration.value) || 0);
-      duration.onchange = () => applyTransition(index, select.value, Number(duration.value) || 0);
-      typeLabel.appendChild(select);
-      durationLabel.appendChild(duration);
-      transition.append(typeLabel, durationLabel);
-    }
-    row.appendChild(transition);
+    row.addEventListener('keydown', (event) => {
+      if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+      event.preventDefault();
+      const target = event.key === 'ArrowLeft' ? index - 1 : index + 1;
+      if (target < 0 || target >= project.scenes.length) return;
+      reorderScene(index, target);
+      focusSceneCard(target);
+    });
+    row.addEventListener('dragstart', (event) => {
+      event.dataTransfer?.setData('text/plain', String(index));
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragover', (event) => { event.preventDefault(); });
+    row.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const from = Number(event.dataTransfer?.getData('text/plain'));
+      if (!Number.isInteger(from) || from === index) return;
+      reorderScene(from, index);
+      focusSceneCard(index);
+    });
     sceneOrder.appendChild(row);
   });
 }
@@ -926,12 +974,14 @@ function applyIdeaProject(candidate: unknown) {
     const next = structuredClone(candidate as ProjectV1);
     const briefText = ideaBrief?.value.trim() ?? '';
     const styleId = selectedStyleId();
+    const story = (ideaText?.value ?? '').trim().slice(0, STORY_MAX_CHARS);
     const briefOk = briefText ? validateBrief(briefText, { scenes: ideaScenes ? Number(ideaScenes.value) : 5 }).ok : false;
-    if (briefOk || styleId) {
+    if (briefOk || styleId || story) {
       next.meta = {
         ...(next.meta ?? {}),
         ...(briefOk ? { brief: extractBrief(briefText) } : {}),
         ...(styleId ? { styleId } : {}),
+        ...(story ? { story } : {}),
       };
     }
     project = next;
@@ -940,6 +990,7 @@ function applyIdeaProject(candidate: unknown) {
     duration = scene.duration;
     t = Math.min(t, duration);
   });
+  syncStoryField();
   ideaCandidate = undefined;
   ideaErrList = [];
   if (ideaCreate) ideaCreate.disabled = true;
@@ -1204,14 +1255,31 @@ function renderTabs() {
   if (!tabs) return;
   tabs.innerHTML = '';
   project.scenes.forEach((entry, index) => {
-    const tab = document.createElement('span');
+    const tab = document.createElement('div');
     tab.className = 'scene-tab';
-    const select = document.createElement('button'); select.textContent = entry.name; select.classList.toggle('on', index === activeSceneIndex); select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; frame(); renderTabs(); };
-    const left = document.createElement('button'); left.textContent = '←'; left.title = 'Переместить влево'; left.disabled = index === 0; left.onclick = () => moveScene(index, -1);
-    const right = document.createElement('button'); right.textContent = '→'; right.title = 'Переместить вправо'; right.disabled = index === project.scenes.length - 1; right.onclick = () => moveScene(index, 1);
+    const select = document.createElement('button');
+    select.type = 'button';
+    select.textContent = entry.name;
+    select.classList.toggle('on', index === activeSceneIndex);
+    select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; frame(); renderTabs(); };
     select.ondblclick = () => { const name = prompt('Название сцены', entry.name); if (name?.trim()) applyChange('rename-scene', () => { entry.name = name.trim(); }); };
-    tab.append(select, left, right); tabs.appendChild(tab);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'scene-close';
+    close.textContent = '×';
+    close.title = project.scenes.length > 1 ? 'Удалить сцену' : 'Последнюю сцену удалять нельзя';
+    close.disabled = project.scenes.length <= 1;
+    close.onclick = (event) => { event.stopPropagation(); deleteSceneAt(index); };
+    tab.append(select, close);
+    tabs.appendChild(tab);
   });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'scene-add';
+  add.textContent = '+';
+  add.title = 'Новая сцена';
+  add.onclick = addScene;
+  tabs.appendChild(add);
   if (projectTitle) projectTitle.value = project.title;
   if (projectFormat) projectFormat.value = project.format;
   if (projectFps) projectFps.value = String(project.fps);
@@ -1224,13 +1292,38 @@ function renderTabs() {
   renderSceneOrder();
   storageSet(SCENE_TAB_KEY, String(activeSceneIndex));
 }
-function moveScene(index: number, delta: number) { const target = index + delta; applyChange('move-scene', () => { [project.scenes[index], project.scenes[target]] = [project.scenes[target], project.scenes[index]]; activeSceneIndex = target; }); }
+function addScene() { applyChange('add-scene', () => { project.scenes.push(makeEmptyScene('Новая сцена')); activeSceneIndex = project.scenes.length - 1; scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; }); }
+function deleteSceneAt(index: number) {
+  if (project.scenes.length <= 1) return;
+  const entry = project.scenes[index];
+  if (!entry || !confirm(`Удалить сцену «${entry.name}»?`)) return;
+  applyChange('delete-scene', () => { project.scenes.splice(index, 1); activeSceneIndex = Math.min(index, project.scenes.length - 1); scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; });
+}
+function reorderScene(from: number, to: number) {
+  if (from === to || from < 0 || to < 0 || from >= project.scenes.length || to >= project.scenes.length) return;
+  applyChange('move-scene', () => {
+    const [entry] = project.scenes.splice(from, 1);
+    project.scenes.splice(to, 0, entry);
+    activeSceneIndex = to;
+    scene = project.scenes[activeSceneIndex].scene;
+    duration = scene.duration;
+  });
+}
 function updateProjectControls() { applyChange('project-settings', () => { if (projectTitle) project.title = projectTitle.value; if (projectFormat) project.format = projectFormat.value as ProjectV1['format']; if (projectFps) project.fps = Number(projectFps.value); }); }
-document.getElementById('addScene')?.addEventListener('click', () => applyChange('add-scene', () => { project.scenes.push(makeEmptyScene('Новая сцена')); activeSceneIndex = project.scenes.length - 1; }));
-document.getElementById('duplicateScene')?.addEventListener('click', () => applyChange('duplicate-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; }));
-document.getElementById('deleteScene')?.addEventListener('click', () => { if (project.scenes.length <= 1) return; applyChange('delete-scene', () => { project.scenes.splice(activeSceneIndex, 1); activeSceneIndex = Math.min(activeSceneIndex, project.scenes.length - 1); }); });
+const STORY_MAX_CHARS = 4000;
+function syncStoryField() { if (ideaText && document.activeElement !== ideaText) ideaText.value = project.meta?.story ?? ''; }
+function updateProjectStory() {
+  const story = (ideaText?.value ?? '').trim().slice(0, STORY_MAX_CHARS);
+  applyChange('project-story', () => {
+    const meta = { ...(project.meta ?? {}) };
+    if (story) meta.story = story; else delete meta.story;
+    if (Object.keys(meta).length) project.meta = meta; else delete project.meta;
+  });
+}
+document.getElementById('duplicateScene')?.addEventListener('click', () => applyChange('duplicate-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; }));
 projectTitle?.addEventListener('change', updateProjectControls); projectFormat?.addEventListener('change', updateProjectControls); projectFps?.addEventListener('change', updateProjectControls);
-document.getElementById('newProject')?.addEventListener('click', () => applyChange('new-project', () => { project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [makeEmptyScene('Сцена 1')] }; activeSceneIndex = 0; }));
+ideaText?.addEventListener('change', updateProjectStory);
+document.getElementById('newProject')?.addEventListener('click', () => { applyChange('new-project', () => { project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [makeEmptyScene('Сцена 1')] }; activeSceneIndex = 0; }); syncStoryField(); });
 document.getElementById('saveProject')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); hasUnsavedChanges = false; updateSavedLabel(); });
 document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
 openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed, { catalogIds: Object.keys(catalog) }); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
@@ -1389,6 +1482,7 @@ if (Number.isInteger(storedScene) && storedScene >= 0 && storedScene < project.s
   duration = scene.duration;
 }
 renderTabs();
+syncStoryField();
 updateSavedLabel();
 
 // Каталог: первичный рендер и обработчики

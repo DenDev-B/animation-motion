@@ -50,6 +50,8 @@ function validateTransition(value: unknown, index: number, duration: number | un
 export interface ProjectMetaV1 {
   /** ТЗ режиссёра в Markdown, до BRIEF_MAX_CHARS символов. */
   brief?: string;
+  /** Общий рассказ (идея ролика), до 4000 символов. */
+  story?: string;
   /** id пресета из engine/styles.ts. */
   styleId?: string;
 }
@@ -101,6 +103,10 @@ export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: b
       if (meta.brief !== undefined) {
         if (typeof meta.brief !== 'string') err('meta.brief', 'meta.brief должен быть строкой (Markdown ТЗ)');
         else if (meta.brief.length > BRIEF_MAX_CHARS) err('meta.brief', `meta.brief длиннее ${BRIEF_MAX_CHARS} символов (${meta.brief.length}); сократите ТЗ`);
+      }
+      if (meta.story !== undefined) {
+        if (typeof meta.story !== 'string') err('meta.story', 'meta.story должен быть строкой (общий рассказ)');
+        else if (meta.story.length > 4000) err('meta.story', `meta.story длиннее 4000 символов (${meta.story.length}); сократите рассказ`);
       }
       if (meta.styleId !== undefined) {
         if (typeof meta.styleId !== 'string') err('meta.styleId', 'meta.styleId должен быть строкой (id пресета стиля)');

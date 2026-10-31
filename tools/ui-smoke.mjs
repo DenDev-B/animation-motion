@@ -94,16 +94,26 @@ try {
   // 2. Проект
   await page.click('#topTabs button[data-tab="project"]');
   if (!(await page.$eval('#panelProject', (el) => !el.hidden))) fail('вкладка «Проект» не открылась');
-  for (const id of ['ideaText', 'ideaCopyPrompt', 'ideaResponse', 'ideaCreate', 'openProjectButton', 'saveProject', 'ideaSuggestions']) {
+  if (!(await page.$eval('#stageCol', (el) => el.hidden))) fail('на вкладке «Проект» предпросмотр сцены должен быть скрыт');
+  if (!(await page.$eval('#app', (el) => el.classList.contains('full')))) fail('на вкладке «Проект» контент должен занимать всю ширину');
+  for (const id of ['ideaText', 'ideaCopyPrompt', 'ideaScenes', 'ideaSeconds', 'ideaFormat', 'ideaStyle', 'ideaCopyBrief', 'ideaBrief', 'ideaCopyProjectPrompt', 'ideaResponse', 'ideaCreate', 'openProjectButton', 'saveProject', 'ideaSuggestions', 'projectTitle', 'projectFormat', 'projectFps']) {
     if (!(await page.$(`#${id}`))) fail(`на вкладке «Проект» нет #${id}`);
   }
-  ok('вкладка «Проект»: идея, импорт/экспорт, подсказки на месте');
+  const storyParent = await page.$eval('#ideaText', (el) => el.closest('#panelProject') !== null);
+  if (!storyParent) fail('поле «Общий рассказ» (#ideaText) должно быть на вкладке «Проект»');
+  ok('вкладка «Проект»: рассказ, настройки, импорт/экспорт и ИИ на месте, предпросмотр скрыт');
 
   // 3. Сцены и все подвкладки
   await page.click('#topTabs button[data-tab="scenes"]');
   if (!(await page.$eval('#panelScenes', (el) => !el.hidden))) fail('вкладка «Сцены» не открылась');
+  if (await page.$eval('#stageCol', (el) => el.hidden)) fail('на вкладке «Сцены» предпросмотр сцены должен быть виден');
+  if (await page.$eval('#app', (el) => el.classList.contains('full'))) fail('на вкладке «Сцены» нужна колонка предпросмотра');
   const sceneCount = await page.$$eval('#sceneTabs .scene-tab > button:first-child', (buttons) => buttons.length);
   if (sceneCount !== 3) fail(`подвкладок сцен: ${sceneCount}, ожидалось 3`);
+  const arrowText = await page.$$eval('#sceneTabs button', (buttons) => buttons.map((b) => b.textContent).join(''));
+  if (/[←→]/.test(arrowText)) fail('на вкладках сцен остались стрелки ←/→');
+  if (!(await page.$('#sceneTabs .scene-add'))) fail('в конце вкладок сцен нет кнопки «+»');
+  if ((await page.$$('#sceneTabs .scene-close')).length !== 3) fail('у вкладок сцен нет кнопки удаления «×»');
   for (let index = 0; index < sceneCount; index++) {
     const buttons = await page.$$('#sceneTabs .scene-tab > button:first-child');
     await buttons[index].click();
@@ -128,6 +138,26 @@ try {
   // 4. Склейка
   await page.click('#topTabs button[data-tab="splice"]');
   await page.waitForFunction(() => document.querySelectorAll('#sceneOrder .order-row').length === 3, { timeout: 10000 });
+  if (!(await page.$eval('#stageCol', (el) => el.hidden))) fail('на вкладке «Склейка» предпросмотр сцены должен быть скрыт');
+  if (!(await page.$eval('#app', (el) => el.classList.contains('full')))) fail('на вкладке «Склейка» контент должен занимать всю ширину');
+  const thumbnails = await page.$$eval('#sceneOrder .order-row canvas.order-thumb', (canvases) => canvases.map((el) => ({ width: el.width, height: el.height })));
+  if (thumbnails.length !== 3) fail(`миниатюр сцен: ${thumbnails.length}, ожидалось 3`);
+  for (const [index, thumb] of thumbnails.entries()) {
+    if (thumb.width !== 240) fail(`миниатюра ${index}: ширина ${thumb.width}, ожидалось 240`);
+    if (!(thumb.height > 0)) fail(`миниатюра ${index}: высота ${thumb.height}`);
+  }
+  const cards = await page.$$eval('#sceneOrder .order-row', (rows) => rows.map((row) => ({
+    draggable: row.draggable,
+    tabIndex: row.tabIndex,
+    name: row.querySelector('.order-name')?.textContent ?? '',
+    duration: row.querySelector('.order-duration')?.textContent ?? '',
+  })));
+  for (const [index, card] of cards.entries()) {
+    if (!card.draggable) fail(`карточка ${index}: нет перетаскивания`);
+    if (card.tabIndex !== 0) fail(`карточка ${index}: нет фокуса для Alt+←/→`);
+    if (!card.name) fail(`карточка ${index}: нет названия`);
+    if (!/с$/.test(card.duration)) fail(`карточка ${index}: нет длительности (${card.duration})`);
+  }
   const transitionSelects = await page.$$eval('#sceneOrder select', (els) => els.length);
   const durationInputs = await page.$$eval('#sceneOrder input[type="number"]', (els) => els.length);
   if (transitionSelects !== 2 || durationInputs !== 2) fail(`переходы: select ${transitionSelects}, duration ${durationInputs}, ожидалось 2/2`);
@@ -138,7 +168,7 @@ try {
   if (!/MP4/.test(exportState.text ?? '')) fail('нет кнопки экспорта MP4');
   if (!exportState.disabled) fail('кнопка экспорта MP4 включена, хотя браузерный экспорт не реализован');
   if (!/npm run export/.test(exportHint ?? '')) fail('нет подсказки про npm run export');
-  ok(`вкладка «Склейка»: ${transitionSelects} перехода, предпросмотр ${previewSize.w}×${previewSize.h}, экспорт — заглушка с командой`);
+  ok(`вкладка «Склейка»: ${cards.length} карточек с миниатюрами 240px, ${transitionSelects} перехода, предпросмотр ${previewSize.w}×${previewSize.h}, экспорт — заглушка с командой`);
 
   // 5. Каталог: список, миниатюры, подвкладки
   await page.click('#topTabs button[data-tab="catalog"]');

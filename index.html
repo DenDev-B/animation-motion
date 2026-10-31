@@ -8,10 +8,13 @@
   <link rel="stylesheet" href="/editor/style.css">
 </head>
 <body>
-  <h1>animation-motion</h1>
+  <header class="page-head">
+    <h1>animation-motion</h1>
+    <div class="bar headbar"><button id="undo">Отмена</button><button id="redo">Повтор</button><span id="saveState" class="hint">Сохранено</span></div>
+  </header>
   <div id="topTabs" class="tabs topbar" role="tablist"></div>
-  <div class="app">
-    <div class="col stage">
+  <div class="app" id="app">
+    <div class="col stage" id="stageCol">
       <div class="stagewrap"><canvas id="cv" class="h" width="1280" height="720"></canvas></div>
       <div class="box">
         <div class="bar">
@@ -31,35 +34,39 @@
       </div>
     </div>
     <div class="col panels">
-      <div class="box">
-        <div class="bar"><button id="undo">Отмена</button><button id="redo">Повтор</button><span id="saveState" class="hint">Сохранено</span></div>
-      </div>
 
       <div id="panelProject" class="box">
         <h2>Проект</h2>
         <div class="bar"><button id="newProject">Новый проект</button><button id="openProjectButton">Открыть</button><button id="saveProject">Сохранить</button><input id="openProject" type="file" accept=".json,application/json" hidden></div>
-        <div class="bar" style="margin-top:8px"><label class="f">Название<input id="projectTitle"></label><label class="f">Формат<select id="projectFormat"><option>16:9</option><option>9:16</option></select></label><label class="f">FPS<select id="projectFps"><option>24</option><option>30</option><option>60</option></select></label></div>
-        <h2 style="margin-top:10px">Новый проект из идеи</h2>
-        <div class="hint" style="margin-bottom:6px">1. Опишите идею и выберите стиль.<br>2. Скопируйте запрос на ТЗ и вставьте его в чат ИИ.<br>3. Вставьте ТЗ сюда (необязательно) и скопируйте промт проекта.<br>4. Вставьте ответ ИИ (JSON) и нажмите «Создать проект».</div>
+        <div class="bar" style="margin-top:8px"><label class="f">Название проекта<input id="projectTitle"></label><label class="f">Формат<select id="projectFormat"><option>16:9</option><option>9:16</option></select></label><label class="f">FPS<select id="projectFps"><option>24</option><option>30</option><option>60</option></select></label></div>
         <div class="bar" style="margin-top:8px; align-items:flex-start">
-          <label class="f" style="flex:1 1 100%">Идея<textarea id="ideaText" rows="4" placeholder="Например: Что если бы киты летали над городом"></textarea></label>
+          <label class="f" style="flex:1 1 100%">Общий рассказ (идея ролика)<textarea id="ideaText" rows="4" placeholder="Например: Что если бы киты летали над городом"></textarea></label>
         </div>
+        <h2 style="margin-top:12px">Создать проект с помощью ИИ</h2>
+        <div class="hint" style="margin-bottom:6px">1. Напишите рассказ выше. 2. Скопируйте промт и вставьте его в чат ИИ. 3. Вставьте ответ ИИ и нажмите «Создать проект».</div>
         <div class="bar" style="margin-top:8px">
           <label class="f">Сцен<input id="ideaScenes" type="number" value="5" min="2" max="12" style="width:70px"></label>
           <label class="f">Секунд на сцену<input id="ideaSeconds" type="number" value="8" min="4" max="20" style="width:90px"></label>
           <label class="f">Формат<select id="ideaFormat"><option>16:9</option><option>9:16</option></select></label>
           <label class="f">Стиль<select id="ideaStyle"></select></label>
         </div>
+        <details id="ideaAdvanced" class="advanced">
+          <summary>Расширенно: ТЗ отдельным шагом</summary>
+          <div class="hint" style="margin:6px 0">Прежний путь: сначала запрос на ТЗ, затем промт проекта с готовым ТЗ.</div>
+          <div class="btns">
+            <button id="ideaCopyBrief">Копировать запрос на ТЗ</button>
+          </div>
+          <div id="ideaBriefStatus" class="msg"></div>
+          <div style="margin-top:10px" class="f">Вставьте ТЗ от ИИ (необязательно)</div>
+          <textarea id="ideaBrief" spellcheck="false" rows="8" placeholder="Вставьте сюда ответ ИИ с ТЗ режиссёра или оставьте поле пустым"></textarea>
+          <ul id="briefErrors" class="errs"></ul>
+          <ul id="briefWarnings" class="warns"></ul>
+          <div class="btns">
+            <button id="ideaCopyProjectPrompt">Копировать промт проекта с ТЗ</button>
+          </div>
+        </details>
         <div class="btns">
-          <button id="ideaCopyBrief">1. Копировать запрос на ТЗ</button>
-        </div>
-        <div id="ideaBriefStatus" class="msg"></div>
-        <div style="margin-top:10px" class="f">2. Вставьте ТЗ от ИИ (необязательно)</div>
-        <textarea id="ideaBrief" spellcheck="false" rows="8" placeholder="Вставьте сюда ответ ИИ с ТЗ режиссёра или оставьте поле пустым"></textarea>
-        <ul id="briefErrors" class="errs"></ul>
-        <ul id="briefWarnings" class="warns"></ul>
-        <div class="btns">
-          <button id="ideaCopyPrompt">3. Копировать промт проекта</button>
+          <button id="ideaCopyPrompt">1. Копировать промт (ТЗ + проект)</button>
         </div>
         <div id="ideaPromptFallback" hidden style="margin-top:6px">
           <textarea id="ideaPromptOut" spellcheck="false" rows="6" readonly style="width:100%"></textarea>
@@ -69,8 +76,8 @@
           <div class="hint">Буфер обмена недоступен. Скопируйте промт из поля выше.</div>
         </div>
         <div id="ideaCopyStatus" class="msg"></div>
-        <div style="margin-top:10px" class="f">4. Вставьте ответ ИИ (JSON)</div>
-        <textarea id="ideaResponse" spellcheck="false" rows="10" aria-label="Ответ ИИ для проекта" placeholder="Вставьте сюда ответ ИИ целиком, он начинается с {" style="border:2px solid #b8531f"></textarea>
+        <div style="margin-top:10px" class="f">2. Вставьте ответ ИИ (ТЗ + JSON или только JSON)</div>
+        <textarea id="ideaResponse" spellcheck="false" rows="10" aria-label="Ответ ИИ для проекта" placeholder="Вставьте сюда ответ ИИ целиком: блок с ТЗ и блок с JSON проекта" style="border:2px solid #b8531f"></textarea>
         <div class="btns">
           <button id="ideaCreate" class="primary" disabled>Создать проект</button>
           <button id="ideaFix" hidden>Копировать запрос на исправление</button>
@@ -87,7 +94,7 @@
       <div id="panelScenes" class="box">
         <h2>Сцены</h2>
         <div id="sceneTabs" class="tabs" style="margin-bottom:8px"></div>
-        <div class="btns"><button id="addScene">+ Сцена</button><button id="duplicateScene">Дублировать</button><button id="deleteScene">Удалить</button></div>
+        <div class="btns"><button id="duplicateScene">Дублировать</button></div>
         <div id="projectDuration" class="hint"></div>
         <div class="hint" style="margin-top:8px">Превью текущей сцены — слева.</div>
         <h3 class="subhead">Слои и объекты</h3>
@@ -126,7 +133,7 @@
 
       <div id="panelSplice" class="box" hidden>
         <h2>Склейка</h2>
-        <div class="hint">Порядок сцен и переходы между ними.</div>
+        <div class="hint">Карточки сцен в порядке ролика. Перетащите карточку мышью или нажмите Alt+←/→ на карточке в фокусе.</div>
         <div id="sceneOrder" class="order"></div>
         <h2 style="margin-top:10px">Предпросмотр проекта</h2>
         <div class="splicepreview"><canvas id="projectPreview" width="320" height="180"></canvas></div>
