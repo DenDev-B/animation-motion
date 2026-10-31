@@ -90,6 +90,7 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     '## Анимации объекта (anim — массив)',
     anims,
     'ВАЖНО про anim move: from и to это СМЕЩЕНИЯ от позиции объекта (x, y), а не абсолютные координаты. Объект стоит в (x, y), а анимация добавляет к ним смещение. Чтобы машина проехала слева направо по дороге на y=280: поставь x: 0, y: 280 и anim {"type":"move","from":[-420,0],"to":[420,0],"t0":0,"t1":8}. Если поставить x: -420 и from [-420,280], объект улетит за кадр.',
+    `В anim swing amp — угол в радианах, по модулю не больше 0.6. Деревья, людей и животных оживляй через params.motion (${MOTION_PRESETS.join('|')}), а не swing на целом asset.`,
     `Пресет движения для asset и shape: params.motion = {preset: ${MOTION_PRESETS.join('|')}, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1} или массив таких. Пресет «оживляет» тело на месте (шаг, взмах, плавание); перемещение по сцене задавай отдельно anim move.`,
     `Камера: verticalFit всегда 0.52 (не меняй, это масштаб для вертикального кадра), keys по времени, например [{"t":0,"x":-60,"y":0,"zoom":1},{"t":${sec},"x":60,"y":-10,"zoom":1.2}]. В каждой сцене лёгкое движение камеры (медленный наезд или сдвиг); тряску shake используй только для ударов и взрывов.`,
     `Переходы transition между сценами: type ${TRANSITION_TYPES.join('|')}; duration в секундах (не больше половины меньшей из двух соседних сцен), dir ${TRANSITION_DIRS.join('|')} для slide/wipe, color hex для dip. Чередуй переходы по смыслу (crossfade для плавной смены, dip для смены времени, slide/wipe для динамики).`,
@@ -132,7 +133,22 @@ export interface ProjectReplyResult {
 
 const SUGGESTION_ID_RE = /^[a-z][a-z0-9-]{0,39}$/;
 
-/** Типичные ошибки ИИ, которые валидатор схемы пропускает: абсолютные координаты в move и странный verticalFit. */
+const SWING_AMP_LIMIT = 0.6;
+const SWING_AMP_MESSAGE = 'swing.amp измеряется в радианах (допустимо до 0.6). Для покачивания дерева/человека используй params.motion: sway';
+
+/** Любой список anim в объекте: сам anim, partAnim по частям и части моделей внутри сцены. */
+function checkAnimList(list: unknown, path: string, errors: ValidationError[]): void {
+  if (!Array.isArray(list)) return;
+  list.forEach((a, ai) => {
+    if (!a || typeof a !== 'object') return;
+    const m = a as Record<string, unknown>;
+    if (m.type === 'swing' && typeof m.amp === 'number' && Number.isFinite(m.amp) && Math.abs(m.amp) > SWING_AMP_LIMIT) {
+      errors.push({ path: `${path}[${ai}].amp`, message: SWING_AMP_MESSAGE });
+    }
+  });
+}
+
+/** Типичные ошибки ИИ, которые валидатор схемы пропускает: абсолютные координаты в move, странный verticalFit и amp у swing. */
 function checkSceneSanity(json: unknown, errors: ValidationError[]): void {
   const scenes = json && typeof json === 'object' ? (json as Record<string, unknown>).scenes : undefined;
   if (!Array.isArray(scenes)) return;
@@ -143,17 +159,35 @@ function checkSceneSanity(json: unknown, errors: ValidationError[]): void {
     if (cam && typeof cam.verticalFit === 'number' && (cam.verticalFit < 0.2 || cam.verticalFit > 1.2)) {
       errors.push({ path: `scenes[${si}].scene.camera.verticalFit`, message: `verticalFit должен быть от 0.2 до 1.2 (обычно 0.52), получено ${cam.verticalFit}; пример: 0.52` });
     }
+    const assets = scene.assets;
+    if (assets && typeof assets === 'object' && !Array.isArray(assets)) {
+      for (const [assetId, rawAsset] of Object.entries(assets as Record<string, unknown>)) {
+        const asset = rawAsset && typeof rawAsset === 'object' ? rawAsset as Record<string, unknown> : undefined;
+        const parts = asset && Array.isArray(asset.parts) ? asset.parts : [];
+        parts.forEach((part, pi) => {
+          if (!part || typeof part !== 'object') return;
+          checkAnimList((part as Record<string, unknown>).anim, `scenes[${si}].scene.assets.${assetId}.parts[${pi}].anim`, errors);
+        });
+      }
+    }
     const layers = Array.isArray(scene.layers) ? scene.layers : [];
     layers.forEach((layer, li) => {
       const objects = layer && typeof layer === 'object' && Array.isArray((layer as Record<string, unknown>).objects) ? (layer as { objects: unknown[] }).objects : [];
       objects.forEach((o, oi) => {
         if (!o || typeof o !== 'object') return;
         const obj = o as Record<string, unknown>;
+        const objectPath = `scenes[${si}].scene.layers[${li}].objects[${oi}]`;
         if (typeof obj.kind === 'string' && NO_TEXT_KINDS.includes(obj.kind)) {
-          errors.push({ path: `scenes[${si}].scene.layers[${li}].objects[${oi}].kind`, message: `объекты kind "${obj.kind}" не нужны: титры добавляются позже в видеоредакторе; удали этот объект (и пустой слой, если в нём больше ничего нет)` });
+          errors.push({ path: `${objectPath}.kind`, message: `объекты kind "${obj.kind}" не нужны: титры добавляются позже в видеоредакторе; удали этот объект (и пустой слой, если в нём больше ничего нет)` });
         }
         const x = typeof obj.x === 'number' ? obj.x : 0;
         const y = typeof obj.y === 'number' ? obj.y : 0;
+        checkAnimList(obj.anim, `${objectPath}.anim`, errors);
+        if (obj.partAnim && typeof obj.partAnim === 'object' && !Array.isArray(obj.partAnim)) {
+          for (const [partId, list] of Object.entries(obj.partAnim as Record<string, unknown>)) {
+            checkAnimList(list, `${objectPath}.partAnim.${partId}`, errors);
+          }
+        }
         if (!Array.isArray(obj.anim)) return;
         obj.anim.forEach((a, ai) => {
           if (!a || typeof a !== 'object') return;
@@ -161,7 +195,7 @@ function checkSceneSanity(json: unknown, errors: ValidationError[]): void {
           if (m.type !== 'move' || !Array.isArray(m.from) || m.from.length !== 2) return;
           const fx = m.from[0], fy = m.from[1];
           if ((x !== 0 || y !== 0) && typeof fx === 'number' && typeof fy === 'number' && Math.abs(fx - x) < 1 && Math.abs(fy - y) < 1) {
-            errors.push({ path: `scenes[${si}].scene.layers[${li}].objects[${oi}].anim[${ai}].from`, message: 'move.from и move.to это смещения от x,y объекта, а не абсолютные координаты (здесь from равен самой позиции объекта, и объект улетит за кадр); поставь x и y в точку покоя, а from/to задай смещениями, например from [-400,0], to [400,0]' });
+            errors.push({ path: `${objectPath}.anim[${ai}].from`, message: 'move.from и move.to это смещения от x,y объекта, а не абсолютные координаты (здесь from равен самой позиции объекта, и объект улетит за кадр); поставь x и y в точку покоя, а from/to задай смещениями, например from [-400,0], to [400,0]' });
           }
         });
       });
