@@ -50,6 +50,10 @@ const projectPreviewEl = document.getElementById('projectPreview') as HTMLCanvas
 const projectScrub = document.getElementById('projectScrub') as HTMLInputElement | null;
 const projectTime = document.getElementById('projectTime') as HTMLElement | null;
 const projectPlay = document.getElementById('projectPlay') as HTMLButtonElement | null;
+const exportMp4Btn = document.getElementById('exportMp4') as HTMLButtonElement | null;
+const exportCancelBtn = document.getElementById('exportCancel') as HTMLButtonElement | null;
+const exportDownload = document.getElementById('exportDownload') as HTMLAnchorElement | null;
+const exportStatusEl = document.getElementById('exportStatus') as HTMLElement | null;
 
 // Каталог: ссылки на элементы
 const catalogTabBar = document.getElementById('catalogTabBar') as HTMLElement | null;
@@ -412,7 +416,7 @@ function setTopTab(tab: TopTab, persist = true) {
   if (appEl) appEl.classList.toggle('full', tab !== 'scenes');
   renderTopTabs();
   if (persist) storageSet(TAB_KEY, tab);
-  if (tab === 'splice') { renderSceneOrder(); renderProjectPreview(); }
+  if (tab === 'splice') { renderSceneOrder(); renderProjectPreview(); void refreshExportPanel(); }
   else if (tab === 'catalog') renderCatalogList();
   else if (tab === 'scenes') frame();
 }
@@ -1026,6 +1030,122 @@ function suggestionToModel(suggestion: { id: string; description: string; view?:
   };
 }
 
+// ---------- локальный сервис: экспорт MP4 кнопкой ----------
+interface ExportReply {
+  ok: boolean;
+  jobId?: string;
+  state?: 'running' | 'done' | 'error' | 'cancelled';
+  frame?: number;
+  total?: number;
+  file?: string;
+  message?: string;
+  errors?: Array<{ path: string; message: string }>;
+}
+
+const EXPORT_OFFLINE_MESSAGE = 'Экспорт работает только при запуске через run.bat: локальный сервис не отвечает. В терминале — команда npm run export.';
+let exportJobId: string | null = null;
+let exportPollTimer: number | null = null;
+
+function setExportStatus(message: string): void {
+  if (!exportStatusEl) return;
+  exportStatusEl.textContent = message;
+}
+
+function stopExportPolling(): void {
+  if (exportPollTimer === null) return;
+  window.clearTimeout(exportPollTimer);
+  exportPollTimer = null;
+}
+
+async function fetchExportJson(url: string, init?: RequestInit): Promise<ExportReply> {
+  try {
+    const response = await fetch(url, init);
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as ExportReply;
+    } catch {
+      return { ok: false, errors: [{ path: '', message: `Сервер ответил не JSON (код ${response.status}).` }] };
+    }
+  } catch (error) {
+    localApiReady = false;
+    return { ok: false, errors: [{ path: '', message: `Сервер недоступен: ${error instanceof Error ? error.message : String(error)}` }] };
+  }
+}
+
+function showExportResult(reply: ExportReply): void {
+  if (exportMp4Btn) exportMp4Btn.disabled = false;
+  if (exportCancelBtn) exportCancelBtn.hidden = true;
+  if (reply.state === 'done') {
+    if (exportDownload) {
+      exportDownload.href = `/__api/export/file?id=${encodeURIComponent(exportJobId ?? '')}`;
+      exportDownload.textContent = 'Скачать MP4';
+      exportDownload.hidden = false;
+    }
+    setExportStatus(`Готово: ${reply.file}`);
+  } else if (reply.state === 'cancelled') {
+    setExportStatus('Экспорт отменён, файл не сохранён.');
+  } else {
+    setExportStatus(reply.message || issueMessage(reply.errors));
+  }
+  exportJobId = null;
+}
+
+async function pollExportStatus(): Promise<void> {
+  if (!exportJobId) return;
+  const reply = await fetchExportJson(`/__api/export/status?id=${encodeURIComponent(exportJobId)}`);
+  if (!reply.ok || !reply.state) {
+    showExportResult(reply);
+    return;
+  }
+  if (reply.state === 'running') {
+    setExportStatus(reply.total ? `кадр ${reply.frame} из ${reply.total}` : 'собирается…');
+    exportPollTimer = window.setTimeout(() => void pollExportStatus(), 500);
+    return;
+  }
+  showExportResult(reply);
+}
+
+async function startExport(): Promise<void> {
+  if (exportJobId) return;
+  if (exportDownload) exportDownload.hidden = true;
+  if (!(await localApiAvailable())) {
+    if (exportMp4Btn) exportMp4Btn.disabled = true;
+    setExportStatus(EXPORT_OFFLINE_MESSAGE);
+    return;
+  }
+  setExportStatus('Отправляю проект…');
+  const reply = await fetchExportJson('/__api/export', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ project: structuredClone(project) }),
+  });
+  if (!reply.ok || !reply.jobId) {
+    setExportStatus(reply.ok ? 'Сервер не вернул id задания.' : issueMessage(reply.errors));
+    if (exportMp4Btn) exportMp4Btn.disabled = false;
+    return;
+  }
+  exportJobId = reply.jobId;
+  if (exportMp4Btn) exportMp4Btn.disabled = true;
+  if (exportCancelBtn) exportCancelBtn.hidden = false;
+  setExportStatus('Экспорт запущен, жду первый кадр…');
+  await pollExportStatus();
+}
+
+async function cancelExport(): Promise<void> {
+  if (!exportJobId) return;
+  stopExportPolling();
+  const reply = await fetchExportJson(`/__api/export/cancel?id=${encodeURIComponent(exportJobId)}`, { method: 'POST' });
+  showExportResult({ ...reply, state: reply.state ?? 'cancelled' });
+}
+
+/** Кнопка активна только когда отвечает локальный сервис; офлайн остаётся подсказка про npm run export. */
+async function refreshExportPanel(): Promise<void> {
+  if (exportJobId) return;
+  const online = await localApiAvailable();
+  if (exportMp4Btn) exportMp4Btn.disabled = !online;
+  setExportStatus(online ? '' : EXPORT_OFFLINE_MESSAGE);
+}
+
 function updateCatalogModelPrompt() {
   if (!catalogCopyModelPrompt) return;
   const desc = (catalogModelDesc?.value ?? '').trim();
@@ -1476,6 +1596,8 @@ if (projectScrub) projectScrub.oninput = (e) => {
   spliceT = Number((e.target as HTMLInputElement).value) * seconds;
   renderProjectPreview();
 };
+if (exportMp4Btn) exportMp4Btn.onclick = () => void startExport();
+if (exportCancelBtn) exportCancelBtn.onclick = () => void cancelExport();
 if (aspectH) aspectH.onclick = () => setAspect('h');
 if (aspectV) aspectV.onclick = () => setAspect('v');
 

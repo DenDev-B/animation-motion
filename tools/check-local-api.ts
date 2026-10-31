@@ -1,4 +1,5 @@
-// Локальный сервис: живой HTTP-запросы к ping/catalog/add на копий каталога во временной папке.
+// Локальный сервис: живые HTTP-запросы к ping/catalog/add/export на копии каталога во временной папке.
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -8,15 +9,18 @@ import { createLocalApi, LOCAL_API_VERSION, MAX_BODY_BYTES } from './local-api.t
 let errors = 0;
 const fail = (msg: string) => { console.error('FAIL:', msg); errors++; };
 const ok = (msg: string) => console.log('OK:', msg);
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const realCatalog = path.resolve('catalog');
+const realExportDir = path.resolve('out', 'export');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'am-local-api-'));
 const root = tmp;
 fs.cpSync(realCatalog, path.join(tmp, 'catalog'), { recursive: true });
 const catalogDir = path.join(tmp, 'catalog');
+const realExportBefore = fs.existsSync(realExportDir) ? fs.readdirSync(realExportDir).sort().join(',') : '';
 
 let port = 0;
-const api = createLocalApi({ root, getPort: () => port });
+const api = createLocalApi({ root, getPort: () => port, exportScript: path.resolve('tools', 'export.ts') });
 const server = http.createServer((req, res) => {
   api.handle(req, res).then((handled) => {
     if (!handled) { res.statusCode = 404; res.end(''); }
@@ -28,7 +32,20 @@ const server = http.createServer((req, res) => {
 
 interface Reply {
   status: number;
-  json: { ok?: boolean; id?: string; version?: number; errors?: Array<{ path: string; message: string }> };
+  headers: Record<string, string | string[] | undefined>;
+  body: Buffer;
+  json: {
+    ok?: boolean;
+    id?: string;
+    version?: number;
+    jobId?: string;
+    state?: string;
+    frame?: number;
+    total?: number;
+    file?: string;
+    message?: string;
+    errors?: Array<{ path: string; message: string }>;
+  };
   text: string;
 }
 
@@ -42,10 +59,11 @@ function request(options: { method: string; path: string; host?: string; origin?
       const chunks: Buffer[] = [];
       res.on('data', (c: Buffer) => chunks.push(c));
       res.on('end', () => {
-        const text = Buffer.concat(chunks).toString('utf8');
+        const body = Buffer.concat(chunks);
+        const text = body.toString('utf8');
         let json: Reply['json'] = {};
         try { json = JSON.parse(text) as Reply['json']; } catch { /* ответ проверяется статусом */ }
-        resolve({ status: res.statusCode ?? 0, json, text });
+        resolve({ status: res.statusCode ?? 0, headers: res.headers, body, json, text });
       });
     });
     req.on('error', reject);
@@ -65,6 +83,29 @@ const validModel = {
 };
 const postAdd = (model: unknown, overwrite = false, origin?: string) =>
   request({ method: 'POST', path: '/__api/catalog/add', origin, body: JSON.stringify({ model, overwrite }) });
+
+/** Есть ли утилита в PATH; экспорт без ffmpeg проверяется честно и печатает «пропущено». */
+function hasTool(name: string): boolean {
+  try {
+    return spawnSync(name, ['-version'], { stdio: 'ignore' }).status === 0;
+  } catch {
+    return false;
+  }
+}
+
+function probeVideo(file: string): Record<string, string> | null {
+  try {
+    const result = spawnSync('ffprobe', [
+      '-v', 'error', '-select_streams', 'v:0',
+      '-show_entries', 'stream=codec_name,width,height,nb_frames',
+      '-of', 'json', file,
+    ], { encoding: 'utf8' });
+    if (result.status !== 0) return null;
+    return (JSON.parse(result.stdout) as { streams: Array<Record<string, string>> }).streams[0] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 try {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -145,8 +186,113 @@ try {
   if (notApi.status !== 404) fail('запрос вне /__api/ должен уйти мимо сервиса');
   else ok('запрос вне /__api/ обслужен не сервисом');
 
+  // 10. экспорт MP4: самый короткий легальный проект (1 сцена, 1 с, 24 fps)
+  const shortProject = {
+    version: 1,
+    title: 'api-export-short',
+    fps: 24,
+    format: '16:9',
+    scenes: [{
+      id: 'one',
+      name: 'Одна сцена',
+      transition: { type: 'cut' },
+      scene: {
+        version: 1,
+        title: 'Фон',
+        duration: 1,
+        palette: { sky: ['#123456', '#654321'] },
+        camera: { keys: [] },
+        assets: {},
+        layers: [],
+      },
+    }],
+  };
+  const longProject = {
+    ...shortProject,
+    title: 'api-export-long',
+    fps: 60,
+    scenes: [{ ...shortProject.scenes[0], scene: { ...shortProject.scenes[0].scene, duration: 5 } }],
+  };
+  const postExport = (proj: unknown) => request({ method: 'POST', path: '/__api/export', body: JSON.stringify({ project: proj }) });
+  const exportStatus = (id: string) => request({ method: 'GET', path: `/__api/export/status?id=${id}` });
+
+  const badBody = await request({ method: 'POST', path: '/__api/export', body: '{"project": 5}' });
+  if (badBody.json.ok !== false) fail(`проект-число должен отклоняться: ${badBody.text.slice(0, 160)}`);
+  else ok('экспорт с некорректным проектом отклонён');
+  const badId = await request({ method: 'GET', path: '/__api/export/status?id=../../etc' });
+  if (badId.status !== 400 && badId.status !== 404) fail(`чужой id задания должен отклоняться, получено ${badId.status}`);
+  else ok(`чужой id задания: ${badId.status}`);
+
+  if (!hasTool('ffmpeg')) {
+    ok('пропущено: нет ffmpeg');
+  } else {
+    const started = await postExport(shortProject);
+    const jobId = started.json.jobId ?? '';
+    if (started.status !== 200 || started.json.ok !== true || !jobId) fail(`экспорт не принят: ${started.status} ${started.text.slice(0, 200)}`);
+    else {
+      ok(`экспорт принят: задание ${jobId}`);
+      const busy = await postExport(shortProject);
+      if (busy.status !== 409) fail(`второй экспорт одновременно должен давать 409, получено ${busy.status}`);
+      else ok('второй экспорт одновременно: 409');
+      let last = await exportStatus(jobId);
+      const deadline = Date.now() + 180000;
+      while (last.json.state === 'running' && Date.now() < deadline) {
+        await sleep(200);
+        last = await exportStatus(jobId);
+      }
+      if (last.json.state !== 'done') fail(`экспорт не завершился: ${last.text.slice(0, 200)}`);
+      else {
+        ok(`экспорт завершён: кадр ${last.json.frame} из ${last.json.total}`);
+        if (last.json.total !== 24) fail(`прогресс не досчитался 24 кадров: ${last.json.total}`);
+        const rel = String(last.json.file);
+        const videoPath = path.resolve(root, rel);
+        if (!rel.startsWith('out/export/') || !videoPath.startsWith(path.resolve(root))) fail(`видео попало не во временный out/export: ${rel}`);
+        else if (!fs.existsSync(videoPath)) fail(`видео не записано: ${rel}`);
+        else {
+          const download = await request({ method: 'GET', path: `/__api/export/file?id=${jobId}` });
+          const magic = download.body.subarray(4, 8).toString('latin1');
+          if (download.status !== 200 || magic !== 'ftyp') fail(`скачивание не отдаёт MP4: код ${download.status}, сигнатура ${magic}`);
+          else if (!/video\/mp4/.test(String(download.headers['content-type']))) fail(`content-type не video/mp4: ${download.headers['content-type']}`);
+          else ok(`скачивание MP4: ${download.body.length} байт, имя файла из content-disposition`);
+          const probe = probeVideo(videoPath);
+          if (!probe) fail('ffprobe не прочитал готовое видео');
+          else if (Number(probe.width) !== 1920 || Number(probe.height) !== 1080 || Number(probe.nb_frames) !== 24) fail(`ffprobe: ${JSON.stringify(probe)}`);
+          else ok(`ffprobe: ${probe.width}x${probe.height}, ${probe.nb_frames} кадров, ${probe.codec_name}`);
+        }
+      }
+
+      const long = await postExport(longProject);
+      const longId = long.json.jobId ?? '';
+      if (!longId) fail(`второй (длинный) экспорт не принят: ${long.status} ${long.text.slice(0, 200)}`);
+      else {
+        await sleep(1200);
+        const cancel = await request({ method: 'POST', path: `/__api/export/cancel?id=${longId}` });
+        if (cancel.json.state !== 'cancelled') fail(`отмена не сработала: ${cancel.text.slice(0, 200)}`);
+        else ok('отмена: состояние cancelled');
+        const afterCancel = await exportStatus(longId);
+        if (afterCancel.json.state !== 'cancelled') fail(`после отмены состояние «${afterCancel.json.state}»`);
+        let partial = 'есть';
+        for (let i = 0; i < 100; i++) {
+          partial = fs.readdirSync(path.join(root, 'out', 'export')).filter((f) => f.includes(longId)).join(',');
+          if (!partial) break;
+          await sleep(100);
+        }
+        if (partial) fail(`после отмены остался файл: ${partial}`);
+        else ok('после отмены частичный файл удалён');
+        const again = await postExport(shortProject);
+        if (again.status !== 200 || !again.json.jobId) fail(`после отмены слот не освободился: ${again.status} ${again.text.slice(0, 160)}`);
+        else ok('после отмены принимается новый экспорт');
+        await request({ method: 'POST', path: `/__api/export/cancel?id=${again.json.jobId ?? ''}` });
+      }
+    }
+  }
+
   if (fs.existsSync(path.join(realCatalog, 'test-bell.json'))) fail('тест записал модель в настоящий catalog/');
+  const realExportAfter = fs.existsSync(realExportDir) ? fs.readdirSync(realExportDir).sort().join(',') : '';
+  if (realExportAfter !== realExportBefore) fail('тест записал видео в настоящий out/export');
+  else ok('настоящий out/export не тронут');
 } finally {
+  api.close();
   await new Promise<void>((resolve) => { server.close(() => resolve()); });
   fs.rmSync(tmp, { recursive: true, force: true });
 }

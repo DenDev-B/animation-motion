@@ -144,8 +144,11 @@
         </div>
         <div class="btns">
           <button id="exportMp4" disabled>Экспорт MP4</button>
-          <span id="exportHint" class="hint">MP4 собирается командой npm run export (Node + ffmpeg); в браузере экспорт не выполняется.</span>
+          <button id="exportCancel" hidden>Отмена</button>
+          <a id="exportDownload" hidden>Скачать MP4</a>
+          <span id="exportStatus" class="hint"></span>
         </div>
+        <span id="exportHint" class="hint">MP4 собирается командой npm run export (Node + ffmpeg); в браузере экспорт не выполняется.</span>
       </div>
 
       <div id="panelCatalog" class="box" hidden>
