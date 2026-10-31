@@ -6,7 +6,7 @@ import { extractBrief } from '../engine/ai-brief.ts';
 const args = process.argv.slice(2);
 const opt = (name: string): string | undefined => { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1]; };
 const idea = opt('--idea');
-if (!idea) throw new Error('Использование: npm run ai:project-prompt -- --idea "текст" [--scenes 5] [--scene-seconds 8] [--format 16:9|9:16] [--fps 30] [--tone "..."] [--brief <ТЗ.md>] [--style id]');
+if (!idea) throw new Error('Использование: npm run ai:project-prompt -- --idea "текст" [--scenes 5] [--scene-seconds 8] [--format 16:9|9:16] [--fps 30] [--tone "..."] [--brief <ТЗ.md>] [--style id] [--with-brief]');
 const format = opt('--format') ?? '16:9';
 if (format !== '16:9' && format !== '9:16') throw new Error('--format должен быть 16:9 или 9:16');
 const fps = opt('--fps') === undefined ? 30 : Number(opt('--fps'));
@@ -23,7 +23,7 @@ const prompt = buildProjectPrompt({
   idea, format, fps: fps as 24 | 30 | 60,
   scenes: opt('--scenes') === undefined ? undefined : Number(opt('--scenes')),
   sceneSeconds: opt('--scene-seconds') === undefined ? undefined : Number(opt('--scene-seconds')),
-  tone: opt('--tone'), brief, styleId: opt('--style'), catalogIndex,
+  tone: opt('--tone'), brief, styleId: opt('--style'), catalogIndex, withBrief: args.includes('--with-brief'),
 });
 const bytes = Buffer.byteLength(prompt, 'utf8');
 if (bytes > PROJECT_PROMPT_MAX_BYTES) throw new Error(`Промт ${bytes} байт, больше лимита ${PROJECT_PROMPT_MAX_BYTES}`);

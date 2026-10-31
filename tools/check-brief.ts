@@ -50,6 +50,11 @@ expect(projectPrompt.includes('## ТЗ режиссёра (следуй ему)'
 expect(projectPrompt.includes('## Стиль ролика'), 'со styleId в промте проекта нет блока стиля');
 expect(projectPrompt.includes('style.preset = "warm-dusk"'), 'в промте проекта нет требования style.preset');
 
+// Подсказки качества кадра в промте проекта.
+for (const must of ['## Качество кадра', '20–40% высоты кадра', 'params.lit 0.25–0.4', 'kind glow', 'Не меньше 6 слоёв глубины', '8–15 частями']) {
+  expect(basePrompt.includes(must), `в промте проекта нет подсказки качества «${must}»`);
+}
+
 // Один шаг «идея → ТЗ + проект»: промт с withBrief требует два блока кода.
 const combinedPrompt = buildProjectPrompt({ idea: 'Что если бы киты летали над городом', scenes: 3, catalogIndex, withBrief: true });
 expect(combinedPrompt.includes('ДВУХ блоков кода'), 'в промте withBrief нет требования двух блоков кода');
