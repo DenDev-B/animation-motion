@@ -101,6 +101,12 @@ try {
   }
   const storyParent = await page.$eval('#ideaText', (el) => el.closest('#panelProject') !== null);
   if (!storyParent) fail('поле «Общий рассказ» (#ideaText) должно быть на вкладке «Проект»');
+  const oneStepLabel = await page.$eval('#ideaCopyPrompt', (el) => el.textContent ?? '');
+  if (!oneStepLabel.includes('ТЗ + проект')) fail('кнопка #ideaCopyPrompt должна называться «1. Копировать промт (ТЗ + проект)»');
+  const advancedOpen = await page.$eval('#ideaAdvanced', (el) => el.open);
+  if (advancedOpen) fail('блок «Расширенно: ТЗ отдельным шагом» (#ideaAdvanced) должен быть свёрнут по умолчанию');
+  const advancedBtnParent = await page.$eval('#ideaCopyProjectPrompt', (el) => el.closest('#ideaAdvanced') !== null);
+  if (!advancedBtnParent) fail('кнопка «Копировать промт проекта с ТЗ» должна быть внутри #ideaAdvanced');
   ok('вкладка «Проект»: рассказ, настройки, импорт/экспорт и ИИ на месте, предпросмотр скрыт');
 
   // 3. Сцены и все подвкладки

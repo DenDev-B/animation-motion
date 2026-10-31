@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, locateFrame, composeFrame } from '../engine/index.ts';
+import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
 import { STYLE_PRESETS } from '../engine/styles.ts';
@@ -118,6 +118,7 @@ const ideaBriefStatus = document.getElementById('ideaBriefStatus') as HTMLElemen
 const briefErrEl = document.getElementById('briefErrors') as HTMLUListElement | null;
 const briefWarnEl = document.getElementById('briefWarnings') as HTMLUListElement | null;
 const ideaCopyPrompt = document.getElementById('ideaCopyPrompt') as HTMLButtonElement | null;
+const ideaCopyProjectPrompt = document.getElementById('ideaCopyProjectPrompt') as HTMLButtonElement | null;
 const ideaPromptFallback = document.getElementById('ideaPromptFallback') as HTMLElement | null;
 const ideaPromptOut = document.getElementById('ideaPromptOut') as HTMLTextAreaElement | null;
 const ideaPromptSelectAll = document.getElementById('ideaPromptSelectAll') as HTMLButtonElement | null;
@@ -183,6 +184,8 @@ let fixCandidate: unknown;
 let fixErrors: ValidationError[] = [];
 let ideaCandidate: unknown;
 let ideaErrList: ValidationError[] = [];
+/** ТЗ из ответа ИИ (путь «ТЗ + проект одним ответом»); записывается в meta.brief при создании проекта. */
+let ideaReplyBrief = '';
 const SCOPE_LABELS: Record<JsonScope, string> = { scene: 'сцена', project: 'весь проект', object: 'выбранный объект' };
 
 // Состояние каталога
@@ -295,6 +298,7 @@ function resetAiResult() {
 function resetIdeaResult() {
   ideaCandidate = undefined;
   ideaErrList = [];
+  ideaReplyBrief = '';
   if (ideaCreate) ideaCreate.disabled = true;
   if (ideaFix) ideaFix.hidden = true;
   showList(ideaErrEl, []);
@@ -334,6 +338,10 @@ function setIdeaBriefStatus(message: string, isError: boolean) {
   ideaBriefStatus.textContent = message;
   ideaBriefStatus.classList.toggle('err', isError);
 }
+const NOT_JSON_MESSAGE = 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ';
+const BRIEF_NOT_JSON_MESSAGE = 'Это ТЗ, а не JSON. Отправьте ИИ промт проекта и вставьте его ответ сюда.';
+/** Вставлен только документ ТЗ: заголовки «## 1.»…«## 7.» без JSON-блока. */
+const ideaReplyMessage = (text: string): string => (/^##\s*[1-7]\./m.test(text) ? BRIEF_NOT_JSON_MESSAGE : NOT_JSON_MESSAGE);
 function selectedStyleId(): string | undefined {
   return ideaStyle?.value || undefined;
 }
@@ -342,7 +350,7 @@ function checkBriefField(): boolean {
   if (!text) {
     showList(briefErrEl, []);
     showList(briefWarnEl, []);
-    if (ideaCopyPrompt) ideaCopyPrompt.disabled = false;
+    if (ideaCopyProjectPrompt) ideaCopyProjectPrompt.disabled = false;
     setIdeaBriefStatus('', false);
     return true;
   }
@@ -350,7 +358,7 @@ function checkBriefField(): boolean {
   const result = validateBrief(text, { scenes });
   showList(briefErrEl, result.errors);
   showList(briefWarnEl, result.warnings);
-  if (ideaCopyPrompt) ideaCopyPrompt.disabled = !result.ok;
+  if (ideaCopyProjectPrompt) ideaCopyProjectPrompt.disabled = !result.ok;
   setIdeaBriefStatus(result.ok
     ? (result.warnings.length ? `ТЗ принято; предупреждений: ${result.warnings.length}. Можно копировать промт проекта.` : 'ТЗ принято. Можно копировать промт проекта.')
     : `Ошибок ТЗ: ${result.errors.length}. Исправьте ТЗ или очистите поле.`, !result.ok);
@@ -972,14 +980,15 @@ function applyIdeaProject(candidate: unknown) {
   if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
   applyChange('new-project-from-idea', () => {
     const next = structuredClone(candidate as ProjectV1);
-    const briefText = ideaBrief?.value.trim() ?? '';
     const styleId = selectedStyleId();
     const story = (ideaText?.value ?? '').trim().slice(0, STORY_MAX_CHARS);
-    const briefOk = briefText ? validateBrief(briefText, { scenes: ideaScenes ? Number(ideaScenes.value) : 5 }).ok : false;
-    if (briefOk || styleId || story) {
+    const advancedBrief = ideaBrief?.value.trim() ?? '';
+    const briefFromAdvanced = advancedBrief && validateBrief(advancedBrief, { scenes: ideaScenes ? Number(ideaScenes.value) : 5 }).ok ? extractBrief(advancedBrief) : '';
+    const briefText = ideaReplyBrief || briefFromAdvanced;
+    if (briefText || styleId || story) {
       next.meta = {
         ...(next.meta ?? {}),
-        ...(briefOk ? { brief: extractBrief(briefText) } : {}),
+        ...(briefText ? { brief: briefText } : {}),
         ...(styleId ? { styleId } : {}),
         ...(story ? { story } : {}),
       };
@@ -993,6 +1002,7 @@ function applyIdeaProject(candidate: unknown) {
   syncStoryField();
   ideaCandidate = undefined;
   ideaErrList = [];
+  ideaReplyBrief = '';
   if (ideaCreate) ideaCreate.disabled = true;
   if (ideaFix) ideaFix.hidden = true;
   setStatus('Проект создан из идеи. Отмена — Ctrl+Z.', false);
@@ -1100,14 +1110,25 @@ function checkIdeaResponse(): boolean {
     return false;
   }
   if (!text.includes('{')) {
-    reportIdeaErrors([{ path: '', message: 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ' }]);
-    setIdeaStatus('Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ', true);
+    const message = ideaReplyMessage(text);
+    reportIdeaErrors([{ path: '', message }]);
+    setIdeaStatus(message, true);
+    if (ideaCreate) ideaCreate.disabled = true;
+    return false;
+  }
+  let split: SplitReply;
+  try {
+    split = splitReply(text);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    reportIdeaErrors([{ path: '', message }]);
+    setIdeaStatus('В ответе ИИ нет JSON проекта.', true);
     if (ideaCreate) ideaCreate.disabled = true;
     return false;
   }
   let candidate: unknown;
   try {
-    candidate = extractJson(text);
+    candidate = extractJson(split.jsonText);
   } catch (error) {
     reportIdeaErrors([{ path: '', message: error instanceof Error ? error.message : String(error) }]);
     setIdeaStatus('Не удалось разобрать ответ ИИ.', true);
@@ -1115,10 +1136,17 @@ function checkIdeaResponse(): boolean {
     return false;
   }
   const reply = validateProjectReply(candidate, { catalogIds: Object.keys(catalog) });
+  ideaReplyBrief = '';
+  if (split.brief) {
+    const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
+    const briefCheck = validateBrief(split.brief, { scenes });
+    if (briefCheck.ok) ideaReplyBrief = split.brief;
+    else reply.warnings.push({ path: 'meta.brief', message: `ТЗ из ответа не записано в проект: ${briefCheck.errors[0]?.message ?? 'не проходит проверку'}` });
+  }
   ideaCandidate = candidate;
   ideaErrList = [...reply.errors];
   showList(ideaErrEl, reply.errors);
-  showList(ideaWarnEl, []);
+  showList(ideaWarnEl, reply.warnings);
   if (reply.errors.length === 0) {
     if (ideaCreate) ideaCreate.disabled = false;
     if (ideaFix) ideaFix.hidden = true;
@@ -1372,33 +1400,46 @@ if (ideaCopyBrief) ideaCopyBrief.onclick = async () => {
 };
 if (ideaBrief) ideaBrief.addEventListener('input', () => { checkBriefField(); });
 if (ideaScenes) ideaScenes.addEventListener('change', () => { if (ideaBrief?.value.trim()) checkBriefField(); });
-if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
+/** Общие параметры промта проекта из вкладки «Проект»; null, если рассказ пустой. */
+function ideaPromptBase(): { idea: string; scenes: number; sceneSeconds: number; format: '16:9' | '9:16'; styleId?: string } | null {
   const idea = ideaText?.value.trim() ?? '';
-  if (!idea) { setIdeaCopyStatus('Введите идею.', true); setIdeaStatus('', false); return; }
+  if (!idea) { setIdeaCopyStatus('Введите идею.', true); setIdeaStatus('', false); return null; }
+  const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
+  const sceneSeconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
+  const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
+  const styleId = selectedStyleId();
+  return { idea, scenes, sceneSeconds, format, ...(styleId ? { styleId } : {}) };
+}
+async function copyProjectPrompt(prompt: string) {
+  try {
+    await navigator.clipboard.writeText(prompt);
+    if (ideaPromptFallback) ideaPromptFallback.hidden = true;
+    const kb = (new TextEncoder().encode(prompt).length / 1024).toFixed(1);
+    setIdeaCopyStatus(`Скопировано (${kb} КБ). Вставьте в чат ИИ`, false);
+    setIdeaStatus('', false);
+  } catch {
+    if (ideaPromptOut) ideaPromptOut.value = prompt;
+    if (ideaPromptFallback) ideaPromptFallback.hidden = false;
+    setIdeaCopyStatus('Буфер недоступен. Покажите промт в поле ниже.', true);
+    setIdeaStatus('', false);
+  }
+}
+if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
+  const base = ideaPromptBase();
+  if (!base) return;
+  try {
+    await copyProjectPrompt(buildProjectPrompt({ ...base, catalogIndex, withBrief: true }));
+  } catch (error) {
+    setIdeaCopyStatus(error instanceof Error ? error.message : String(error), true);
+  }
+};
+if (ideaCopyProjectPrompt) ideaCopyProjectPrompt.onclick = async () => {
+  const base = ideaPromptBase();
+  if (!base) return;
   if (!checkBriefField()) { setIdeaCopyStatus('В ТЗ есть ошибки: исправьте их или очистите поле.', true); return; }
   try {
-    const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
-    const seconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
-    const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
     const briefText = ideaBrief?.value.trim();
-    const prompt = buildProjectPrompt({
-      idea, scenes, sceneSeconds: seconds, format, catalogIndex,
-      ...(briefText ? { brief: extractBrief(briefText) } : {}),
-      ...(selectedStyleId() ? { styleId: selectedStyleId() } : {}),
-    });
-    try {
-      await navigator.clipboard.writeText(prompt);
-      if (ideaPromptFallback) ideaPromptFallback.hidden = true;
-      const bytes = new TextEncoder().encode(prompt).length;
-      const kb = (bytes / 1024).toFixed(1);
-      setIdeaCopyStatus(`Скопировано (${kb} КБ). Вставьте в чат ИИ`, false);
-      setIdeaStatus('', false);
-    } catch {
-      if (ideaPromptOut) ideaPromptOut.value = prompt;
-      if (ideaPromptFallback) ideaPromptFallback.hidden = false;
-      setIdeaCopyStatus('Буфер недоступен. Покажите промт в поле ниже.', true);
-      setIdeaStatus('', false);
-    }
+    await copyProjectPrompt(buildProjectPrompt({ ...base, catalogIndex, ...(briefText ? { brief: extractBrief(briefText) } : {}) }));
   } catch (error) {
     setIdeaCopyStatus(error instanceof Error ? error.message : String(error), true);
   }
@@ -1419,12 +1460,14 @@ if (ideaResponse) {
     if (ideaFix) ideaFix.hidden = true;
     ideaCandidate = undefined;
     ideaErrList = [];
+    ideaReplyBrief = '';
     if (!text) {
       return;
     }
     if (!text.includes('{')) {
-      reportIdeaErrors([{ path: '', message: 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ' }]);
-      setIdeaStatus('Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ', true);
+      const message = ideaReplyMessage(text);
+      reportIdeaErrors([{ path: '', message }]);
+      setIdeaStatus(message, true);
       if (ideaCreate) ideaCreate.disabled = true;
       return;
     }

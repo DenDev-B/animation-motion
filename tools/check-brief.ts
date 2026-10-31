@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildBriefPrompt, BRIEF_MAX_CHARS, BRIEF_SECTIONS, extractBrief, validateBrief } from '../engine/ai-brief.ts';
-import { buildProjectPrompt, CATALOG_MAX_LINES, PROJECT_PROMPT_MAX_BYTES, type CatalogEntry } from '../engine/ai-project.ts';
+import { buildProjectPrompt, CATALOG_MAX_LINES, PROJECT_PROMPT_MAX_BYTES, splitReply, validateProjectReply, type CatalogEntry } from '../engine/ai-project.ts';
 import { styleBlock } from '../engine/styles.ts';
 
 const errors: string[] = [];
@@ -50,6 +50,13 @@ expect(projectPrompt.includes('## ТЗ режиссёра (следуй ему)'
 expect(projectPrompt.includes('## Стиль ролика'), 'со styleId в промте проекта нет блока стиля');
 expect(projectPrompt.includes('style.preset = "warm-dusk"'), 'в промте проекта нет требования style.preset');
 
+// Один шаг «идея → ТЗ + проект»: промт с withBrief требует два блока кода.
+const combinedPrompt = buildProjectPrompt({ idea: 'Что если бы киты летали над городом', scenes: 3, catalogIndex, withBrief: true });
+expect(combinedPrompt.includes('ДВУХ блоков кода'), 'в промте withBrief нет требования двух блоков кода');
+for (const section of BRIEF_SECTIONS) expect(combinedPrompt.includes(`«## ${section}»`), `в промте withBrief нет раздела «${section}»`);
+expect(/не сокращай json/i.test(combinedPrompt), 'в промте withBrief нет напоминания не сокращать JSON');
+expect(!combinedPrompt.includes('## ТЗ режиссёра (следуй ему)'), 'без поля brief в промте withBrief не должно быть раздела с ТЗ');
+
 // Синтетический каталог на 200 моделей: размер промта не зависит от реальной папки catalog/.
 const bigCatalog: CatalogEntry[] = Array.from({ length: 200 }, (_, i) => ({
   id: `model-${i + 1}`,
@@ -67,10 +74,25 @@ expect(bigLines.some((line) => line.startsWith('- model-2 |')), 'модель, �
 
 const maxBrief = (example + '\n' + 'Палитра и действие описаны словами. '.repeat(300)).slice(0, BRIEF_MAX_CHARS);
 const largest = buildProjectPrompt({ idea: 'Что если бы киты летали над городом и над ним пролетает огромный кит', scenes: 3, catalogIndex: bigCatalog, brief: maxBrief, styleId: 'ink-paper' });
-for (const [label, prompt] of [['промт ТЗ', briefPrompt], ['промт проекта без ТЗ', basePrompt], ['промт проекта с ТЗ 6000 и каталогом 200', largest]] as const) {
+const largestCombined = buildProjectPrompt({ idea: 'Что если бы киты летали над городом и над ним пролетает огромный кит', scenes: 3, catalogIndex: bigCatalog, withBrief: true, styleId: 'ink-paper' });
+for (const [label, prompt] of [['промт ТЗ', briefPrompt], ['промт проекта без ТЗ', basePrompt], ['промт проекта с ТЗ 6000 и каталогом 200', largest], ['промт проекта ТЗ+проект с каталогом 200', largestCombined]] as const) {
   const bytes = Buffer.byteLength(prompt, 'utf8');
   expect(bytes <= PROJECT_PROMPT_MAX_BYTES, `${label}: ${bytes} байт, лимит ${PROJECT_PROMPT_MAX_BYTES}`);
 }
+
+// splitReply: двойной ответ, только JSON, только ТЗ.
+const projectReplyText = fs.readFileSync(path.resolve('docs/examples/project-reply-example.json'), 'utf8');
+const doubleReply = splitReply(['```markdown', briefText, '```', '', '```json', projectReplyText, '```'].join('\n'));
+expect(doubleReply.brief !== undefined && doubleReply.brief.startsWith('# ТЗ режиссёра'), 'splitReply: из двойного ответа не досталось ТЗ');
+expect(validateProjectReply(JSON.parse(doubleReply.jsonText), { catalogIds: catalogIndex.map((e) => e.id) }).ok, 'splitReply: JSON из двойного ответа не проходит проверку');
+const jsonOnly = splitReply('```json\n' + projectReplyText + '\n```');
+expect(jsonOnly.brief === undefined, 'splitReply: в ответе только JSON — ТЗ быть не должно');
+expect(jsonOnly.jsonText.startsWith('{'), 'splitReply: jsonText должен начинаться с {');
+const rawJson = splitReply(projectReplyText);
+expect(rawJson.brief === undefined && rawJson.jsonText.startsWith('{'), 'splitReply: JSON без блока кода должен браться от первой {');
+let noJsonError = '';
+try { splitReply(example); } catch (error) { noJsonError = error instanceof Error ? error.message : String(error); }
+expect(/нет JSON проекта/i.test(noJsonError), 'splitReply: ответ только с ТЗ должен давать ошибку про отсутствие JSON');
 
 if (errors.length) {
   console.error('check:brief FAIL');

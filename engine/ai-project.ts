@@ -3,7 +3,7 @@ import { ANIM_SPEC, KIND_SPEC, PALETTE_SLOTS, TRANSITION_DIRS, TRANSITION_TYPES,
 import { MOTION_PRESETS } from './motion.ts';
 import { validateProject, type ProjectV1 } from './project.ts';
 import type { ValidateOpts, ValidationError } from './validate.ts';
-import { BRIEF_MAX_CHARS } from './ai-brief.ts';
+import { BRIEF_MAX_CHARS, BRIEF_SECTIONS, extractBrief } from './ai-brief.ts';
 import { getStyle, STYLE_PRESETS, styleBlock } from './styles.ts';
 
 export interface CatalogEntry {
@@ -30,6 +30,8 @@ export interface ProjectPromptOptions {
   brief?: string;
   /** id пресета из engine/styles.ts. */
   styleId?: string;
+  /** Один ответ ИИ: сначала ТЗ в ```markdown, затем JSON проекта. */
+  withBrief?: boolean;
   catalogIndex: readonly CatalogEntry[];
 }
 
@@ -121,8 +123,24 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
   const kinds = Object.entries(KIND_SPEC).filter(([k]) => !NO_TEXT_KINDS.includes(k)).map(([k, s]) => `- ${k}: ${s.description} ${s.params.length ? `Параметры: ${s.params.map(fieldLine).join('; ')}.` : 'Параметров нет.'}`).join('\n');
   const anims = Object.entries(ANIM_SPEC).map(([t, f]) => `- ${t}: ${f.map(fieldLine).join('; ')}`).join('\n');
 
+  const withBrief = opts.withBrief === true;
+  const role = withBrief
+    ? 'Роль: ты сценарист-режиссёр и редактор JSON-проектов для программы animation-motion. По идее ты делаешь короткий ролик из нескольких сцен, которые вместе рассказывают одну историю (завязка, развитие, финал). Весь ответ: два блока кода подряд — сначала ```markdown с ТЗ режиссёра, затем ```json с проектом, без пояснений и без комментариев в JSON.'
+    : 'Роль: ты сценарист-режиссёр и редактор JSON-проектов для программы animation-motion. По идее ты делаешь короткий ролик из нескольких сцен, которые вместе рассказывают одну историю (завязка, развитие, финал). Весь ответ: один полный JSON-объект проекта внутри одного блока кода ```json ... ``` (в чате у блока кода есть кнопка «Копировать»), без пояснений и без комментариев в JSON.';
+  const combinedSection = withBrief ? [
+    '## Формат ответа: ТЗ и проект вместе',
+    'Ответ состоит из ДВУХ блоков кода подряд, без текста до, между и после:',
+    `1. Блок \`\`\`markdown с ТЗ режиссёра по структуре из 7 разделов: ${BRIEF_SECTIONS.map((section) => `«## ${section}»`).join(', ')}. В разделе 5 у каждого шота заголовок «### Шот N», по одному шоту на сцену.`,
+    '2. Блок ```json с полным JSON проекта, строго по этому ТЗ: одна сцена = один шот.',
+    'Не сокращай JSON, он должен быть полным.',
+  ] : [];
+  const responseRule = withBrief
+    ? '- Ответ: два блока кода подряд — ```markdown с ТЗ по структуре из 7 разделов, затем ```json с полным JSON проекта; ни текста вокруг, ни нескольких JSON-блоков. Не сокращай JSON и не пиши «...».'
+    : '- Ответ: один блок кода ```json с JSON проекта (один объект) и больше ничего: ни текста до блока, ни после, ни нескольких блоков. Если ответ длинный, не сокращай и не пиши «...»: JSON должен быть полным.';
+
   const text = [
-    'Роль: ты сценарист-режиссёр и редактор JSON-проектов для программы animation-motion. По идее ты делаешь короткий ролик из нескольких сцен, которые вместе рассказывают одну историю (завязка, развитие, финал). Весь ответ: один полный JSON-объект проекта внутри одного блока кода ```json ... ``` (в чате у блока кода есть кнопка «Копировать»), без пояснений и без комментариев в JSON.',
+    role,
+    ...combinedSection,
     '## Что нужно сделать',
     `Проект: version 1, title на русском, fps ${fps}, format "${format}", ровно ${scenes} сцен(ы) по ~${sec} секунд (допустимо 4..20, сумма по смыслу истории). У каждой сцены: id ("s1", "s2"...), name на русском, scene (полная сцена формата v1) и transition (у первой сцены {"type":"cut"}).`,
     tone(opts.tone),
@@ -149,7 +167,7 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     'Нарисуй её сам через kind "shape": params.model = {"bounds":[x,y,w,h],"parts":[{"id":"body","name":"Тело","fill":"#hex","d":"M 0 0 C ... Z"}]}. bounds в формате [x, y, ширина, высота] с центром модели в (0,0), модель высотой около 200 единиц; d это SVG-путь (команды M L C Q Z), 1..10 частей, простые узнаваемые силуэты; цвета только hex. Типы частей: path (по умолчанию), circle (cx, cy, r), line. Для shape sizeM не используется: размер задай полем s.',
     'Каждую такую модель добавь в meta проекта: "meta": {"suggestions": [{"id": "dog", "description": "что это за модель", "view": "side", "sizeM": 0.6}]} (id латиницей через дефис). Если всё есть в каталоге, meta не нужен.',
     '## Жёсткие правила',
-    '- Ответ: один блок кода ```json с JSON проекта (один объект) и больше ничего: ни текста до блока, ни после, ни нескольких блоков. Если ответ длинный, не сокращай и не пиши «...»: JSON должен быть полным.',
+    responseRule,
     '- В каждой сцене: kind "sky" (фон), фон по смыслу (mountains, hills, skyline, cloud, stars, rain, snow), 1..3 смысловых объекта, лёгкое движение камеры. Не перегружай: до 25 объектов в сцене.',
     '- Не создавай объекты kind "text" и "counter": титры и подписи автор добавит позже в видеоредакторе. Смысл сцены передавай картинкой, объектами и движением.',
     '- Никакой случайности: геометрия задаётся seed (целое число), анимации только из списка выше.',
@@ -169,6 +187,26 @@ function tone(t: string | undefined): string {
 }
 
 // ---------- проверка ответа ----------
+
+export interface SplitReply {
+  /** ТЗ режиссёра из блока ```markdown, если он в ответе есть. */
+  brief?: string;
+  /** Текст JSON проекта: из последнего блока ```json, иначе от первой «{» до конца. */
+  jsonText: string;
+}
+
+/** Разбор ответа ИИ: один JSON или два блока подряд (ТЗ + JSON). */
+export function splitReply(text: string): SplitReply {
+  const source = (text ?? '').trim();
+  const markdownBlock = /```(?:markdown|md)\s*\r?\n[\s\S]*?```/i.test(source);
+  const brief = markdownBlock ? extractBrief(source) : undefined;
+  const jsonBlocks = [...source.matchAll(/```json\s*\r?\n([\s\S]*?)```/gi)];
+  const lastJson = jsonBlocks[jsonBlocks.length - 1];
+  if (lastJson) return { ...(brief ? { brief } : {}), jsonText: lastJson[1].trim() };
+  const start = source.indexOf('{');
+  if (start < 0) throw new Error('В ответе нет JSON проекта: нужен блок ```json с проектом. Если это ТЗ, отправьте ИИ промт проекта и вставьте его ответ сюда.');
+  return { ...(brief ? { brief } : {}), jsonText: source.slice(start) };
+}
 
 export interface Suggestion { id: string; description: string; view?: string; sizeM?: number }
 

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { buildProjectPrompt, PROJECT_PROMPT_MAX_BYTES, validateProjectReply, type CatalogEntry } from '../engine/ai-project.ts';
+import { buildProjectPrompt, PROJECT_PROMPT_MAX_BYTES, splitReply, validateProjectReply, type CatalogEntry } from '../engine/ai-project.ts';
 import { readCatalogIds } from './catalog-ids.ts';
 
 let errors = 0;
@@ -92,6 +92,25 @@ if (files.length === 2 && fs.readdirSync(tmp).filter((n) => n.endsWith('.project
   fs.writeFileSync(fencedPath, fenced, 'utf8');
   const fr = run(fencedPath);
   if (fr.status !== 0) fail('ответ в блоке json-кода не принят: ' + fr.stderr);
+}
+
+// 8. ответ «ТЗ + проект» одним сообщением: splitReply и ai:apply --new
+{
+  const briefText = fs.readFileSync(path.resolve('docs/examples/brief-example.md'), 'utf8');
+  const combined = briefText + '\n\n```json\n' + exampleText + '\n```\n';
+  const split = splitReply(combined);
+  if (!split.brief || !split.brief.startsWith('# ТЗ режиссёра')) fail('splitReply: из двойного ответа не досталось ТЗ');
+  if (split.brief && split.brief.includes('```')) fail('splitReply: в ТЗ попали маркеры блока кода');
+  if (JSON.parse(split.jsonText).scenes.length !== 3) fail('splitReply: JSON из двойного ответа разобран неверно');
+  const combinedPath = path.join(tmp, 'combined.txt');
+  fs.writeFileSync(combinedPath, combined, 'utf8');
+  const combinedRun = run(combinedPath);
+  if (combinedRun.status !== 0) fail('ai:apply --new не принял двойной ответ (ТЗ + JSON): ' + combinedRun.stderr);
+  let onlyBriefError = '';
+  try { splitReply(briefText); } catch (error) { onlyBriefError = error instanceof Error ? error.message : String(error); }
+  if (!/нет JSON проекта/i.test(onlyBriefError)) fail('splitReply: ответ только с ТЗ должен давать ошибку «в ответе нет JSON проекта»');
+  const jsonOnly = splitReply('```json\n' + exampleText + '\n```');
+  if (jsonOnly.brief !== undefined) fail('splitReply: в ответе только JSON — ТЗ быть не должно');
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });
