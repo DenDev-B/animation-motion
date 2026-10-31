@@ -217,6 +217,23 @@
           <ul id="catalogSvgWarnings" class="warns"></ul>
         </div>
 
+        <div id="catalogPanelUpload" hidden>
+          <div class="hint" style="margin-bottom:6px">Перетащите файлы в зону ниже или выберите их. Работает через локальный сервис dev-сервера: запуск через run.bat. Модели .json сохраняются как есть, .svg конвертируются так же, как во вкладке «Импорт SVG», с размером 1,5 м (потом поправите в JSON модели).</div>
+          <div id="catalogUploadDrop" class="dropzone">Перетащите сюда .json или .svg — можно несколько сразу</div>
+          <div class="btns" style="margin-top:6px">
+            <button id="catalogUploadPick">Выбрать файлы</button>
+            <input id="catalogUploadFiles" type="file" accept=".json,.svg,application/json,image/svg+xml" multiple hidden>
+          </div>
+          <div class="bar" style="margin-top:8px; gap:8px; flex-wrap:wrap">
+            <label class="f">Лицензия<input id="catalogUploadLicense" value="own"></label>
+            <label class="f">Автор<input id="catalogUploadAuthor" value="project"></label>
+            <label class="f">Источник<input id="catalogUploadSource"></label>
+          </div>
+          <div class="hint" style="margin-top:6px">Одно поле лицензии на всю пачку: подставьте свою, если файлы чужие.</div>
+          <ul id="catalogUploadResults" class="uploadlist"></ul>
+          <div id="catalogUploadStatus" class="msg"></div>
+        </div>
+
         <div id="catalogPanelModelPrompt" hidden>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:flex-start">
             <label class="f" style="flex:1 1 100%">Описание<textarea id="catalogModelDesc" rows="3" placeholder="Например: собака сбоку, смотрит вправо"></textarea></label>

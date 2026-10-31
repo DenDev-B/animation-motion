@@ -214,12 +214,27 @@ try {
   ok('список каталога не шире экрана');
 
   const catalogTabs = await page.$$('#catalogTabBar button');
+  const catalogTabLabels = await page.$$eval('#catalogTabBar button', (buttons) => buttons.map((b) => b.textContent));
+  if (!catalogTabLabels.includes('Загрузить')) fail(`в подвкладках каталога нет «Загрузить»: ${catalogTabLabels.join('|')}`);
   for (let index = 0; index < catalogTabs.length; index++) {
     const buttons = await page.$$('#catalogTabBar button');
     await buttons[index].click();
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  ok(`подвкладки каталога: пройдено ${catalogTabs.length}`);
+  ok(`подвкладки каталога: пройдено ${catalogTabs.length} (${catalogTabLabels.join('|')})`);
+
+  // 5b. Подвкладка «Загрузить»: зона перетаскивания и подсказка про run.bat (сервиса в dist нет)
+  const uploadButtons = await page.$$('#catalogTabBar button');
+  const uploadIndex = catalogTabLabels.indexOf('Загрузить');
+  if (uploadIndex >= 0) {
+    await uploadButtons[uploadIndex].click();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    if (await page.$eval('#catalogPanelUpload', (el) => el.hidden)) fail('подвкладка «Загрузить» не открылась');
+    if (!(await page.$('#catalogUploadDrop'))) fail('нет зоны перетаскивания файлов');
+    const uploadStatus = await page.$eval('#catalogUploadStatus', (el) => el.textContent);
+    if (!/run\.bat/.test(uploadStatus ?? '')) fail(`без локального сервиса статус не говорит про run.bat: ${uploadStatus}`);
+    else ok('подвкладка «Загрузить»: зона есть, без сервиса подсказывает про run.bat');
+  }
 
   // 6. Узкое окно: вкладки прокручиваются, раскладка не ломается
   await page.click('#topTabs button[data-tab="catalog"]');

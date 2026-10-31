@@ -1,3 +1,6 @@
 import { defineConfig } from 'vite';
+import { localApiPlugin } from './tools/local-api.ts';
 
-export default defineConfig({});
+export default defineConfig({
+  plugins: [localApiPlugin()],
+});

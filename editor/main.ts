@@ -105,6 +105,15 @@ const catalogModelErrors = document.getElementById('catalogModelErrors') as HTML
 const catalogModelWarnings = document.getElementById('catalogModelWarnings') as HTMLUListElement | null;
 const catalogShowCredits = document.getElementById('catalogShowCredits') as HTMLButtonElement | null;
 const catalogCreditsOut = document.getElementById('catalogCreditsOut') as HTMLPreElement | null;
+const catalogPanelUpload = document.getElementById('catalogPanelUpload') as HTMLElement | null;
+const catalogUploadDrop = document.getElementById('catalogUploadDrop') as HTMLElement | null;
+const catalogUploadPick = document.getElementById('catalogUploadPick') as HTMLButtonElement | null;
+const catalogUploadFilesInput = document.getElementById('catalogUploadFiles') as HTMLInputElement | null;
+const catalogUploadLicense = document.getElementById('catalogUploadLicense') as HTMLInputElement | null;
+const catalogUploadAuthor = document.getElementById('catalogUploadAuthor') as HTMLInputElement | null;
+const catalogUploadSource = document.getElementById('catalogUploadSource') as HTMLInputElement | null;
+const catalogUploadResults = document.getElementById('catalogUploadResults') as HTMLUListElement | null;
+const catalogUploadStatus = document.getElementById('catalogUploadStatus') as HTMLElement | null;
 
 // Новый проект из идеи
 const ideaText = document.getElementById('ideaText') as HTMLTextAreaElement | null;
@@ -608,7 +617,7 @@ function renderProjectPreview() {
 function renderCatalogTabs(active: string) {
   if (!catalogTabBar) return;
   catalogTabBar.innerHTML = '';
-  const tabs: Array<[string, string]> = [['list', 'Список'], ['preview', 'Превью'], ['newjson', 'Новая модель из JSON'], ['svg', 'Импорт SVG'], ['modelprompt', 'Промт через ИИ'], ['credits', 'Титры проекта']];
+  const tabs: Array<[string, string]> = [['list', 'Список'], ['preview', 'Превью'], ['newjson', 'Новая модель из JSON'], ['svg', 'Импорт SVG'], ['upload', 'Загрузить'], ['modelprompt', 'Промт через ИИ'], ['credits', 'Титры проекта']];
   for (const [id, label] of tabs) {
     const button = document.createElement('button');
     button.textContent = label;
@@ -624,6 +633,7 @@ function switchCatalogPanel(id: string) {
     preview: catalogPanelPreview,
     newjson: catalogPanelNewJson,
     svg: catalogPanelSvg,
+    upload: catalogPanelUpload,
     modelprompt: catalogPanelModelPrompt,
     credits: catalogPanelCredits,
   };
@@ -631,6 +641,7 @@ function switchCatalogPanel(id: string) {
   renderCatalogTabs(id);
   if (id === 'list') renderCatalogList();
   else if (id === 'preview') { renderPreviewModelSelect(); setPreviewPlaying(false); renderPreviewFrame(); }
+  else if (id === 'upload') { catalogUploadDrop?.classList.remove('over'); void refreshUploadPanel(); }
   else if (id === 'credits') renderCatalogCredits();
 }
 
@@ -847,6 +858,174 @@ function importSvgToCatalog() {
   setCatalogStatus(catalogSvgStatus, `Импортировано как ${importedId}: модель в списке «Список», файл скачан. Положите его в папку catalog/ и выполните npm run catalog:add, чтобы она осталась навсегда.`, false);
 }
 
+// ---------- локальный сервис: загрузка моделей перетаскиванием ----------
+const LOCAL_API_MISSING_MESSAGE = 'Загрузка работает только при запуске через run.bat: локальный сервис не отвечает. Модель можно сохранить через «Новая модель из JSON» или «Импорт SVG» — файл скачается, положите его в catalog/.';
+const LOCAL_API_MISSING_SHORT = 'Загрузка работает только при запуске через run.bat.';
+const RELOAD_HINT = 'Страница перезагрузится; на вопрос «Восстановить прошлую сессию?» нажмите ОК — проект останется.';
+const VIEWS: readonly string[] = ['side', 'bottom', 'front', 'top', 'three-quarter'];
+/** Размер SVG из пачки: в drag-and-drop нет поля размера, поправимо в JSON модели. */
+const SVG_UPLOAD_SIZE_M = 1.5;
+let localApiReady: boolean | null = null;
+let uploadInFlight = false;
+
+async function checkLocalApi(): Promise<boolean> {
+  try {
+    const response = await fetch('/__api/ping', { headers: { accept: 'application/json' } });
+    const data = (await response.json()) as { ok?: boolean; version?: number };
+    localApiReady = response.ok && data.ok === true && data.version === 1;
+  } catch {
+    localApiReady = false;
+  }
+  return localApiReady;
+}
+
+async function localApiAvailable(): Promise<boolean> {
+  return localApiReady === null ? checkLocalApi() : localApiReady;
+}
+
+interface CatalogAddReply {
+  ok: boolean;
+  id?: string;
+  errors?: Array<{ path: string; message: string }>;
+}
+
+async function postCatalogAdd(model: unknown, overwrite: boolean): Promise<CatalogAddReply> {
+  try {
+    const response = await fetch('/__api/catalog/add', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model, overwrite }),
+    });
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as CatalogAddReply;
+    } catch {
+      return { ok: false, errors: [{ path: '', message: `Сервер ответил не JSON (код ${response.status}).` }] };
+    }
+  } catch (error) {
+    localApiReady = false;
+    return { ok: false, errors: [{ path: '', message: `Сервер недоступен: ${error instanceof Error ? error.message : String(error)}` }] };
+  }
+}
+
+function issueMessage(errors: CatalogAddReply['errors']): string {
+  const first = errors?.[0];
+  if (!first) return 'сервер отклонил модель';
+  return `${first.path ? `${first.path}: ` : ''}${first.message}`;
+}
+
+function addUploadResult(fileName: string, message: string, isOk: boolean): void {
+  if (!catalogUploadResults) return;
+  const item = document.createElement('li');
+  item.className = isOk ? 'ok' : 'bad';
+  item.textContent = `${isOk ? '✔' : '✖'} ${fileName}: ${message}`;
+  catalogUploadResults.appendChild(item);
+}
+
+async function buildModelForUpload(file: File, license: { name: string; author: string; source: string }): Promise<{ model?: unknown; error?: string }> {
+  const text = await file.text();
+  if (/\.svg$/i.test(file.name)) {
+    const baseName = file.name.replace(/\.[^.]+$/, '');
+    const slug = baseName.toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '') || 'model';
+    const result = buildSvgModel(text, {
+      id: slug, name: baseName, view: 'side', sizeM: SVG_UPLOAD_SIZE_M, sizeAxis: 'height', tags: [],
+      license: { ...license, attribution: false },
+    });
+    if (!result.ok || !result.asset) return { error: result.errors.map((e) => `${e.path ? `${e.path}: ` : ''}${e.message}`).join('; ') || 'SVG не распознан' };
+    return { model: result.asset };
+  }
+  if (/\.json$/i.test(file.name) || /\.json$/i.test(file.type)) {
+    try {
+      return { model: extractJson(text) };
+    } catch (error) {
+      return { error: `не удалось разобрать JSON: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+  return { error: 'поддерживаются только .json и .svg' };
+}
+
+async function uploadCatalogFiles(files: readonly File[]): Promise<void> {
+  if (uploadInFlight || files.length === 0) return;
+  uploadInFlight = true;
+  if (catalogUploadResults) catalogUploadResults.innerHTML = '';
+  try {
+    if (!(await localApiAvailable())) {
+      setCatalogStatus(catalogUploadStatus, LOCAL_API_MISSING_MESSAGE, true);
+      return;
+    }
+    const license = {
+      name: (catalogUploadLicense?.value ?? '').trim() || 'own',
+      author: (catalogUploadAuthor?.value ?? '').trim() || 'project',
+      source: (catalogUploadSource?.value ?? '').trim(),
+    };
+    let added = 0;
+    for (const file of files) {
+      const prepared = await buildModelForUpload(file, license);
+      if (!prepared.model) {
+        addUploadResult(file.name, prepared.error ?? 'файл не подошёл', false);
+        continue;
+      }
+      const candidateId = String((prepared.model as CatalogAsset).id ?? '');
+      const taken = Object.prototype.hasOwnProperty.call(catalog, candidateId);
+      const overwrite = taken && confirm(`Модель «${candidateId}» уже есть в каталоге.\nОК — заменить её, Отмена — сохранить с суффиксом.`);
+      const reply = await postCatalogAdd(prepared.model, overwrite);
+      if (reply.ok) {
+        added++;
+        addUploadResult(file.name, `добавлено, id ${reply.id}`, true);
+      } else {
+        addUploadResult(file.name, issueMessage(reply.errors), false);
+      }
+    }
+    if (added > 0) {
+      setCatalogStatus(catalogUploadStatus, `Добавлено: ${added}. Обновляю каталог… ${RELOAD_HINT}`, false);
+      saveAutosave();
+      window.setTimeout(() => location.reload(), 800);
+    } else {
+      setCatalogStatus(catalogUploadStatus, 'Добавлено: 0. Каталог не менялся.', true);
+    }
+  } finally {
+    uploadInFlight = false;
+  }
+}
+
+async function refreshUploadPanel(): Promise<void> {
+  const online = await localApiAvailable();
+  if (online) setCatalogStatus(catalogUploadStatus, 'Сервис на месте: перетащите файлы в зону выше или нажмите «Выбрать файлы».', false);
+  else setCatalogStatus(catalogUploadStatus, LOCAL_API_MISSING_MESSAGE, true);
+}
+
+/** Первый объект kind shape с таким id или именем, из которого можно собрать модель каталога. */
+function findShapeModel(id: string): { name: string; model: Record<string, unknown> } | null {
+  for (const entry of project.scenes) {
+    for (const layer of entry.scene.layers) {
+      for (const object of layer.objects) {
+        if (object.kind !== 'shape' || (object.id !== id && object.name !== id)) continue;
+        const model = (object.params as Record<string, unknown> | undefined)?.model;
+        if (model && typeof model === 'object' && !Array.isArray(model)) return { name: object.name, model: model as Record<string, unknown> };
+      }
+    }
+  }
+  return null;
+}
+
+function suggestionToModel(suggestion: { id: string; description: string; view?: string; sizeM?: number }): unknown | null {
+  const shape = findShapeModel(suggestion.id);
+  if (!shape) return null;
+  return {
+    version: 1,
+    id: suggestion.id,
+    name: shape.name || suggestion.id,
+    bounds: shape.model.bounds,
+    realSize: { heightM: suggestion.sizeM ?? SVG_UPLOAD_SIZE_M },
+    meta: {
+      view: VIEWS.includes(suggestion.view ?? '') ? suggestion.view : 'side',
+      tags: [suggestion.id],
+      license: { name: 'own', author: 'project', source: '', attribution: false },
+    },
+    parts: shape.model.parts,
+  };
+}
+
 function updateCatalogModelPrompt() {
   if (!catalogCopyModelPrompt) return;
   const desc = (catalogModelDesc?.value ?? '').trim();
@@ -961,7 +1140,34 @@ function renderIdeaSuggestions() {
     status.className = 'hint';
     status.style.marginLeft = '8px';
     button.onclick = () => copyCatalogModelPromptForSuggestion(s.description, s.view, s.sizeM, status);
-    row.append(text, button, status);
+    const save = document.createElement('button');
+    save.textContent = 'Сохранить в каталог';
+    const hasShape = findShapeModel(s.id) !== null;
+    save.disabled = !hasShape;
+    if (!hasShape) save.title = `В проекте нет объекта kind "shape" с id или именем «${s.id}» — сохранить нечего`;
+    save.onclick = () => {
+      const model = suggestionToModel(s);
+      if (!model) {
+        status.textContent = 'Объект kind "shape" с таким id или именем не найден — сохраните модель через промт и вкладку «Новая модель из JSON».';
+        return;
+      }
+      status.textContent = 'Сохраняю…';
+      void localApiAvailable().then(async (online) => {
+        if (!online) {
+          status.textContent = LOCAL_API_MISSING_SHORT;
+          return;
+        }
+        const reply = await postCatalogAdd(model, false);
+        if (reply.ok) {
+          status.textContent = `✔ id ${reply.id}. Обновляю каталог… ${RELOAD_HINT}`;
+          saveAutosave();
+          window.setTimeout(() => location.reload(), 800);
+        } else {
+          status.textContent = `✖ ${issueMessage(reply.errors)}`;
+        }
+      });
+    };
+    row.append(text, button, save, status);
     list.appendChild(row);
   }
 }
@@ -1485,10 +1691,11 @@ if (ideaCreate) ideaCreate.onclick = () => {
     return;
   }
   if (!checkIdeaResponse()) return;
-  if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
-  applyIdeaProject(ideaCandidate!);
-  const ideaReply = validateProjectReply(ideaCandidate as ProjectV1, { catalogIds: Object.keys(catalog) });
+  const candidate = ideaCandidate;
+  const ideaReply = validateProjectReply(candidate as ProjectV1, { catalogIds: Object.keys(catalog) });
   ideaSuggestions = ideaReply.suggestions;
+  if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
+  applyIdeaProject(candidate!);
   renderIdeaSuggestions();
 };
 if (ideaFix) ideaFix.onclick = () => {
@@ -1541,6 +1748,21 @@ if (catalogSvgFile) catalogSvgFile.addEventListener('change', checkCatalogSvg);
 for (const el of document.querySelectorAll('#catalogPanelSvg input, #catalogPanelSvg select')) { if (el !== catalogSvgFile) el.addEventListener('input', checkCatalogSvg); }
 if (catalogImportSvg) catalogImportSvg.onclick = importSvgToCatalog;
 if (catalogCopyFixSvg) catalogCopyFixSvg.onclick = () => { if (!svgCandidate || !svgCandidate.asset) return; void copyText(buildFixRequest(svgCandidate.asset, svgCandidate.errors), 'Запрос на исправление'); };
+if (catalogUploadPick) catalogUploadPick.onclick = () => catalogUploadFilesInput?.click();
+if (catalogUploadFilesInput) catalogUploadFilesInput.addEventListener('change', () => {
+  const picked = Array.from(catalogUploadFilesInput.files ?? []);
+  catalogUploadFilesInput.value = '';
+  void uploadCatalogFiles(picked);
+});
+if (catalogUploadDrop) {
+  catalogUploadDrop.addEventListener('dragover', (event) => { event.preventDefault(); catalogUploadDrop.classList.add('over'); });
+  catalogUploadDrop.addEventListener('dragleave', () => catalogUploadDrop.classList.remove('over'));
+  catalogUploadDrop.addEventListener('drop', (event) => {
+    event.preventDefault();
+    catalogUploadDrop.classList.remove('over');
+    void uploadCatalogFiles(Array.from(event.dataTransfer?.files ?? []));
+  });
+}
 if (catalogModelDesc) catalogModelDesc.addEventListener('input', updateCatalogModelPrompt);
 if (catalogModelView) catalogModelView.addEventListener('change', updateCatalogModelPrompt);
 if (catalogModelSizeM) catalogModelSizeM.addEventListener('input', updateCatalogModelPrompt);

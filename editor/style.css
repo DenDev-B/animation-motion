@@ -67,4 +67,10 @@ ul.warns { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: #8a5a00;
 .tpl:last-child { border-bottom: 0; }
 .tpl code { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; }
 pre#selftest { font-size: 12px; font-family: monospace; padding: 8px; background: #eef2f7; border-radius: 4px; margin-top: 8px; }
+.dropzone { border: 2px dashed #b8531f; border-radius: 8px; padding: 18px 10px; text-align: center; font-size: 12px; color: #6f6676; background: #fff; min-width: 0; overflow-wrap: break-word; }
+.dropzone.over { background: #f3d3bd; color: #2b2118; }
+ul.uploadlist { margin: 6px 0 0; padding: 0; list-style: none; font-size: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+ul.uploadlist li { overflow-wrap: break-word; }
+ul.uploadlist li.ok { color: #2f7d32; }
+ul.uploadlist li.bad { color: #d2403a; }
 @media (max-width: 1100px) { .app { grid-template-columns: minmax(0, 1fr) } .stage { order: -1 } }
