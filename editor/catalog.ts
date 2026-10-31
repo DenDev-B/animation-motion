@@ -28,8 +28,8 @@ export function filterCatalog(catalog: Record<string, CatalogAsset>, index: read
 
 export function sizeTextM(entry: CatalogEntry): string {
   const rs = entry.realSize;
-  if (rs?.heightM !== undefined) return `${rs.heightM} м`;
-  if (rs?.widthM !== undefined) return `${rs.widthM} м`;
+  if (rs?.heightM !== undefined) return `${Math.round(rs.heightM * 100) / 100} м`;
+  if (rs?.widthM !== undefined) return `${Math.round(rs.widthM * 100) / 100} м`;
   return '—';
 }
 

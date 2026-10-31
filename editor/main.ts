@@ -530,6 +530,29 @@ function switchCatalogPanel(id: string) {
   else if (id === 'credits') renderCatalogCredits();
 }
 
+function hexLuminance(value: unknown): number | null {
+  if (typeof value !== 'string') return null;
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(value.trim());
+  if (!match) return null;
+  const hex = match[1];
+  const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+  const r = parseInt(full.slice(0, 2), 16) / 255;
+  const g = parseInt(full.slice(2, 4), 16) / 255;
+  const b = parseInt(full.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Средняя яркость заливок модели; null, если читаемых hex-fill нет (например, SVG с градиентами). */
+function averageFillLuminance(asset: CatalogAsset): number | null {
+  const values: number[] = [];
+  for (const part of asset.parts ?? []) {
+    const luminance = hexLuminance(part.fill);
+    if (luminance !== null) values.push(luminance);
+  }
+  if (values.length === 0) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 function thumbnailUrl(asset: CatalogAsset): string {
   const cached = thumbCache.get(asset.id);
   if (cached) return cached;
@@ -544,7 +567,8 @@ function thumbnailUrl(asset: CatalogAsset): string {
   const k = 800 / Math.max(bw, bh);
   const unitsPerMeter = 1000;
   const scene = buildPreviewScene(asset, 'none', 1);
-  scene.palette = { sky: ['#f4f1ea', '#dcd6ca'] };
+  const fillLuminance = averageFillLuminance(asset);
+  scene.palette = { sky: fillLuminance !== null && fillLuminance > 0.7 ? ['#17141f', '#2c2735'] : ['#f4f1ea', '#dcd6ca'] };
   scene.world = { unitsPerMeter };
   scene.layers.unshift({ id: 'thumb-bg', name: 'Фон', depth: 0, visible: true, objects: [{ id: 'thumb-bg', name: 'Фон', kind: 'sky', x: 0, y: 0, s: 1 }] });
   const object = scene.layers[1]?.objects[0];
