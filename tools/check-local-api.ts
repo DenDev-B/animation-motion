@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { createLocalApi, LOCAL_API_VERSION, MAX_BODY_BYTES } from './local-api.ts';
+import { createLocalApi, contentDisposition, LOCAL_API_VERSION, MAX_BODY_BYTES } from './local-api.ts';
 
 let errors = 0;
 const fail = (msg: string) => { console.error('FAIL:', msg); errors++; };
@@ -284,8 +284,65 @@ try {
         else ok('после отмены принимается новый экспорт');
         await request({ method: 'POST', path: `/__api/export/cancel?id=${again.json.jobId ?? ''}` });
       }
+
+      // 11. русский заголовок проекта: заголовок content-disposition только ASCII, filename* = имя файла на диске.
+      const russianTitle = 'Красная машина, ночной город';
+      const russian = await postExport({ ...shortProject, title: russianTitle });
+      const russianId = russian.json.jobId ?? '';
+      if (russian.status !== 200 || russian.json.ok !== true || !russianId) fail(`экспорт с русским заголовком не принят: ${russian.status} ${russian.text.slice(0, 200)}`);
+      else {
+        ok(`экспорт с русским заголовком принят: задание ${russianId}`);
+        let russianLast = await exportStatus(russianId);
+        const russianDeadline = Date.now() + 180000;
+        while (russianLast.json.state === 'running' && Date.now() < russianDeadline) {
+          await sleep(200);
+          russianLast = await exportStatus(russianId);
+        }
+        if (russianLast.json.state !== 'done') fail(`экспорт с русским заголовком не завершился: ${russianLast.text.slice(0, 200)}`);
+        else {
+          ok(`экспорт с русским заголовком завершён: кадр ${russianLast.json.frame} из ${russianLast.json.total}`);
+          const rel = String(russianLast.json.file);
+          const onDisk = path.basename(rel);
+          const russianDownload = await request({ method: 'GET', path: `/__api/export/file?id=${russianId}` });
+          const cd = String(russianDownload.headers['content-disposition'] ?? '');
+          if (russianDownload.status !== 200) fail(`скачивание русского файла: код ${russianDownload.status}`);
+          else if (russianDownload.body.length === 0) fail('скачивание русского файла: пустое тело');
+          else if (!/video\/mp4/.test(String(russianDownload.headers['content-type']))) fail(`content-type не video/mp4: ${russianDownload.headers['content-type']}`);
+          else ok(`скачивание русского файла: ${russianDownload.body.length} байт, ${russianDownload.headers['content-type']}`);
+          if (!/^[\x20-\x7e]*$/.test(cd)) fail(`content-disposition с не-ASCII: ${JSON.stringify(cd)}`);
+          else ok('content-disposition: только ASCII');
+          const encoded = /filename\*=UTF-8''([^;]*)$/.exec(cd)?.[1];
+          if (encoded === undefined) fail(`в content-disposition нет filename*: ${JSON.stringify(cd)}`);
+          else if (decodeURIComponent(encoded) !== onDisk) fail(`filename* декодируется в «${decodeURIComponent(encoded)}», ожидалось имя файла «${onDisk}»`);
+          else ok(`filename* декодируется в имя файла на диске: ${JSON.stringify(onDisk)}`);
+          const asciiName = /filename="([^"]*)"/.exec(cd)?.[1] ?? '';
+          const expectedAscii = onDisk.replace(/[^\x20-\x7e]/g, '_');
+          if (asciiName !== expectedAscii) fail(`filename="${asciiName}", ожидалось "${expectedAscii}"`);
+          else ok(`ASCII-вариант имени: ${asciiName}`);
+          if (!onDisk.includes(russianTitle)) fail(`имя файла на диске потеряло заголовок: ${onDisk}`);
+          else ok(`имя на диске осталось с исходным заголовком: ${onDisk}`);
+        }
+      }
     }
   }
+
+  // 12. content-disposition как чистая функция: имя целиком из кириллицы, кавычки и «\», пустое имя.
+  const cyrillicName = 'радуга.mp4';
+  const cyrillicHeader = contentDisposition(cyrillicName);
+  if (!/^[\x20-\x7e]*$/.test(cyrillicHeader)) fail(`кирилличное имя дало не-ASCII заголовок: ${JSON.stringify(cyrillicHeader)}`);
+  else ok(`имя целиком из кириллицы, заголовок ASCII: ${cyrillicHeader}`);
+  if (!cyrillicHeader.includes('filename="______.mp4"')) fail(`кириллица не стала подчёркиваниями: ${cyrillicHeader}`);
+  else ok('ASCII-вариант: шесть подчёркиваний + .mp4');
+  const cyrillicDecoded = decodeURIComponent(/filename\*=UTF-8''([^;]*)$/.exec(cyrillicHeader)?.[1] ?? '');
+  if (cyrillicDecoded !== cyrillicName) fail(`filename* вернул «${cyrillicDecoded}», ожидалось «${cyrillicName}»`);
+  else ok('filename* декодируется в исходное кириллическое имя');
+  const quotedHeader = contentDisposition('a"b\\c.mp4');
+  if (!quotedHeader.includes('filename="abc.mp4"')) fail(`кавычки и «\\» не убраны из ASCII-имени: ${quotedHeader}`);
+  else ok('кавычки и «\\» выброшены из ASCII-имени');
+  if (decodeURIComponent(/filename\*=UTF-8''([^;]*)$/.exec(quotedHeader)?.[1] ?? '') !== 'a"b\\c.mp4') fail('filename* не декодируется имя с кавычкой');
+  else ok('filename* сохраняет кавычку и «\\»');
+  if (!contentDisposition('').includes('filename="video.mp4"')) fail('пустое имя не дало запасное video.mp4');
+  else ok('пустое имя: запасное video.mp4');
 
   if (fs.existsSync(path.join(realCatalog, 'test-bell.json'))) fail('тест записал модель в настоящий catalog/');
   const realExportAfter = fs.existsSync(realExportDir) ? fs.readdirSync(realExportDir).sort().join(',') : '';

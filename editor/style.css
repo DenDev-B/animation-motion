@@ -15,7 +15,7 @@ body { font: 14px/1.45 -apple-system, BlinkMacSystemFont, sans-serif; margin: 0;
 .layer-name { font-size: 11px; color: #6f6676; font-weight: 700; margin-bottom: 2px; overflow-wrap: break-word; }
 .layer-object { display: block; width: 100%; text-align: left; margin-top: 4px; white-space: normal; overflow-wrap: break-word; }
 .layer-object.on { background: #f3d3bd; border-color: #b8531f; }
-.order { display: flex; flex-direction: row; align-items: stretch; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.order { display: flex; flex-direction: row; align-items: stretch; gap: 6px; flex-wrap: wrap; overflow-x: auto; padding-bottom: 4px; }
 .order-row { border: 1px solid #ddd5ca; border-radius: 6px; padding: 6px; display: grid; gap: 6px; flex: 0 0 252px; cursor: grab; }
 .order-row.dragging { opacity: 0.45; }
 .order-thumb { width: 240px; max-width: 100%; height: auto; border-radius: 4px; background: #0d0b12; display: block; }

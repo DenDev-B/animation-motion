@@ -1,12 +1,13 @@
 import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
+import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
 import { STYLE_PRESETS } from '../engine/styles.ts';
 import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import catalogIndexRaw from '../catalog/index.json';
-import type { CatalogAsset } from '../engine/schema.ts';
+import type { CatalogAsset, Palette } from '../engine/schema.ts';
 import { EditorHistory } from './history.ts';
 import { applyTargetJson, targetJson, validateTargetJson, type JsonScope, type JsonTarget } from './json-patch.ts';
 
@@ -661,15 +662,24 @@ function hexLuminance(value: unknown): number | null {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** Средняя яркость заливок модели; null, если читаемых hex-fill нет (например, SVG с градиентами). */
-function averageFillLuminance(asset: CatalogAsset): number | null {
+/** Палитра миниатюр: цвета слотов берём из эталонной сцены — у моделей fill задают слотом («mid», «near», «window»). */
+const thumbnailPalette: Palette = (demoScene as unknown as SceneV1).palette;
+
+/** Средняя яркость заливок модели; null, если цвет не определить ни по hex, ни по слоту палитры. */
+function averageFillLuminance(asset: CatalogAsset, palette: Palette): number | null {
   const values: number[] = [];
   for (const part of asset.parts ?? []) {
-    const luminance = hexLuminance(part.fill);
+    const luminance = resolveFillLuminance(part.fill, palette);
     if (luminance !== null) values.push(luminance);
   }
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+/** Яркость заливки так же, как её видит рендер: слот палитры → его цвет, иначе сам hex; null — если ни то ни другое. */
+function resolveFillLuminance(fill: unknown, palette: Palette): number | null {
+  if (typeof fill !== 'string' || fill === 'none') return null;
+  return hexLuminance(col(fill, palette));
 }
 
 function thumbnailUrl(asset: CatalogAsset): string {
@@ -686,8 +696,8 @@ function thumbnailUrl(asset: CatalogAsset): string {
   const k = 800 / Math.max(bw, bh);
   const unitsPerMeter = 1000;
   const scene = buildPreviewScene(asset, 'none', 1);
-  const fillLuminance = averageFillLuminance(asset);
-  scene.palette = { sky: fillLuminance !== null && fillLuminance > 0.7 ? ['#17141f', '#2c2735'] : ['#f4f1ea', '#dcd6ca'] };
+  const fillLuminance = averageFillLuminance(asset, thumbnailPalette);
+  scene.palette = { ...thumbnailPalette, sky: fillLuminance !== null && fillLuminance > 0.7 ? ['#17141f', '#2c2735'] : ['#f4f1ea', '#dcd6ca'] };
   scene.world = { unitsPerMeter };
   scene.layers.unshift({ id: 'thumb-bg', name: 'Фон', depth: 0, visible: true, objects: [{ id: 'thumb-bg', name: 'Фон', kind: 'sky', x: 0, y: 0, s: 1 }] });
   const object = scene.layers[1]?.objects[0];

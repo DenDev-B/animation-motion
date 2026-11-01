@@ -149,6 +149,24 @@ function modelSourceId(model: unknown): string {
   return typeof model.name === 'string' ? model.name.trim() : '';
 }
 
+/** ASCII-вариант имени для content-disposition: символы вне 0x20–0x7E → «_», кавычки и «\» выбрасываем; пустое → video.mp4. */
+function asciiFileName(name: string): string {
+  let out = '';
+  for (const ch of name) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (ch === '"' || ch === '\\') continue;
+    out += code >= 0x20 && code <= 0x7e ? ch : '_';
+  }
+  return out || 'video.mp4';
+}
+
+/** attachment с ASCII-именем и полной копией в UTF-8 (RFC 5987); имя файла на диске не меняется. */
+export function contentDisposition(name: string): string {
+  // encodeURIComponent оставляет ' ( ) * — их в attr-char нет, экранируем.
+  const encoded = encodeURIComponent(name).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `attachment; filename="${asciiFileName(name)}"; filename*=UTF-8''${encoded}`;
+}
+
 export function createLocalApi(options: LocalApiOptions): LocalApi {
   const root = path.resolve(options.root);
   const catalogDir = path.join(root, 'catalog');
@@ -354,7 +372,7 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
     res.statusCode = 200;
     res.setHeader('content-type', 'video/mp4');
     res.setHeader('content-length', fs.statSync(job.outFile).size);
-    res.setHeader('content-disposition', `attachment; filename="${safeFileName(name).replace(/"/g, '')}"`);
+    res.setHeader('content-disposition', contentDisposition(name));
     fs.createReadStream(job.outFile).pipe(res);
   }
 
