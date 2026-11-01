@@ -15,6 +15,16 @@ export function mixc(a: string, b: string, k: number): string {
   const y = h2r(b);
   return `rgb(${x.map((v, i) => Math.round(lerp(v, y[i], k))).join(',')})`;
 }
+/**
+ * Смешение цвета с цветом дымки с сохранением альфы (#rrggbbaa). Для не-hex значений и k<=0 возвращает цвет без изменений.
+ */
+export function hazeMix(color: string, haze: string, k: number): string {
+  if (!(k > 0) || !/^#(?:[\da-fA-F]{3}|[\da-fA-F]{6}|[\da-fA-F]{8})$/.test(color)) return color;
+  const body = color.slice(1);
+  const alpha = body.length === 8 ? parseInt(body.slice(6, 8), 16) / 255 : 1;
+  const m = mixc(color, haze, Math.min(1, k));
+  return alpha >= 1 ? m : m.replace('rgb(', 'rgba(').replace(')', `,${alpha})`);
+}
 export function col(v: string | undefined, pal: Record<string, unknown>): string {
   if (v === undefined) return '#888888';
   const slot = pal[v];

@@ -17,6 +17,8 @@ export type RenderDeps = {
   cache: ReturnType<typeof createRenderCache>;
 };
 
+const hazeParam = (p: Record<string, unknown>): number => (typeof p.haze === 'number' && Number.isFinite(p.haze) ? Math.min(1, Math.max(0, p.haze)) : 0);
+
 export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: number, scene: SceneV1, deps: RenderDeps) {
   const { createCanvas, catalog, cache } = deps;
   const K = H / 1000;
@@ -108,13 +110,13 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
             g.scale(metersScale, metersScale);
           }
           if (o.params?.motion !== undefined) applyMotion(g, o.params.motion, t, a.bounds);
-          drawAsset(g, o, a, t, pal);
+          drawAsset(g, o, a, t, pal, hazeParam(p));
         }
       } else if (o.kind === 'shape') {
         const model = (o.params?.model as import('./schema.ts').CatalogAsset | undefined);
         if (model) {
           if (o.params?.motion !== undefined) applyMotion(g, o.params.motion, t, model.bounds);
-          drawAsset(g, o, model, t, pal);
+          drawAsset(g, o, model, t, pal, hazeParam(p));
         }
       }
     }

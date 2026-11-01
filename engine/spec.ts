@@ -100,6 +100,7 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
   asset: { description: 'Модель из scene.assets или catalog/.', params: [
     { name: 'sizeM', type: 'number', min: 0, exclusiveMin: true, description: 'Высота bounds в метрах; требует scene.world.unitsPerMeter.' },
     { name: 'motion', type: 'any', description: 'Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}.' },
+    { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Воздушная дымка: доля смешения всех цветов модели с цветом palette.haze; чем дальше объект, тем больше.' },
   ] },
   mountains: { description: 'Детерминированный горный хребет одним замкнутым контуром.', params: [
     { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 2400, description: 'Ширина хребта (> 0).' },
@@ -134,6 +135,7 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
   shape: { description: 'Модель прямо в scene (params.model). Рендерится через drawAsset.', params: [
     { name: 'model', type: 'object', description: 'Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны.' },
     { name: 'motion', type: 'any', description: 'Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}.' },
+    { name: 'haze', type: 'number', min: 0, max: 1, default: 0, description: 'Воздушная дымка: доля смешения всех цветов модели с цветом palette.haze; чем дальше объект, тем больше.' },
   ] },
   light: { description: 'Световой конус (фара, прожектор, луч) или пятно света на поверхности; складывается со сценой (additive), край мягкий. Конус направлен вправо, направление задаёт rot объекта.', params: [
     { name: 'mode', type: 'enum', values: ['cone', 'pool'], default: 'cone', description: 'cone — конус от точки объекта; pool — пятно (эллипс) вокруг точки.' },

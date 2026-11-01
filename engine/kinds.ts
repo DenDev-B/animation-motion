@@ -1,6 +1,6 @@
 import type { CatalogAsset, SceneObject } from './schema.ts';
 import { lerp, rng } from './math.ts';
-import { col, mixc, rgba } from './color.ts';
+import { col, hazeMix, mixc, rgba } from './color.ts';
 import { isGradient, makeGradient } from './fill.ts';
 
 export interface RenderCache {
@@ -93,8 +93,10 @@ function modelPaths(a: CatalogAsset): (Path2D | undefined)[] {
   return paths;
 }
 
-export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: CatalogAsset, t: number, pal: Record<string, unknown>) {
+export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: CatalogAsset, t: number, pal: Record<string, unknown>, haze = 0) {
   const paths = modelPaths(a);
+  const hazeColor = typeof pal.haze === 'string' ? pal.haze : undefined;
+  const tint = (c: string): string => (haze > 0 && hazeColor ? hazeMix(c, hazeColor, haze) : c);
   for (const [index, part] of a.parts.entries()) {
     g.save();
     if (part.off) g.translate(part.off[0], part.off[1]);
@@ -105,7 +107,7 @@ export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: Catalo
     for (const an of pa) if (an.type === 'swing') rot += (an.amp ?? 0) * Math.sin((t / (an.period ?? 4) + (an.phase ?? 0)) * 2 * Math.PI);
     if (rot) g.rotate(rot);
     // объектный color перекрашивает часть целиком (в том числе градиентную); иначе градиент строится в координатах части
-    const fill = o.color === undefined && isGradient(part.fill) ? makeGradient(g, part.fill, pal) : col(o.color ?? (part.fill as string | undefined), pal);
+    const fill = o.color === undefined && isGradient(part.fill) ? makeGradient(g, part.fill, pal, tint) : tint(col(o.color ?? (part.fill as string | undefined), pal));
     if (part.type === 'circle') {
       g.fillStyle = fill;
       g.beginPath();
@@ -113,7 +115,7 @@ export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: Catalo
       g.fill();
     } else if (part.type === 'line') {
       const st = part.stroke as { color: string; w: number } | undefined;
-      g.strokeStyle = col(st?.color, pal);
+      g.strokeStyle = tint(col(st?.color, pal));
       g.lineWidth = st?.w ?? 1;
       g.lineCap = 'round';
       g.stroke(paths[index] as Path2D);
@@ -125,7 +127,7 @@ export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: Catalo
       }
       if (part.stroke) {
         const st = part.stroke as { color: string; w: number };
-        g.strokeStyle = col(st.color, pal);
+        g.strokeStyle = tint(col(st.color, pal));
         g.lineWidth = st.w;
         g.stroke(P);
       }
@@ -133,8 +135,10 @@ export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: Catalo
         g.save();
         g.clip(P);
         const gr = g.createLinearGradient(0, part.rim[0], 0, part.rim[1]);
-        gr.addColorStop(0, rgba(pal.rim, 0.9));
-        gr.addColorStop(1, rgba(pal.rim, 0));
+        const rimColor = tint(pal.rim);
+        const rimAlpha = (k: number) => (rimColor.startsWith('rgb(') ? rimColor.replace('rgb(', 'rgba(').replace(')', `,${k})`) : rgba(rimColor, k));
+        gr.addColorStop(0, rimAlpha(0.9));
+        gr.addColorStop(1, rimAlpha(0));
         g.fillStyle = gr;
         g.fillRect(-700, part.rim[0] - 4, 1400, part.rim[1] - part.rim[0] + 4);
         g.restore();

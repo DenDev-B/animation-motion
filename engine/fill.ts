@@ -12,11 +12,11 @@ export function isGradient(value: unknown): value is Gradient {
  * Градиент в координатах части (те же единицы, что у пути d; смещение part.off уже применено).
  * Цвета остановок: hex (#rgb, #rrggbb, #rrggbbaa) или слот палитры. Чистая функция от значений, без случайности.
  */
-export function makeGradient(g: CanvasRenderingContext2D, fill: Gradient, pal: Record<string, unknown>): CanvasGradient {
+export function makeGradient(g: CanvasRenderingContext2D, fill: Gradient, pal: Record<string, unknown>, tint: (color: string) => string = (c) => c): CanvasGradient {
   const gr = fill.type === 'radial'
     ? g.createRadialGradient(fill.c[0], fill.c[1], 0, fill.c[0], fill.c[1], fill.r)
     : g.createLinearGradient(fill.from[0], fill.from[1], fill.to[0], fill.to[1]);
-  for (const [offset, color] of fill.stops) gr.addColorStop(Math.min(1, Math.max(0, offset)), col(color, pal));
+  for (const [offset, color] of fill.stops) gr.addColorStop(Math.min(1, Math.max(0, offset)), tint(col(color, pal)));
   return gr;
 }
 

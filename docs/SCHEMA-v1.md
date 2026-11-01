@@ -148,6 +148,7 @@
 |---|---|---|---|
 | `sizeM` | number; >0…∞ | — | Высота bounds в метрах; требует scene.world.unitsPerMeter. |
 | `motion` | any; — | — | Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}. |
+| `haze` | number; ≥0…≤1 | `0` | Воздушная дымка: доля смешения всех цветов модели с цветом palette.haze; чем дальше объект, тем больше. |
 
 ### `mountains`
 
@@ -202,6 +203,7 @@
 |---|---|---|---|
 | `model` | object; — | — | Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны. |
 | `motion` | any; — | — | Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}. |
+| `haze` | number; ≥0…≤1 | `0` | Воздушная дымка: доля смешения всех цветов модели с цветом palette.haze; чем дальше объект, тем больше. |
 
 ### `light`
 
