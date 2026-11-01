@@ -18,7 +18,7 @@ export interface KindSpec {
 
 export const EASES = ['sine', 'inOut', 'out', 'lin'] as const;
 export const PALETTE_SLOTS = ['sky', 'sun', 'haze', 'far', 'mid', 'near', 'whale', 'belly', 'rim', 'cloudLight', 'cloudShadow', 'window'] as const;
-export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'rain', 'snow', 'birds', 'text', 'counter', 'asset', 'shape'] as const;
+export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'rain', 'snow', 'birds', 'text', 'counter', 'asset', 'shape', 'light'] as const;
 
 export const SCENE_SPEC = {
   fields: [
@@ -134,6 +134,17 @@ export const KIND_SPEC: Record<typeof KIND_NAMES[number], KindSpec> = {
   shape: { description: 'Модель прямо в scene (params.model). Рендерится через drawAsset.', params: [
     { name: 'model', type: 'object', description: 'Модель в формате CatalogAsset (bounds, parts). id/name/version необязательны.' },
     { name: 'motion', type: 'any', description: 'Пресет движения или массив пресетов: {preset: walk|run|fly|swim|hop|sway, speed 0.2..4, amp 0..3, phase 0..1, dir -1|1}.' },
+  ] },
+  light: { description: 'Световой конус (фара, прожектор, луч) или пятно света на поверхности; складывается со сценой (additive), край мягкий. Конус направлен вправо, направление задаёт rot объекта.', params: [
+    { name: 'mode', type: 'enum', values: ['cone', 'pool'], default: 'cone', description: 'cone — конус от точки объекта; pool — пятно (эллипс) вокруг точки.' },
+    { name: 'color', type: 'color', default: 'sun', description: 'Цвет света.' },
+    { name: 'a', type: 'number', min: 0, max: 1, default: 0.5, description: 'Яркость у источника (конус) или в центре (пятно).' },
+    { name: 'soft', type: 'number', min: 0, max: 1, default: 0.6, description: 'Мягкость края: 0 — резкий край, 1 — край тает по всей ширине.' },
+    { name: 'len', type: 'number', min: 0, exclusiveMin: true, default: 600, description: 'cone: длина луча (> 0); к концу свет гаснет.' },
+    { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 160, description: 'cone: полуширина луча на конце (> 0).' },
+    { name: 'w0', type: 'number', min: 0, exclusiveMin: true, default: 6, description: 'cone: полуширина у источника (> 0).' },
+    { name: 'r', type: 'number', min: 0, exclusiveMin: true, default: 200, description: 'pool: радиус пятна по X (> 0).' },
+    { name: 'squash', type: 'number', min: 0.05, max: 1, default: 0.35, description: 'pool: сплющивание по Y (0.05..1); для света на дороге 0.2..0.4.' },
   ] },
   rain: { description: 'Детерминированный дождь: чистые частицы без состояния между кадрами.', params: [
     { name: 'w', type: 'number', min: 0, exclusiveMin: true, default: 1600, description: 'Ширина области (> 0).' },

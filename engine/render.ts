@@ -6,6 +6,7 @@ import { cloudSprite, skylineGeo, drawAsset, getNoise, createRenderCache } from 
 import { drawMountains, drawHills, drawStars } from './kinds-bg.ts';
 import { drawRain, drawSnow, drawBirds } from './kinds-particles.ts';
 import { drawText, drawCounter } from './kinds-text.ts';
+import { drawLight } from './kinds-light.ts';
 import { assetScaleForMeters } from './units.ts';
 import type { CreateCanvas } from './kinds.ts';
 import { applyMotion } from './motion.ts';
@@ -64,6 +65,8 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
         g.arc(0, 0, r, 0, 7);
         g.fill();
         g.globalCompositeOperation = 'source-over';
+      } else if (o.kind === 'light') {
+        drawLight(g, p, pal, cache, createCanvas);
       } else if (o.kind === 'cloud') {
         const sp = cloudSprite(p, pal, cache, createCanvas);
         g.drawImage(sp, -((p.w as number | undefined) ?? 400) / 2, -((p.h as number | undefined) ?? 140), (p.w as number | undefined) ?? 400, (p.h as number | undefined) ?? 140);
