@@ -131,6 +131,9 @@ const ideaBrief = document.getElementById('ideaBrief') as HTMLTextAreaElement | 
 const ideaBriefStatus = document.getElementById('ideaBriefStatus') as HTMLElement | null;
 const briefErrEl = document.getElementById('briefErrors') as HTMLUListElement | null;
 const briefWarnEl = document.getElementById('briefWarnings') as HTMLUListElement | null;
+const ideaAuto = document.getElementById('ideaAuto') as HTMLButtonElement | null;
+const ideaAiCheck = document.getElementById('ideaAiCheck') as HTMLButtonElement | null;
+const ideaAutoStatus = document.getElementById('ideaAutoStatus') as HTMLElement | null;
 const ideaCopyPrompt = document.getElementById('ideaCopyPrompt') as HTMLButtonElement | null;
 const ideaCopyProjectPrompt = document.getElementById('ideaCopyProjectPrompt') as HTMLButtonElement | null;
 const ideaPromptFallback = document.getElementById('ideaPromptFallback') as HTMLElement | null;
@@ -1762,6 +1765,57 @@ async function copyProjectPrompt(prompt: string) {
     setIdeaStatus('', false);
   }
 }
+function setIdeaAutoStatus(message: string, isError: boolean) {
+  if (!ideaAutoStatus) return;
+  ideaAutoStatus.textContent = message;
+  ideaAutoStatus.classList.toggle('err', isError);
+}
+const AI_LABELS: Record<string, string> = { gemini: 'Gemini', groq: 'Groq' };
+async function postAi(route: string, body?: unknown): Promise<{ ok?: boolean; text?: string; provider?: string; message?: string; results?: Array<{ ok: boolean; message: string }>; errors?: Array<{ message: string }> } | null> {
+  try {
+    const response = await fetch(`/__api/${route}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+const SERVICE_DOWN = 'Локальный сервис недоступен: откройте редактор через run.bat (dev-режим).';
+if (ideaAuto) ideaAuto.onclick = async () => {
+  const base = ideaPromptBase();
+  if (!base) return;
+  let prompt: string;
+  try {
+    prompt = buildProjectPrompt({ ...base, catalogIndex, withBrief: true });
+  } catch (error) {
+    setIdeaAutoStatus(error instanceof Error ? error.message : String(error), true);
+    return;
+  }
+  ideaAuto.disabled = true;
+  if (ideaAiCheck) ideaAiCheck.disabled = true;
+  setIdeaAutoStatus('Создаю проект: запрос к Gemini, при неудаче к Groq. Это может занять до пары минут…', false);
+  setIdeaStatus('', false);
+  const data = await postAi('ai/generate', { prompt });
+  ideaAuto.disabled = false;
+  if (ideaAiCheck) ideaAiCheck.disabled = false;
+  if (!data) { setIdeaAutoStatus(`${SERVICE_DOWN} Промт можно скопировать вручную кнопкой ниже.`, true); return; }
+  if (data.ok && typeof data.text === 'string' && ideaResponse) {
+    ideaResponse.value = data.text;
+    setIdeaAutoStatus(`Готово: ответил ${AI_LABELS[data.provider ?? ''] ?? data.provider}.`, false);
+    if (checkIdeaResponse() && ideaCreate) ideaCreate.click();
+    return;
+  }
+  setIdeaAutoStatus(data.message ?? data.errors?.[0]?.message ?? 'Не удалось создать проект.', true);
+  try { await copyProjectPrompt(prompt); } catch { /* буфер недоступен: промт можно скопировать кнопкой ниже */ }
+};
+if (ideaAiCheck) ideaAiCheck.onclick = async () => {
+  ideaAiCheck.disabled = true;
+  setIdeaAutoStatus('Проверяю подключение…', false);
+  const data = await postAi('ai/check');
+  ideaAiCheck.disabled = false;
+  if (!data) { setIdeaAutoStatus(SERVICE_DOWN, true); return; }
+  if (!data.results || data.results.length === 0) { setIdeaAutoStatus('Ключи не найдены: создайте файл .env.local по образцу .env.example.', true); return; }
+  setIdeaAutoStatus(data.results.map((item) => item.message).join(' · '), data.results.every((item) => !item.ok));
+};
 if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
   const base = ideaPromptBase();
   if (!base) return;

@@ -6,6 +6,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { addToCatalog } from '../engine/catalog-add.ts';
 import { validateProject } from '../engine/project.ts';
+import { callProvider, generateWithChain, PROVIDER_LABELS, PROVIDER_ORDER, DEFAULT_MODELS, ProviderError, type FetchFn, type CheckResult } from '../engine/ai-chain.ts';
+import { extractJson } from '../engine/ai-io.ts';
+import { splitReply, validateProjectReply } from '../engine/ai-project.ts';
+import { loadProviders } from './env-local.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
 
 export const LOCAL_API_PREFIX = '/__api/';
@@ -17,6 +21,8 @@ const MODEL_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const JOB_ID_RE = /^[a-z0-9]{1,32}$/;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
 const EXPORT_LOG_LIMIT = 4000;
+/** Промт проекта ограничен ~28 КБ; запас на длинное ТЗ. */
+const MAX_AI_PROMPT_CHARS = 120_000;
 
 export type ExportState = 'running' | 'done' | 'error' | 'cancelled';
 
@@ -48,6 +54,10 @@ export interface LocalApiOptions {
   getPort: () => number;
   /** Скрипт экспорта; по умолчанию <root>/tools/export.ts, как его вызывает npm run export. */
   exportScript?: string;
+  /** Для проверок: подмена сетевого вызова к Gemini/Groq. */
+  aiFetch?: FetchFn;
+  /** Для проверок: подмена переменных окружения (ключи берутся ещё и из <root>/.env.local). */
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface LocalApi {
@@ -61,7 +71,7 @@ class BodyTooLarge extends Error {}
 
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 
-function sendJson(res: ServerResponse, status: number, reply: ApiReply | ExportStatusReply): void {
+function sendJson(res: ServerResponse, status: number, reply: object): void {
   const body = JSON.stringify(reply, null, 2);
   res.statusCode = status;
   res.setHeader('content-type', 'application/json; charset=utf-8');
@@ -424,6 +434,75 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
     sendJson(res, 200, { ok: true, id: result.id });
   }
 
+  const aiFetch: FetchFn = options.aiFetch ?? ((url, init) => fetch(url, init));
+  let aiBusy = false;
+
+  function checkProjectReply(text: string): CheckResult {
+    let jsonText: string;
+    try {
+      jsonText = splitReply(text).jsonText;
+    } catch (error) {
+      return { ok: false, errors: [{ path: '', message: error instanceof Error ? error.message : String(error) }] };
+    }
+    let candidate: unknown;
+    try {
+      candidate = extractJson(jsonText);
+    } catch (error) {
+      return { ok: false, errors: [{ path: '', message: error instanceof Error ? error.message : String(error) }], candidate: jsonText };
+    }
+    const reply = validateProjectReply(candidate, { catalogIds: catalogIds() });
+    return { ok: reply.errors.length === 0, errors: reply.errors, candidate };
+  }
+
+  function handleAiStatus(res: ServerResponse): void {
+    const configured = new Map(loadProviders(root, options.env).map((spec) => [spec.id, spec.model]));
+    const providers = PROVIDER_ORDER.map((id) => ({ id, label: PROVIDER_LABELS[id], configured: configured.has(id), model: configured.get(id) ?? DEFAULT_MODELS[id] }));
+    sendJson(res, 200, { ok: true, providers });
+  }
+
+  async function handleAiGenerate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    let prompt: unknown;
+    try {
+      const parsed = JSON.parse(await readBody(req)) as unknown;
+      prompt = isRecord(parsed) ? parsed.prompt : undefined;
+    } catch (error) {
+      if (error instanceof BodyTooLarge) { fail(res, 413, `Тело запроса больше ${MAX_BODY_BYTES / 1024 / 1024} МБ.`); return; }
+      fail(res, 400, 'Тело запроса должно быть JSON вида {"prompt":"..."}.');
+      return;
+    }
+    if (typeof prompt !== 'string' || !prompt.trim()) { fail(res, 400, 'Поле prompt должно быть непустой строкой.', 'prompt'); return; }
+    if (prompt.length > MAX_AI_PROMPT_CHARS) { fail(res, 413, `Промт длиннее ${MAX_AI_PROMPT_CHARS} символов.`, 'prompt'); return; }
+    if (aiBusy) { fail(res, 409, 'Генерация уже идёт: дождитесь её окончания.'); return; }
+    aiBusy = true;
+    try {
+      const result = await generateWithChain({
+        prompt,
+        providers: loadProviders(root, options.env),
+        call: (spec, text) => callProvider(spec, text, aiFetch),
+        check: checkProjectReply,
+      });
+      sendJson(res, 200, result.ok
+        ? { ok: true, text: result.text, provider: result.provider, attempts: result.attempts }
+        : { ok: false, manual: true, message: result.message, attempts: result.attempts, errors: [{ path: '', message: result.message }] });
+    } finally {
+      aiBusy = false;
+    }
+  }
+
+  /** Проверка подключения: короткий запрос каждому настроенному провайдеру. Ключи в ответ не попадают. */
+  async function handleAiCheck(res: ServerResponse): Promise<void> {
+    const results: Array<{ id: string; label: string; ok: boolean; message: string }> = [];
+    for (const spec of loadProviders(root, options.env)) {
+      try {
+        await callProvider(spec, 'Ответь одним словом: ok', aiFetch, 30_000);
+        results.push({ id: spec.id, label: PROVIDER_LABELS[spec.id], ok: true, message: `${PROVIDER_LABELS[spec.id]} (${spec.model}): работает` });
+      } catch (error) {
+        results.push({ id: spec.id, label: PROVIDER_LABELS[spec.id], ok: false, message: error instanceof ProviderError ? error.message : `${PROVIDER_LABELS[spec.id]}: ${error instanceof Error ? error.message : String(error)}` });
+      }
+    }
+    sendJson(res, 200, { ok: true, results });
+  }
+
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
     const raw = req.url ?? '';
     const queryIndex = raw.indexOf('?');
@@ -441,6 +520,18 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
     }
     if (method === 'GET' && route === 'ping') {
       sendJson(res, 200, { ok: true, version: LOCAL_API_VERSION });
+      return true;
+    }
+    if (method === 'GET' && route === 'ai/status') {
+      handleAiStatus(res);
+      return true;
+    }
+    if (method === 'POST' && route === 'ai/generate') {
+      await handleAiGenerate(req, res);
+      return true;
+    }
+    if (method === 'POST' && route === 'ai/check') {
+      await handleAiCheck(res);
       return true;
     }
     if (method === 'POST' && route === 'catalog/add') {
@@ -464,7 +555,7 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
       handleExportFile(req, res);
       return true;
     }
-    const knownRoutes = ['ping', 'catalog/add', 'export', 'export/status', 'export/cancel', 'export/file'];
+    const knownRoutes = ['ping', 'ai/status', 'ai/generate', 'ai/check', 'catalog/add', 'export', 'export/status', 'export/cancel', 'export/file'];
     if (knownRoutes.includes(route)) {
       fail(res, 405, `Метод ${method} для /${LOCAL_API_PREFIX}${route} не поддерживается.`);
       return true;

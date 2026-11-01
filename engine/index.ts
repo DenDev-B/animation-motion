@@ -78,6 +78,8 @@ export type {
 export * from './svg-import.ts';
 export { buildProjectPrompt, validateProjectReply, uniqueProjectSlug, formatSuggestions, modelHeightM, splitReply, PROJECT_PROMPT_MAX_BYTES } from './ai-project.ts';
 export type { CatalogEntry, ProjectPromptOptions, ProjectReplyResult, Suggestion, SplitReply } from './ai-project.ts';
+export { generateWithChain, callProvider, classifyHttpError, failureMessage, describeKind, ProviderError, PROVIDER_ORDER, PROVIDER_LABELS, DEFAULT_MODELS, MANUAL_HINT } from './ai-chain.ts';
+export type { ProviderId, ProviderSpec, FailKind, Attempt, ChainResult, ChainOptions, CheckResult, FetchFn } from './ai-chain.ts';
 export { buildModelPrompt, MODEL_PROMPT_MAX_BYTES, MODEL_SAMPLE } from './ai-model.ts';
 export type { ModelPromptOptions } from './ai-model.ts';
 export { NO_TEXT_KINDS } from './ai-project.ts';

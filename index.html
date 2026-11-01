@@ -66,6 +66,12 @@
           </div>
         </details>
         <div class="btns">
+          <button id="ideaAuto" class="primary">Создать одной кнопкой (Gemini → Groq)</button>
+          <button id="ideaAiCheck">Проверить подключение</button>
+        </div>
+        <div id="ideaAutoStatus" class="msg"></div>
+        <div class="hint">Ключи лежат в файле .env.local рядом с проектом (образец — .env.example). Если оба ИИ не справятся, промт скопируется сам: вставьте его в любой браузерный ИИ и ответ в поле ниже.</div>
+        <div class="btns">
           <button id="ideaCopyPrompt">1. Копировать промт (ТЗ + проект)</button>
         </div>
         <div id="ideaPromptFallback" hidden style="margin-top:6px">

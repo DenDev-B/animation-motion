@@ -8,6 +8,10 @@ docs/*_files/
 
 .run/
 
+# Ключи ИИ (Gemini, Groq) лежат только в локальном .env.local; шаблон .env.example отслеживается
+.env*
+!.env.example
+
 # Скачанные владельцем SVG не попадают в git
 assets-src/downloads/
 # Собственные SVG агента отслеживаются
