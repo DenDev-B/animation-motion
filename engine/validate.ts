@@ -1,4 +1,5 @@
 import { validateMotion } from './motion.ts';
+import { validateGradient } from './fill.ts';
 import { ANIM_SPEC, KIND_SPEC, PALETTE_SLOTS, SPEC_KEYS } from './spec.ts';
 
 export interface ValidateOpts { catalogIds?: string[]; }
@@ -143,7 +144,10 @@ export function validateAsset(json: unknown, options: { inline?: boolean } = {})
         if (!isFiniteNum(part.r) || part.r <= 0) err(`${base}.r`, 'r должен быть конечным числом больше нуля; пример: 10');
       } else if (typeof part.d !== 'string' || !part.d.trim()) err(`${base}.d`, 'd должен быть непустой строкой пути; пример: M 0 0 Z');
       for (const key of ['off', 'rim']) if (part[key] !== undefined && (!Array.isArray(part[key]) || part[key].length !== 2 || !part[key].every(isFiniteNum))) err(`${base}.${key}`, `${key} должен быть массивом из 2 конечных чисел; пример: [0, 0]`);
-      if (part.fill !== undefined && (typeof part.fill !== 'string' || (part.fill !== 'none' && !isSlotOrColor(part.fill)))) err(`${base}.fill`, 'fill должен быть hex, слотом палитры или none; пример: #ffffff');
+      if (isRecord(part.fill)) {
+        for (const issue of validateGradient(part.fill, `${base}.fill`, (v) => isSlotOrColor(v))) err(issue.path, issue.message);
+        if (type === 'line') err(`${base}.fill`, 'у части type line нет заливки; градиент допустим только у path и circle');
+      } else if (part.fill !== undefined && (typeof part.fill !== 'string' || (part.fill !== 'none' && !isSlotOrColor(part.fill)))) err(`${base}.fill`, 'fill должен быть hex, слотом палитры, none или градиентом {type, stops}; пример: #ffffff');
       if (part.stroke !== undefined) {
         if (!isRecord(part.stroke)) err(`${base}.stroke`, 'stroke должен быть объектом {color, w}; пример: {"color":"rim","w":2}');
         else {

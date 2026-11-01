@@ -1,6 +1,7 @@
 import type { CatalogAsset, SceneObject } from './schema.ts';
 import { lerp, rng } from './math.ts';
 import { col, mixc, rgba } from './color.ts';
+import { isGradient, makeGradient } from './fill.ts';
 
 export interface RenderCache {
   cloudCache: Map<string, HTMLCanvasElement>;
@@ -103,7 +104,8 @@ export function drawAsset(g: CanvasRenderingContext2D, o: SceneObject, a: Catalo
     let rot = 0;
     for (const an of pa) if (an.type === 'swing') rot += (an.amp ?? 0) * Math.sin((t / (an.period ?? 4) + (an.phase ?? 0)) * 2 * Math.PI);
     if (rot) g.rotate(rot);
-    const fill = col(o.color ?? part.fill, pal);
+    // объектный color перекрашивает часть целиком (в том числе градиентную); иначе градиент строится в координатах части
+    const fill = o.color === undefined && isGradient(part.fill) ? makeGradient(g, part.fill, pal) : col(o.color ?? (part.fill as string | undefined), pal);
     if (part.type === 'circle') {
       g.fillStyle = fill;
       g.beginPath();

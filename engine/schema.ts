@@ -49,11 +49,19 @@ export interface Palette {
   [key: string]: string | string[] | undefined;
 }
 
+/** Остановка градиента: [смещение 0..1, цвет (hex или слот палитры)]. */
+export type GradientStop = [number, string];
+
+/** Градиентная заливка части; координаты в системе самой части (единицы пути d). */
+export type Gradient =
+  | { type: 'linear'; from: [number, number]; to: [number, number]; stops: GradientStop[] }
+  | { type: 'radial'; c: [number, number]; r: number; stops: GradientStop[] };
+
 export interface AssetPart {
   id: string;
   name: string;
   off?: [number, number];
-  fill?: string;
+  fill?: string | Gradient;
   rim?: [number, number];
   [key: string]: unknown;
 }
