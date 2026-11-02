@@ -19,6 +19,8 @@ import type {
   AssetPart,
   Gradient,
   GradientStop,
+  Grade,
+  Bloom,
   Palette,
 } from './schema.ts';
 
@@ -54,6 +56,7 @@ export { buildPrompt, extractJson, buildFixRequest } from './ai-io.ts';
 export { counterValue, TEXT_FONT_FAMILY } from './kinds-text.ts';
 export { unitsPerMeter, metersToUnits, unitsToMeters, assetScaleForMeters } from './units.ts';
 export { cameraShake } from './shake.ts';
+export { applyGrade, applyBloom } from './effects.ts';
 export { isGradient, makeGradient, gradientFirstColor, validateGradient, GRADIENT_MAX_STOPS } from './fill.ts';
 export { motionTransform, applyMotion, validateMotion, motionList, MOTION_PRESETS, MOTION_CONSTS } from './motion.ts';
 export type { Motion, MotionPreset, MotionTransform } from './motion.ts';
@@ -73,6 +76,8 @@ export type {
   AssetPart,
   Gradient,
   GradientStop,
+  Grade,
+  Bloom,
   Palette,
 };
 export * from './svg-import.ts';

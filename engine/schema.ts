@@ -26,9 +26,37 @@ export interface World {
   unitsPerMeter: number;
 }
 
+/** Цветокоррекция кадра: все поля необязательны, без них эффекта нет. */
+export interface Grade {
+  /** 0..2, 1 — без изменений */
+  saturation?: number;
+  /** 0.5..2, 1 — без изменений */
+  contrast?: number;
+  /** -0.5..0.5, 0 — без изменений */
+  brightness?: number;
+  /** hex или слот палитры */
+  tint?: string;
+  /** 0..1 доля подмешивания tint */
+  tintAmount?: number;
+}
+
+/** Свечение ярких мест кадра. */
+export interface Bloom {
+  /** 0..1 порог яркости */
+  threshold?: number;
+  /** 0..1 сила */
+  strength?: number;
+  /** 1..60 радиус размытия (при высоте кадра 1000) */
+  radius?: number;
+}
+
 export interface Style {
   grain?: number;
   vignette?: number;
+  grade?: Grade;
+  bloom?: Bloom;
+  /** 0..1: автоматическая воздушная дымка слоёв глубже плоскости действия (depth < 1) */
+  depthHaze?: number;
   /** Свободная метка; renderer не читает это поле. */
   preset?: string;
 }

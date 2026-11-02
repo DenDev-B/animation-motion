@@ -187,6 +187,25 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       const st = s.style;
       checkUnknown(st, SPEC_KEYS.style, 'style', warnings);
       for (const key of ['grain', 'vignette']) if (st[key] !== undefined && (!isFiniteNum(st[key]) || st[key] < 0 || st[key] > 1)) err(`style.${key}`, `${key} должен быть числом от 0 до 1; пример: 0.5`);
+      const range = (obj: Record<string, unknown>, key: string, lo: number, hi: number, path: string) => {
+        if (obj[key] !== undefined && (!isFiniteNum(obj[key]) || (obj[key] as number) < lo || (obj[key] as number) > hi)) err(`${path}.${key}`, `${key} должен быть числом от ${lo} до ${hi}; пример: ${lo}`);
+      };
+      range(st, 'depthHaze', 0, 1, 'style');
+      if (st.grade !== undefined) {
+        if (!isRecord(st.grade)) err('style.grade', 'grade должен быть объектом; пример: {"saturation":1.1,"contrast":1.05}');
+        else {
+          checkUnknown(st.grade, ['saturation', 'contrast', 'brightness', 'tint', 'tintAmount'], 'style.grade', warnings);
+          range(st.grade, 'saturation', 0, 2, 'style.grade'); range(st.grade, 'contrast', 0.5, 2, 'style.grade'); range(st.grade, 'brightness', -0.5, 0.5, 'style.grade'); range(st.grade, 'tintAmount', 0, 1, 'style.grade');
+          if (st.grade.tint !== undefined && !isSlotOrColor(st.grade.tint, isRecord(s.palette) ? s.palette : undefined)) err('style.grade.tint', 'tint должен быть hex или слотом палитры; пример: #ffb070');
+        }
+      }
+      if (st.bloom !== undefined) {
+        if (!isRecord(st.bloom)) err('style.bloom', 'bloom должен быть объектом; пример: {"threshold":0.7,"strength":0.4,"radius":16}');
+        else {
+          checkUnknown(st.bloom, ['threshold', 'strength', 'radius'], 'style.bloom', warnings);
+          range(st.bloom, 'threshold', 0, 1, 'style.bloom'); range(st.bloom, 'strength', 0, 1, 'style.bloom'); range(st.bloom, 'radius', 1, 60, 'style.bloom');
+        }
+      }
       if (st.preset !== undefined && typeof st.preset !== 'string') err('style.preset', 'preset должен быть строкой; пример: dusk');
     }
   }

@@ -1,5 +1,6 @@
 // Пресеты стиля ролика: чистые данные и текстовые блоки для промтов. Без DOM и файлов.
 import { PALETTE_SLOTS } from './spec.ts';
+import type { Grade, Bloom } from './schema.ts';
 
 export type StyleMood = 'dawn' | 'day' | 'dusk' | 'night';
 export const STYLE_MOODS: readonly StyleMood[] = ['dawn', 'day', 'dusk', 'night'];
@@ -14,6 +15,8 @@ export interface StylePreset {
   description: string;
   grain: number;
   vignette: number;
+  /** Необязательные эффекты кадра: копируются в scene.style (цветокоррекция, свечение, дымка по глубине). */
+  effects?: { grade?: Grade; bloom?: Bloom; depthHaze?: number };
   atmosphere: string;
   palettes: Record<StyleMood, StylePalette>;
 }
@@ -25,6 +28,7 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
     description: 'Низкое солнце, длинные мягкие тени и медовый свет на всём кадре. Спокойное, немного ностальгическое настроение: будто последние минуты хорошего дня. Подходит для истории о доме, дороге и тихом чуде.',
     grain: 0.06,
     vignette: 0.22,
+    effects: { grade: { saturation: 1.1, contrast: 1.05, tint: '#ffb070', tintAmount: 0.06 }, bloom: { threshold: 0.75, strength: 0.35, radius: 18 }, depthHaze: 0.35 },
     atmosphere: 'Тёплая дымка у горизонта, свечение низкого солнца и редкие пылинки в воздухе; сейчас это делается слоями glow и cloud с haze, силуэты птиц — birds.',
     palettes: {
       dawn: {
@@ -55,6 +59,7 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
     description: 'Синяя глубина, ясные звёзды и ровный морозный свет. Настроение сдержанное и просторное, как ночная дорога за городом. Хорошо работает для одиночества, поиска и тихой решимости.',
     grain: 0.05,
     vignette: 0.32,
+    effects: { grade: { saturation: 0.95, contrast: 1.08, tint: '#6a8cff', tintAmount: 0.05 }, bloom: { threshold: 0.7, strength: 0.3, radius: 16 }, depthHaze: 0.3 },
     atmosphere: 'Ровный холодный свет, мелкие звёзды и тонкая дымка у горизонта; сейчас это делается через stars, glow вокруг луны и cloud с haze, при желании — snow.',
     palettes: {
       dawn: {
@@ -85,6 +90,7 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
     description: 'Серо-графитовая гамма, контровой свет и мокрый асфальт. Настроение настороженное и взрослое, без ярких красок. Красиво в дождь, в переулках и в сценах, где герой долго идёт к цели.',
     grain: 0.09,
     vignette: 0.38,
+    effects: { grade: { saturation: 0.15, contrast: 1.15 }, depthHaze: 0.5 },
     atmosphere: 'Плотная серая дымка, контровой свет и мелкая взвесь в воздухе; сейчас это делается через cloud и skyline с haze, glow за объектом и тонкий rain.',
     palettes: {
       dawn: {
@@ -115,6 +121,7 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
     description: 'Яркие конфетные цвета, чистый свет и глянцевые блики. Настроение лёгкое, праздничное и немного игрушечное. Подходит для музыки, рекламы и всего, что должно улыбаться с первого кадра.',
     grain: 0.03,
     vignette: 0.12,
+    effects: { grade: { saturation: 1.25, contrast: 1.05 }, bloom: { threshold: 0.8, strength: 0.25, radius: 14 }, depthHaze: 0.15 },
     atmosphere: 'Чистый яркий свет без пыли, крупные облака и цветные блики; сейчас это делается через cloud с яркими cloudLight и cloudShadow, glow и максимум два цветных акцента в кадре.',
     palettes: {
       dawn: {
@@ -145,6 +152,7 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
     description: 'Серо-кремовая гамма, сухая фактура и один красный акцент. Настроение собранное, почти книжное, с оттенком тревоги. Хорошо для притч, портретов и историй, где важен один яркий знак.',
     grain: 0.07,
     vignette: 0.18,
+    effects: { grade: { saturation: 0.6, contrast: 1.1, tint: '#e4dbc9', tintAmount: 0.08 }, depthHaze: 0.25 },
     atmosphere: 'Сухая бумажная фактура и рассеянный свет; дымку имитируй редким cloud с haze, свет — glow, а частицы — stars или snow точками. Красный акцент держи один на кадр.',
     palettes: {
       dawn: {
@@ -175,6 +183,7 @@ export const STYLE_PRESETS: readonly StylePreset[] = [
     description: 'Мягкие пастельные переходы, много воздуха и почти нет резких контрастов. Настроение тёплое, сонное и доброе, как воспоминание из детства. Подходит для нежных историй и медленного движения.',
     grain: 0.04,
     vignette: 0.15,
+    effects: { grade: { saturation: 0.9, contrast: 0.95, brightness: 0.03 }, bloom: { threshold: 0.6, strength: 0.4, radius: 24 }, depthHaze: 0.4 },
     atmosphere: 'Мягкий рассеянный свет, воздушные облака и медленные частицы; сейчас это делается через glow, cloud с высоким haze, stars как искры и snow как лепестки.',
     palettes: {
       dawn: {
@@ -223,6 +232,7 @@ export function styleBlock(id: string): string {
     `Стиль «${preset.name}» (id: ${preset.id}).`,
     preset.description,
     `Зерно: ${preset.grain}. Виньетка: ${preset.vignette}.`,
+    ...(preset.effects ? [`Эффекты кадра: добавь в scene.style поля ${JSON.stringify(preset.effects)} (цветокоррекция grade, свечение bloom, дымка по глубине depthHaze).`] : []),
     `Атмосфера: ${preset.atmosphere}`,
     'Палитры по настроению сцены:',
     ...STYLE_MOODS.map((mood) => paletteLine(mood, preset.palettes[mood])),

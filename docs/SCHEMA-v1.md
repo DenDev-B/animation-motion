@@ -26,7 +26,18 @@
 |---|---|---|---|
 | `grain` | number; ≥0…≤1 | `0` | Интенсивность зерна. |
 | `vignette` | number; ≥0…≤1 | `0` | Интенсивность виньетки. |
+| `grade` | object; — | — | Цветокоррекция {saturation 0..2, contrast 0.5..2, brightness -0.5..0.5, tint, tintAmount 0..1}; необязательна. |
+| `bloom` | object; — | — | Свечение ярких мест {threshold 0..1, strength 0..1, radius 1..60}; необязательно. |
+| `depthHaze` | number; ≥0…≤1 | `0` | Автоматическая воздушная дымка слоёв с depth < 1: чем дальше слой, тем сильнее смешение с palette.haze; явный params.haze объекта главнее. |
 | `preset` | string; — | — | Свободная метка; рендер её не читает. |
+
+Эффекты кадра применяются после слоёв и до зерна и виньетки; все необязательны, без них кадр рисуется как раньше.
+
+- `grade` — цветокоррекция: `saturation` 0..2, `contrast` 0.5..2, `brightness` -0.5..0.5, `tint` (hex или слот палитры) и `tintAmount` 0..1. Порядок: насыщенность, контраст, яркость, оттенок.
+- `bloom` — свечение ярких мест: `threshold` 0..1 (с какой яркости), `strength` 0..1, `radius` 1..60 (при высоте кадра 1000).
+- `depthHaze` — автоматическая воздушная дымка для слоёв с `depth` меньше 1: доля смешения с `palette.haze` равна `depthHaze * (1 - depth)`. Действует на `cloud`, `skyline`, `mountains`, `hills`, `asset` и `shape`; явный `params.haze` объекта главнее.
+
+Пример: `{"grain":0.05,"vignette":0.25,"grade":{"saturation":1.1,"tint":"#ffb070","tintAmount":0.06},"bloom":{"threshold":0.75,"strength":0.35,"radius":18},"depthHaze":0.35}`
 
 ## Камера
 

@@ -35,7 +35,17 @@
     "style": {
      "grain": 0.06,
      "vignette": 0.3,
-     "preset": "night"
+     "preset": "night",
+     "grade": {
+      "saturation": 1.1,
+      "contrast": 1.06
+     },
+     "bloom": {
+      "threshold": 0.72,
+      "strength": 0.35,
+      "radius": 20
+     },
+     "depthHaze": 0.3
     },
     "camera": {
      "verticalFit": 0.52,

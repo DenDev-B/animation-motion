@@ -7,6 +7,7 @@ import { drawMountains, drawHills, drawStars } from './kinds-bg.ts';
 import { drawRain, drawSnow, drawBirds } from './kinds-particles.ts';
 import { drawText, drawCounter } from './kinds-text.ts';
 import { drawLight } from './kinds-light.ts';
+import { applyBloom, applyGrade } from './effects.ts';
 import { assetScaleForMeters } from './units.ts';
 import type { CreateCanvas } from './kinds.ts';
 import { applyMotion } from './motion.ts';
@@ -16,6 +17,9 @@ export type RenderDeps = {
   catalog: Record<string, import('./schema.ts').CatalogAsset>;
   cache: ReturnType<typeof createRenderCache>;
 };
+
+/** Виды объектов, у которых есть params.haze; для них depthHaze подставляет дымку по глубине слоя. */
+const HAZE_KINDS = new Set(['cloud', 'skyline', 'mountains', 'hills', 'asset', 'shape']);
 
 const hazeParam = (p: Record<string, unknown>): number => (typeof p.haze === 'number' && Number.isFinite(p.haze) ? Math.min(1, Math.max(0, p.haze)) : 0);
 
@@ -34,6 +38,8 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
   for (const L of scene.layers) {
     if (L.visible === false) continue;
     const d = L.depth;
+    const depthHaze = scene.style?.depthHaze;
+    const autoHaze = typeof depthHaze === 'number' && depthHaze > 0 && d < 1 ? Math.min(1, depthHaze * (1 - Math.max(0, d))) : 0;
     const z = 1 + (zoom - 1) * d;
     const base = [K * z, 0, 0, K * z, W / 2 - cam.x * d * K * z, H / 2 - cam.y * d * K * z];
     for (const o of L.objects) {
@@ -43,7 +49,8 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
       g.rotate(m.rot);
       g.scale(m.s, m.s);
       g.globalAlpha = clamp(m.a);
-      const p = o.params ?? {};
+      let p = o.params ?? {};
+      if (autoHaze > 0 && p.haze === undefined && HAZE_KINDS.has(o.kind)) p = { ...p, haze: autoHaze };
       if (o.kind === 'sky') {
         g.setTransform(1, 0, 0, 1, 0, 0);
         const sk = pal.sky ?? ['#000', '#222'];
@@ -125,6 +132,8 @@ export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: numbe
   g.globalAlpha = 1;
   g.globalCompositeOperation = 'source-over';
   const st = scene.style ?? {};
+  if (st.grade) applyGrade(g, W, H, st.grade, pal);
+  if (st.bloom) applyBloom(g, W, H, st.bloom, cache, createCanvas);
   if (st.grain) {
     g.globalAlpha = (st.grain as number | undefined) as number;
     g.globalCompositeOperation = 'overlay';

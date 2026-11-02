@@ -35,6 +35,9 @@ export const SCENE_SPEC = {
   style: [
     { name: 'grain', type: 'number', min: 0, max: 1, default: 0, description: 'Интенсивность зерна.' },
     { name: 'vignette', type: 'number', min: 0, max: 1, default: 0, description: 'Интенсивность виньетки.' },
+    { name: 'grade', type: 'object', description: 'Цветокоррекция {saturation 0..2, contrast 0.5..2, brightness -0.5..0.5, tint, tintAmount 0..1}; необязательна.' },
+    { name: 'bloom', type: 'object', description: 'Свечение ярких мест {threshold 0..1, strength 0..1, radius 1..60}; необязательно.' },
+    { name: 'depthHaze', type: 'number', min: 0, max: 1, default: 0, description: 'Автоматическая воздушная дымка слоёв с depth < 1: чем дальше слой, тем сильнее смешение с palette.haze; явный params.haze объекта главнее.' },
     { name: 'preset', type: 'string', description: 'Свободная метка; рендер её не читает.' },
   ] as const,
   camera: [
