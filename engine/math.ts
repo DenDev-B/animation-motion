@@ -5,6 +5,9 @@ export const EASE = {
   sine: (x: number) => -(Math.cos(Math.PI * x) - 1) / 2,
   inOut: (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
   out: (x: number) => 1 - Math.pow(1 - x, 3),
+  in: (x: number) => x * x * x,
+  /** резкий старт и долгое замедление: наезд «crash zoom» */
+  snap: (x: number) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)),
 };
 export function rng(seed: number): () => number {
   let s = seed | 0;

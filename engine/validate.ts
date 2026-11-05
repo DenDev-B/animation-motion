@@ -1,6 +1,7 @@
 import { validateMotion } from './motion.ts';
 import { validateGradient } from './fill.ts';
-import { ANIM_SPEC, KIND_SPEC, PALETTE_SLOTS, SPEC_KEYS } from './spec.ts';
+import { ANIM_SPEC, EASES, KIND_SPEC, PALETTE_SLOTS, SPEC_KEYS } from './spec.ts';
+import { CAMERA_SHOT_NAMES } from './camera-presets.ts';
 
 export interface ValidateOpts { catalogIds?: string[]; }
 export interface ValidationError { path: string; message: string; }
@@ -229,7 +230,8 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
       camera.keys.forEach((raw, index) => {
         const base = `camera.keys[${index}]`;
         if (!isRecord(raw)) { err(base, 'ключ камеры должен быть объектом; пример: {"t":0,"x":0,"y":0,"zoom":1}'); return; }
-        checkUnknown(raw, ['t', 'x', 'y', 'zoom'], base, warnings);
+        checkUnknown(raw, ['t', 'x', 'y', 'zoom', 'ease'], base, warnings);
+        if (raw.ease !== undefined && !(EASES as readonly unknown[]).includes(raw.ease)) err(`${base}.ease`, `ease должен быть одним из ${EASES.join(', ')}; пример: inOut`);
         for (const key of ['t', 'x', 'y', 'zoom']) if (!isFiniteNum(raw[key])) err(`${base}.${key}`, `${key} должен быть конечным числом; пример: ${key === 'zoom' ? '1' : '0'}`);
         if (isFiniteNum(raw.zoom) && raw.zoom <= 0) err(`${base}.zoom`, 'zoom должен быть больше нуля; пример: 1');
         if (isFiniteNum(raw.t)) {
@@ -238,6 +240,18 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
           previous = raw.t;
         }
       });
+    }
+    if (camera.shot !== undefined) {
+      const shot = camera.shot;
+      if (!isRecord(shot)) err('camera.shot', 'shot должен быть объектом; пример: {"name":"crash-zoom","t0":2}');
+      else {
+        checkUnknown(shot, ['name', 't0', 'duration', 'strength'], 'camera.shot', warnings);
+        if (typeof shot.name !== 'string' || !(CAMERA_SHOT_NAMES as readonly string[]).includes(shot.name)) err('camera.shot.name', `name должен быть одним из ${CAMERA_SHOT_NAMES.join(', ')}; пример: crash-zoom`);
+        if (shot.t0 !== undefined && (!isFiniteNum(shot.t0) || shot.t0 < 0 || (duration !== undefined && shot.t0 >= duration))) err('camera.shot.t0', 't0 должен быть числом от 0 до duration; пример: 2');
+        if (shot.duration !== undefined && (!isFiniteNum(shot.duration) || shot.duration <= 0)) err('camera.shot.duration', 'duration должен быть числом больше нуля; пример: 3');
+        if (shot.strength !== undefined && (!isFiniteNum(shot.strength) || shot.strength < 0.1 || shot.strength > 3)) err('camera.shot.strength', 'strength должен быть числом от 0.1 до 3; пример: 1');
+      }
+      if (Array.isArray(camera.keys) && camera.keys.length > 0) warnings.push({ path: 'camera.shot', message: 'shot игнорируется, пока заданы camera.keys' });
     }
     if (camera.shake !== undefined) {
       const list = Array.isArray(camera.shake) ? camera.shake : [camera.shake];
@@ -266,6 +280,29 @@ export function validateScene(data: unknown, opts: ValidateOpts = {}): Validatio
     const result = validateAsset(asset, { inline: true });
     for (const issue of result.errors) err(`assets.${id}${issue.path ? `.${issue.path}` : ''}`, issue.message);
     for (const warning of result.warnings) warnings.push({ ...warning, path: `assets.${id}${warning.path ? `.${warning.path}` : ''}` });
+  }
+  if (s.timeRemap !== undefined) {
+    const tr = s.timeRemap;
+    if (!isRecord(tr)) err('timeRemap', 'timeRemap должен быть объектом; пример: {"keys":[[0,0],[2,2],[4,3]]}');
+    else {
+      checkUnknown(tr, ['keys', 'smooth'], 'timeRemap', warnings);
+      if (tr.smooth !== undefined && typeof tr.smooth !== 'boolean') err('timeRemap.smooth', 'smooth должен быть true или false; пример: true');
+      if (!Array.isArray(tr.keys) || tr.keys.length < 2 || tr.keys.length > 32) err('timeRemap.keys', 'keys должен быть массивом из 2..32 пар [t, s]; пример: [[0,0],[2,2],[4,3]]');
+      else {
+        let pt = -Infinity;
+        let ps = -Infinity;
+        tr.keys.forEach((pair, index) => {
+          const at = `timeRemap.keys[${index}]`;
+          if (!Array.isArray(pair) || pair.length !== 2 || !isFiniteNum(pair[0]) || !isFiniteNum(pair[1])) { err(at, 'ключ должен быть парой чисел [t, s]; пример: [2, 2]'); return; }
+          if (pair[0] < 0 || (duration !== undefined && pair[0] > duration)) err(`${at}[0]`, `t должен быть в диапазоне 0..duration (${duration ?? 'duration'}); пример: 2`);
+          else if (pair[0] <= pt) err(`${at}[0]`, 't должен строго возрастать; пример: 3');
+          if (pair[1] < 0) err(`${at}[1]`, 's не может быть отрицательным; пример: 2');
+          else if (pair[1] < ps) err(`${at}[1]`, 's не должен убывать (время не идёт назад); пример: 2');
+          pt = pair[0];
+          ps = pair[1];
+        });
+      }
+    }
   }
   if (!Array.isArray(s.layers)) err('layers', 'layers должен быть массивом; пример: []');
   else s.layers.forEach((rawLayer, layerIndex) => {

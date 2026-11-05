@@ -16,7 +16,7 @@ export interface KindSpec {
   params: readonly FieldSpec[];
 }
 
-export const EASES = ['sine', 'inOut', 'out', 'lin'] as const;
+export const EASES = ['sine', 'inOut', 'out', 'lin', 'in', 'snap'] as const;
 export const PALETTE_SLOTS = ['sky', 'sun', 'haze', 'far', 'mid', 'near', 'whale', 'belly', 'rim', 'cloudLight', 'cloudShadow', 'window'] as const;
 export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'rain', 'snow', 'birds', 'text', 'counter', 'asset', 'shape', 'light'] as const;
 
@@ -29,6 +29,7 @@ export const SCENE_SPEC = {
     { name: 'style', type: 'object', default: {}, description: 'Эффекты изображения.' },
     { name: 'world', type: 'object', description: 'Масштаб мира: {unitsPerMeter}; необязателен.' },
     { name: 'camera', type: 'object', description: 'Ключи движения камеры.' },
+    { name: 'timeRemap', type: 'object', description: 'Необязательная переразметка времени {keys:[[t,s],...], smooth?}: кадр t рисуется как момент s (замедление, ускорение, стоп-кадр).' },
     { name: 'assets', type: 'object', description: 'Встроенные модели каталога.' },
     { name: 'layers', type: 'array', description: 'Слои сцены в порядке от дальнего к ближнему.' },
   ] as const,
@@ -42,7 +43,8 @@ export const SCENE_SPEC = {
   ] as const,
   camera: [
     { name: 'verticalFit', type: 'number', default: 0.52, description: 'Дополнительный масштаб вертикального кадра.' },
-    { name: 'keys', type: 'array', description: 'Ключи {t, x, y, zoom}; t в секундах, zoom > 0.' },
+    { name: 'keys', type: 'array', description: 'Ключи {t, x, y, zoom, ease?}; t в секундах, zoom > 0; ease участка — sine (по умолчанию), inOut, out, lin, in, snap.' },
+    { name: 'shot', type: 'object', description: 'Готовый приём камеры {name, t0?, duration?, strength?}; действует, когда keys пуст. name: static, push-in, pull-out, pan-left, pan-right, drift, slow-push, dolly-out, crash-zoom, crash-out, whip-pan, tilt-up, tilt-down, handheld.' },
     { name: 'shake', type: 'object', description: 'Тряска {amp 0..60, freq 0.5..30, t0?, t1?, seed?, decay?: none|out} или массив таких записей.' },
   ] as const,
   palette: [

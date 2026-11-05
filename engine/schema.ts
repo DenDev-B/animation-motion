@@ -5,6 +5,29 @@ export interface CameraKey {
   x: number;
   y: number;
   zoom: number;
+  /** Плавность участка от предыдущего ключа до этого; по умолчанию sine. */
+  ease?: 'sine' | 'inOut' | 'out' | 'lin' | 'in' | 'snap';
+}
+
+export type CameraShotName = 'static' | 'push-in' | 'pull-out' | 'pan-left' | 'pan-right' | 'drift' | 'slow-push' | 'dolly-out' | 'crash-zoom' | 'crash-out' | 'whip-pan' | 'tilt-up' | 'tilt-down' | 'handheld';
+
+/** Готовый приём камеры по имени; используется, если camera.keys пуст. */
+export interface CameraShot {
+  name: CameraShotName;
+  /** начало приёма, с (по умолчанию 0) */
+  t0?: number;
+  /** длительность приёма, с (по умолчанию до конца сцены) */
+  duration?: number;
+  /** 0.1..3, сила приёма (по умолчанию 1) */
+  strength?: number;
+}
+
+/** Переразметка времени: кадр t рисуется как момент s сцены (замедление, ускорение, стоп-кадр). */
+export interface TimeRemap {
+  /** пары [t выхода, s источника]; t строго растёт, s не убывает */
+  keys: [number, number][];
+  /** плавная скорость вместо ломаной */
+  smooth?: boolean;
 }
 
 export interface CameraShake {
@@ -19,6 +42,7 @@ export interface CameraShake {
 export interface Camera {
   verticalFit?: number;
   keys: CameraKey[];
+  shot?: CameraShot;
   shake?: CameraShake | CameraShake[];
 }
 
@@ -150,6 +174,7 @@ export interface SceneV1 {
   style?: Style;
   world?: World;
   camera: Camera;
+  timeRemap?: TimeRemap;
   assets: Record<string, CatalogAsset>;
   layers: Layer[];
 }

@@ -8,6 +8,8 @@ import { drawRain, drawSnow, drawBirds } from './kinds-particles.ts';
 import { drawText, drawCounter } from './kinds-text.ts';
 import { drawLight } from './kinds-light.ts';
 import { applyBloom, applyGrade } from './effects.ts';
+import { remapTime } from './time-remap.ts';
+import { resolveCamera } from './camera-presets.ts';
 import { assetScaleForMeters } from './units.ts';
 import type { CreateCanvas } from './kinds.ts';
 import { applyMotion } from './motion.ts';
@@ -25,10 +27,12 @@ const hazeParam = (p: Record<string, unknown>): number => (typeof p.haze === 'nu
 
 export function draw(g: CanvasRenderingContext2D, W: number, H: number, t: number, scene: SceneV1, deps: RenderDeps) {
   const { createCanvas, catalog, cache } = deps;
+  t = remapTime(scene, t);
   const K = H / 1000;
   const cam = camAt(t, scene);
+  const cameraDef = resolveCamera(scene.camera, scene.duration);
   const isV = H > W;
-  const zoom = cam.zoom * (isV ? (scene.camera.verticalFit ?? 0.52) : 1);
+  const zoom = cam.zoom * (isV ? (cameraDef.verticalFit ?? 0.52) : 1);
   const pal = scene.palette;
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1;

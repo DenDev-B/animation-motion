@@ -88,3 +88,6 @@ export type { ProviderId, ProviderSpec, FailKind, Attempt, ChainResult, ChainOpt
 export { buildModelPrompt, MODEL_PROMPT_MAX_BYTES, MODEL_SAMPLE } from './ai-model.ts';
 export type { ModelPromptOptions } from './ai-model.ts';
 export { NO_TEXT_KINDS } from './ai-project.ts';
+export { cameraShot, resolveCamera, CAMERA_SHOT_NAMES } from './camera-presets.ts';
+export { remapTime } from './time-remap.ts';
+export type { CameraShot, CameraShotName, TimeRemap } from './schema.ts';
