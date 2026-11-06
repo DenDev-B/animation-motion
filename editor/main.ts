@@ -3,7 +3,7 @@ import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
 import { STYLE_PRESETS } from '../engine/styles.ts';
-import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
+import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, formatModelJson, previewAssetFor, catalogWithDraft, type CheckModelJsonResult, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import catalogIndexRaw from '../catalog/index.json';
@@ -75,6 +75,13 @@ const catalogPlay = document.getElementById('catalogPlay') as HTMLButtonElement 
 const catalogPreviewEl = document.getElementById('catalogPreview') as HTMLCanvasElement | null;
 const catalogTime = document.getElementById('catalogTime') as HTMLInputElement | null;
 const catalogTimeText = document.getElementById('catalogTimeText') as HTMLElement | null;
+const catalogCode = document.getElementById('catalogCode') as HTMLTextAreaElement | null;
+const catalogCodeReset = document.getElementById('catalogCodeReset') as HTMLButtonElement | null;
+const catalogCodeSave = document.getElementById('catalogCodeSave') as HTMLButtonElement | null;
+const catalogCodeFile = document.getElementById('catalogCodeFile') as HTMLInputElement | null;
+const catalogCodeStatus = document.getElementById('catalogCodeStatus') as HTMLElement | null;
+const catalogCodeErrors = document.getElementById('catalogCodeErrors') as HTMLUListElement | null;
+let codeDraft: CheckModelJsonResult | undefined;
 const catalogNewJson = document.getElementById('catalogNewJson') as HTMLTextAreaElement | null;
 const catalogCheckJson = document.getElementById('catalogCheckJson') as HTMLButtonElement | null;
 const catalogCopyFixJson = document.getElementById('catalogCopyFixJson') as HTMLButtonElement | null;
@@ -648,7 +655,7 @@ function switchCatalogPanel(id: string) {
   for (const [key, panel] of Object.entries(panels)) if (panel) panel.hidden = key !== id;
   renderCatalogTabs(id);
   if (id === 'list') renderCatalogList();
-  else if (id === 'preview') { renderPreviewModelSelect(); setPreviewPlaying(false); renderPreviewFrame(); }
+  else if (id === 'preview') { renderPreviewModelSelect(); loadCodeEditorFromSelection(); setPreviewPlaying(false); renderPreviewFrame(); }
   else if (id === 'upload') { catalogUploadDrop?.classList.remove('over'); void refreshUploadPanel(); }
   else if (id === 'credits') renderCatalogCredits();
 }
@@ -787,7 +794,7 @@ function checkCatalogNewJson() {
   setCatalogStatus(catalogNewJsonStatus, result.ok ? 'Ошибок нет. Можно сохранить в каталог.' : `Ошибок: ${result.errors.length}. Исправьте JSON модели.`, !result.ok);
 }
 
-function saveCatalogModel(asset: CatalogAsset) {
+function saveCatalogModel(asset: CatalogAsset, statusEl: HTMLElement | null = catalogNewJsonStatus) {
   const taken = new Set(Object.keys(catalog));
   let id = asset.id;
   if (taken.has(id)) {
@@ -805,7 +812,8 @@ function saveCatalogModel(asset: CatalogAsset) {
   catalogIndex.push({ id, name: out.name, tags: out.meta?.tags ?? [], view: out.meta?.view, realSize: out.realSize, bounds: out.bounds, license: out.meta?.license?.name });
   thumbCache.clear();
   renderCatalogList();
-  setCatalogStatus(catalogNewJsonStatus, `Сохранено в каталог как ${id} — файл ${id}.json скачан.`, false);
+  setCatalogStatus(statusEl, `Сохранено в каталог как ${id} — файл ${id}.json скачан.`, false);
+  renderPreviewModelSelect();
 }
 
 function readSvgFields() {
@@ -1229,13 +1237,32 @@ function renderPreviewModelSelect() {
 function renderPreviewFrame() {
   const ctx = catalogPreviewEl?.getContext('2d');
   if (!ctx) return;
-  const asset = catalog[catalogPreviewModel?.value ?? ''];
+  const asset = previewAssetFor(catalog[catalogPreviewModel?.value ?? ''], codeDraft);
   if (!asset) return;
   const preset = (catalogPreset?.value ?? 'none') as 'none' | 'walk' | 'run' | 'fly' | 'swim' | 'hop' | 'sway';
   const scene = buildPreviewScene(asset, preset, previewDuration);
   const time = Number(catalogTime?.value ?? 0);
-  renderFrame(ctx, scene, time, { w: 280, h: 280 }, { createCanvas: (w: number, h: number) => { const cc = document.createElement('canvas'); cc.width = w; cc.height = h; return cc; }, catalog, cache });
+  renderFrame(ctx, scene, time, { w: 280, h: 280 }, { createCanvas: (w: number, h: number) => { const cc = document.createElement('canvas'); cc.width = w; cc.height = h; return cc; }, catalog: catalogWithDraft(catalog, asset), cache });
   if (catalogTimeText) catalogTimeText.textContent = `${time.toFixed(1)} / ${previewDuration.toFixed(1)} с`;
+}
+
+function loadCodeEditorFromSelection() {
+  const asset = catalog[catalogPreviewModel?.value ?? ''];
+  codeDraft = undefined;
+  if (catalogCode) catalogCode.value = asset ? formatModelJson(asset) : '';
+  showList(catalogCodeErrors, []);
+  if (catalogCodeSave) catalogCodeSave.disabled = true;
+  setCatalogStatus(catalogCodeStatus, '', false);
+}
+
+function onCodeEdited() {
+  if (!catalogCode) return;
+  const result = checkModelJsonText(catalogCode.value.trim());
+  if (result.ok) codeDraft = result;
+  showList(catalogCodeErrors, result.errors);
+  if (catalogCodeSave) catalogCodeSave.disabled = !result.ok;
+  setCatalogStatus(catalogCodeStatus, result.ok ? 'Ошибок нет: превью показывает ваш код.' : `Ошибок: ${result.errors.length}. Превью остаётся на последней рабочей версии.`, !result.ok);
+  if (result.ok) renderPreviewFrame();
 }
 
 function setPreviewPlaying(playing: boolean) {
@@ -1958,7 +1985,17 @@ if (catalogSaveModel) catalogSaveModel.onclick = () => { const candidate = model
 if (catalogShowCredits) catalogShowCredits.onclick = () => { renderCatalogCredits(); if (catalogCreditsOut) { catalogCreditsOut.hidden = false; void copyText(catalogCreditsOut.textContent ?? '', 'Титры проекта'); } };
 if (catalogPlay) catalogPlay.onclick = () => setPreviewPlaying(!previewPlaying);
 if (catalogTime) catalogTime.addEventListener('input', (e) => { setPreviewPlaying(false); previewTs = Number((e.target as HTMLInputElement).value); renderPreviewFrame(); });
-if (catalogPreviewModel) catalogPreviewModel.addEventListener('change', () => { setPreviewPlaying(false); renderPreviewFrame(); });
+if (catalogPreviewModel) catalogPreviewModel.addEventListener('change', () => { setPreviewPlaying(false); loadCodeEditorFromSelection(); renderPreviewFrame(); });
+if (catalogCode) catalogCode.addEventListener('input', onCodeEdited);
+if (catalogCodeReset) catalogCodeReset.onclick = () => { loadCodeEditorFromSelection(); renderPreviewFrame(); };
+if (catalogCodeSave) catalogCodeSave.onclick = () => { const a = codeDraft?.ok ? codeDraft.asset : undefined; if (a) saveCatalogModel(a, catalogCodeStatus); };
+if (catalogCodeFile) catalogCodeFile.addEventListener('change', async () => {
+  const file = catalogCodeFile.files?.[0];
+  if (!file || !catalogCode) return;
+  catalogCode.value = await file.text();
+  onCodeEdited();
+  catalogCodeFile.value = '';
+});
 if (catalogPreset) catalogPreset.addEventListener('change', () => { setPreviewPlaying(false); renderPreviewFrame(); });
 
 try {

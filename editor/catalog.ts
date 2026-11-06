@@ -110,6 +110,22 @@ export function checkModelJsonText(text: string): CheckModelJsonResult {
   return { ok: validation.ok, asset: validation.ok ? (candidate as CatalogAsset) : undefined, errors: validation.errors, warnings: validation.warnings };
 }
 
+/** Текст модели для редактора кода: читаемый JSON с отступами. */
+export function formatModelJson(asset: CatalogAsset): string {
+  return JSON.stringify(asset, null, 2);
+}
+
+/** Что рисовать в превью: правильный черновик из редактора кода главнее выбранной модели каталога. */
+export function previewAssetFor(selected: CatalogAsset | undefined, draft: CheckModelJsonResult | undefined): CatalogAsset | undefined {
+  if (draft && draft.ok && draft.asset) return draft.asset;
+  return selected;
+}
+
+/** Каталог для рендера превью: черновик подменяет модель с тем же id, не меняя сам каталог. */
+export function catalogWithDraft(catalog: Record<string, CatalogAsset>, asset: CatalogAsset | undefined): Record<string, CatalogAsset> {
+  return asset ? { ...catalog, [asset.id]: asset } : catalog;
+}
+
 export function buildPreviewScene(asset: CatalogAsset, preset: 'none' | MotionPreset, duration = 8): SceneV1 {
   const motion = preset === 'none' ? undefined : { preset, speed: 1, amp: 1 };
   const sizeM = asset.realSize ? (asset.realSize.heightM ?? asset.realSize.widthM) : undefined;
