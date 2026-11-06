@@ -20,6 +20,13 @@ export const EASES = ['sine', 'inOut', 'out', 'lin', 'in', 'snap'] as const;
 export const PALETTE_SLOTS = ['sky', 'sun', 'haze', 'far', 'mid', 'near', 'whale', 'belly', 'rim', 'cloudLight', 'cloudShadow', 'window'] as const;
 export const KIND_NAMES = ['sky', 'glow', 'cloud', 'skyline', 'mountains', 'hills', 'stars', 'rain', 'snow', 'birds', 'text', 'counter', 'asset', 'shape', 'light'] as const;
 
+// Безопасные зоны площадок: значения ориентировочные, сверить с площадками.
+// Отступы в мировых единицах (высота кадра 1000), пересчёт из пикселей: 9:16 — 1080x1920, 16:9 — 1920x1080.
+export const SAFE_ZONES = {
+  '16:9': { top: 96 * 1000 / 1080, bottom: 96 * 1000 / 1080, left: 96 * 1000 / 1080, right: 96 * 1000 / 1080 },
+  '9:16': { top: 250 * 1000 / 1920, bottom: 400 * 1000 / 1920, left: 0, right: 150 * 1000 / 1920 },
+} as const;
+
 export const SCENE_SPEC = {
   fields: [
     { name: 'version', type: 'int', min: 1, max: 1, default: 1, description: 'Версия формата сцены.' },

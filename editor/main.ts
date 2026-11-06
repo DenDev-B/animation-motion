@@ -3,6 +3,8 @@ import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
 import { STYLE_PRESETS } from '../engine/styles.ts';
+import { SAFE_ZONES } from '../engine/spec.ts';
+import { EDITOR_STRINGS } from './strings.ts';
 import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, formatModelJson, previewAssetFor, catalogWithDraft, type CheckModelJsonResult, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
@@ -20,6 +22,8 @@ const scrub = document.getElementById('scrub') as HTMLInputElement | null;
 const playBtn = document.getElementById('play') as HTMLButtonElement | null;
 const aspectH = document.getElementById('aspectH') as HTMLButtonElement | null;
 const aspectV = document.getElementById('aspectV') as HTMLButtonElement | null;
+const safeZonesToggle = document.getElementById('safeZones') as HTMLInputElement | null;
+const safeZonesText = document.getElementById('safeZonesText') as HTMLElement | null;
 const jsonArea = document.getElementById('json') as HTMLTextAreaElement | null;
 const applyBtn = document.getElementById('apply') as HTMLButtonElement | null;
 const resetBtn = document.getElementById('reset') as HTMLButtonElement | null;
@@ -1578,6 +1582,21 @@ function showErrors(errors: { path: string; message: string }[] | null) {
   }
 }
 
+const SAFE_ZONES_KEY = 'animation-motion/safe-zones/v1';
+let showSafeZones = false;
+try { showSafeZones = localStorage.getItem(SAFE_ZONES_KEY) === '1'; } catch {}
+
+// Оверлей живёт только в превью: в рендер и экспорт он не попадает.
+function drawSafeZones(g: CanvasRenderingContext2D, w: number, h: number) {
+  const zone = SAFE_ZONES[vertical ? '9:16' : '16:9'];
+  const k = h / 1000;
+  g.save();
+  g.strokeStyle = 'rgba(255, 214, 102, 0.7)';
+  g.lineWidth = 2;
+  g.strokeRect(zone.left * k, zone.top * k, w - (zone.left + zone.right) * k, h - (zone.top + zone.bottom) * k);
+  g.restore();
+}
+
 function frame() {
   scene = project.scenes[activeSceneIndex].scene;
   duration = scene.duration;
@@ -1586,6 +1605,7 @@ function frame() {
   showErrors(errors.ok ? null : errors.errors);
   if (!errors.ok) return;
   renderFrame(ctx, scene, t, size, { createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }, catalog, cache });
+  if (showSafeZones) drawSafeZones(ctx, size.w, size.h);
   if (scrub) scrub.value = (t / duration).toFixed(2);
   if (timeText) timeText.textContent = `${t.toFixed(1)} / ${duration.toFixed(1)} с`;
 }
@@ -1640,6 +1660,15 @@ if (exportMp4Btn) exportMp4Btn.onclick = () => void startExport();
 if (exportCancelBtn) exportCancelBtn.onclick = () => void cancelExport();
 if (aspectH) aspectH.onclick = () => setAspect('h');
 if (aspectV) aspectV.onclick = () => setAspect('v');
+if (safeZonesText) safeZonesText.textContent = EDITOR_STRINGS.safeZones;
+if (safeZonesToggle) {
+  safeZonesToggle.checked = showSafeZones;
+  safeZonesToggle.onchange = () => {
+    showSafeZones = safeZonesToggle.checked;
+    try { localStorage.setItem(SAFE_ZONES_KEY, showSafeZones ? '1' : '0'); } catch {}
+    frame();
+  };
+}
 
 const tabs = document.getElementById('sceneTabs');
 const openInput = document.getElementById('openProject') as HTMLInputElement | null;
