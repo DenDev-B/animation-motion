@@ -149,10 +149,17 @@
           <input type="range" id="projectScrub" min="0" max="1" step="0.01" value="0" aria-label="Время проекта">
           <span class="time" id="projectTime">0.0 / 0.0 с</span>
         </div>
+        <div class="bar" id="exportControls" style="align-items:flex-end; gap:8px; margin-top:4px">
+          <label class="f"><span id="exportModeText"></span><select id="exportMode"></select></label>
+          <label class="f" id="exportFromLabel"><span id="exportFromText"></span><input id="exportFrom" type="number" min="0" step="0.1" value="0" style="width:72px"></label>
+          <label class="f" id="exportToLabel"><span id="exportToText"></span><input id="exportTo" type="number" min="0" step="0.1" value="5" style="width:72px"></label>
+          <label class="f" id="exportFrameLabel"><span id="exportFrameText"></span><input id="exportFrameAt" type="number" min="0" step="0.1" value="0" style="width:72px"></label>
+          <label class="f"><span id="exportScaleText"></span><select id="exportScale"></select></label>
+        </div>
         <div class="btns">
-          <button id="exportMp4" disabled>Экспорт MP4</button>
+          <button id="exportMp4" disabled></button>
           <button id="exportCancel" hidden>Отмена</button>
-          <a id="exportDownload" hidden>Скачать MP4</a>
+          <a id="exportDownload" hidden></a>
           <span id="exportStatus" class="hint"></span>
         </div>
         <span id="exportHint" class="hint">MP4 собирается командой npm run export (Node + ffmpeg); в браузере экспорт не выполняется.</span>

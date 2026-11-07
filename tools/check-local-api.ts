@@ -213,8 +213,18 @@ try {
     fps: 60,
     scenes: [{ ...shortProject.scenes[0], scene: { ...shortProject.scenes[0].scene, duration: 5 } }],
   };
-  const postExport = (proj: unknown) => request({ method: 'POST', path: '/__api/export', body: JSON.stringify({ project: proj }) });
+  const postExport = (proj: unknown, preview?: Record<string, unknown>) =>
+    request({ method: 'POST', path: '/__api/export', body: JSON.stringify(preview ? { project: proj, preview } : { project: proj }) });
   const exportStatus = (id: string) => request({ method: 'GET', path: `/__api/export/status?id=${id}` });
+  async function waitJob(id: string, deadlineMs = 180000): Promise<Reply> {
+    let last = await exportStatus(id);
+    const deadline = Date.now() + deadlineMs;
+    while (last.json.state === 'running' && Date.now() < deadline) {
+      await sleep(200);
+      last = await exportStatus(id);
+    }
+    return last;
+  }
 
   const badBody = await request({ method: 'POST', path: '/__api/export', body: '{"project": 5}' });
   if (badBody.json.ok !== false) fail(`проект-число должен отклоняться: ${badBody.text.slice(0, 160)}`);
@@ -234,32 +244,29 @@ try {
       const busy = await postExport(shortProject);
       if (busy.status !== 409) fail(`второй экспорт одновременно должен давать 409, получено ${busy.status}`);
       else ok('второй экспорт одновременно: 409');
-      let last = await exportStatus(jobId);
-      const deadline = Date.now() + 180000;
-      while (last.json.state === 'running' && Date.now() < deadline) {
-        await sleep(200);
-        last = await exportStatus(jobId);
-      }
-      if (last.json.state !== 'done') fail(`экспорт не завершился: ${last.text.slice(0, 200)}`);
-      else {
-        ok(`экспорт завершён: кадр ${last.json.frame} из ${last.json.total}`);
-        if (last.json.total !== 24) fail(`прогресс не досчитался 24 кадров: ${last.json.total}`);
-        const rel = String(last.json.file);
-        const videoPath = path.resolve(root, rel);
-        if (!rel.startsWith('out/export/') || !videoPath.startsWith(path.resolve(root))) fail(`видео попало не во временный out/export: ${rel}`);
-        else if (!fs.existsSync(videoPath)) fail(`видео не записано: ${rel}`);
+        let last = await waitJob(jobId);
+        if (last.json.state !== 'done') fail(`экспорт не завершился: ${last.text.slice(0, 200)}`);
         else {
-          const download = await request({ method: 'GET', path: `/__api/export/file?id=${jobId}` });
-          const magic = download.body.subarray(4, 8).toString('latin1');
-          if (download.status !== 200 || magic !== 'ftyp') fail(`скачивание не отдаёт MP4: код ${download.status}, сигнатура ${magic}`);
-          else if (!/video\/mp4/.test(String(download.headers['content-type']))) fail(`content-type не video/mp4: ${download.headers['content-type']}`);
-          else ok(`скачивание MP4: ${download.body.length} байт, имя файла из content-disposition`);
-          const probe = probeVideo(videoPath);
-          if (!probe) fail('ffprobe не прочитал готовое видео');
-          else if (Number(probe.width) !== 1920 || Number(probe.height) !== 1080 || Number(probe.nb_frames) !== 24) fail(`ffprobe: ${JSON.stringify(probe)}`);
-          else ok(`ffprobe: ${probe.width}x${probe.height}, ${probe.nb_frames} кадров, ${probe.codec_name}`);
+          ok(`экспорт завершён: кадр ${last.json.frame} из ${last.json.total}`);
+          if (last.json.total !== 24) fail(`прогресс не досчитался 24 кадров: ${last.json.total}`);
+          const rel = String(last.json.file);
+          const videoPath = path.resolve(root, rel);
+          if (!rel.startsWith('out/export/') || !videoPath.startsWith(path.resolve(root))) fail(`видео попало не во временный out/export: ${rel}`);
+          else if (!fs.existsSync(videoPath)) fail(`видео не записано: ${rel}`);
+          else {
+            if (/_frame|_clip|_x/.test(path.basename(rel))) fail(`обычный экспорт без preview получил суффикс пробы: ${rel}`);
+            else ok('обычный экспорт без preview: имя файла без суффикса');
+            const download = await request({ method: 'GET', path: `/__api/export/file?id=${jobId}` });
+            const magic = download.body.subarray(4, 8).toString('latin1');
+            if (download.status !== 200 || magic !== 'ftyp') fail(`скачивание не отдаёт MP4: код ${download.status}, сигнатура ${magic}`);
+            else if (!/video\/mp4/.test(String(download.headers['content-type']))) fail(`content-type не video/mp4: ${download.headers['content-type']}`);
+            else ok(`скачивание MP4: ${download.body.length} байт, имя файла из content-disposition`);
+            const probe = probeVideo(videoPath);
+            if (!probe) fail('ffprobe не прочитал готовое видео');
+            else if (Number(probe.width) !== 1920 || Number(probe.height) !== 1080 || Number(probe.nb_frames) !== 24) fail(`ffprobe: ${JSON.stringify(probe)}`);
+            else ok(`ffprobe: ${probe.width}x${probe.height}, ${probe.nb_frames} кадров, ${probe.codec_name}`);
+          }
         }
-      }
 
       const long = await postExport(longProject);
       const longId = long.json.jobId ?? '';
@@ -323,10 +330,54 @@ try {
           else ok(`имя на диске осталось с исходным заголовком: ${onDisk}`);
         }
       }
+
+      // 13. preview API
+      const previewFrame = await postExport(shortProject, { frame: 0 });
+      const pFrameId = previewFrame.json.jobId ?? '';
+      if (previewFrame.status !== 200 || previewFrame.json.ok !== true || !pFrameId) fail(`preview.frame не принят: ${previewFrame.status} ${previewFrame.text.slice(0, 200)}`);
+      else {
+        const pDone = await waitJob(pFrameId);
+        if (pDone.json.state !== 'done') fail(`preview.frame не завершился: ${pDone.text.slice(0, 200)}`);
+        else {
+          const rel = String(pDone.json.file);
+          if (!rel.endsWith('.png') || !/_frame/.test(rel)) fail(`preview.frame имя/расширение: ${rel}`);
+          const dl = await request({ method: 'GET', path: `/__api/export/file?id=${pFrameId}` });
+          if (dl.status !== 200) fail(`preview.frame скачивание: ${dl.status}`);
+          else if (!String(dl.headers['content-type']).includes('image/png')) fail(`preview.frame content-type: ${dl.headers['content-type']}`);
+          else if (dl.body[0] !== 0x89 || dl.body.toString('ascii', 1, 4) !== 'PNG') fail('preview.frame не PNG-сигнатура');
+          else ok('preview.frame: done, PNG, image/png');
+        }
+      }
+
+      const clipStart = await postExport(shortProject, { range: { from: 0, to: 0.5 }, scale: 0.5 });
+      const clipId = clipStart.json.jobId ?? '';
+      if (clipStart.status !== 200 || clipStart.json.ok !== true || !clipId) fail(`preview.range+scale не принят: ${clipStart.status} ${clipStart.text.slice(0, 200)}`);
+      else {
+        const cDone = await waitJob(clipId);
+        if (cDone.json.state !== 'done') fail(`preview.range+scale не завершился: ${cDone.text.slice(0, 200)}`);
+        else {
+          const rel = String(cDone.json.file);
+          if (!/_clip.*_x0\.5/.test(rel)) fail(`preview.range+scale имя: ${rel}`);
+          const probe = probeVideo(path.resolve(root, rel));
+          if (!probe) fail('preview.range+scale ffprobe не прочитал');
+          else if (Number(probe.width) !== 960 || Number(probe.height) !== 540 || Number(probe.nb_frames) !== 12) fail(`preview.range+scale ffprobe: ${JSON.stringify(probe)}`);
+          else ok(`preview.range+scale: 960x540, ${probe.nb_frames} кадров`);
+        }
+      }
+
+      const badPreview1 = await postExport(shortProject, { scale: 0.3 });
+      if (badPreview1.json.ok !== false || !badPreview1.json.errors?.some((e) => e.path === 'preview')) fail(`preview.scale 0.3 должен отклоняться с path preview: ${badPreview1.text.slice(0, 180)}`);
+      else if (badPreview1.json.jobId) fail('preview.scale 0.3 создал задание');
+      else ok('preview.scale 0.3: ok:false, path preview, задание не создано');
+
+      const badPreview2 = await postExport(shortProject, { frame: 99 });
+      if (badPreview2.json.ok !== false || !badPreview2.json.errors?.some((e) => e.path === 'preview')) fail(`preview.frame за концом должен отклоняться с path preview: ${badPreview2.text.slice(0, 180)}`);
+      else if (badPreview2.json.jobId) fail('preview.frame за концом создал задание');
+      else ok('preview.frame за концом: ok:false, path preview, задание не создано');
     }
   }
 
-  // 12. content-disposition как чистая функция: имя целиком из кириллицы, кавычки и «\», пустое имя.
+  // 14. content-disposition как чистая функция: имя целиком из кириллицы, кавычки и «\», пустое имя.
   const cyrillicName = 'радуга.mp4';
   const cyrillicHeader = contentDisposition(cyrillicName);
   if (!/^[\x20-\x7e]*$/.test(cyrillicHeader)) fail(`кирилличное имя дало не-ASCII заголовок: ${JSON.stringify(cyrillicHeader)}`);

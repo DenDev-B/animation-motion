@@ -9,7 +9,7 @@ if (!/<script[^>]*type="module"[^>]*src="\/editor\/main\.ts"/.test(html)) fail('
 const main = fs.readFileSync('editor/main.ts', 'utf8');
 if (!main.includes("import.meta.glob('../catalog/*.json'")) fail('каталог редактора должен собираться через import.meta.glob(\'../catalog/*.json\')');
 if (/catalog\s*=\s*\{\s*whale/.test(main)) fail('в editor/main.ts вернулся ручной список моделей каталога');
-const tabIds = ['topTabs', 'panelProject', 'panelScenes', 'panelSplice', 'panelCatalog', 'sceneTabs', 'layerList', 'sceneOrder', 'projectPreview', 'exportMp4'];
+const tabIds = ['topTabs', 'panelProject', 'panelScenes', 'panelSplice', 'panelCatalog', 'sceneTabs', 'layerList', 'sceneOrder', 'projectPreview', 'exportMp4', 'exportMode', 'exportFrom', 'exportTo', 'exportFrameAt', 'exportScale'];
 const missingTabs = tabIds.filter((id) => !html.includes(`id="${id}"`));
 if (missingTabs.length) fail(`в index.html нет контейнеров вкладок: ${missingTabs.join(', ')}`);
 for (const label of ['Проект', 'Сцены', 'Склейка', 'Каталог']) {

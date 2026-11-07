@@ -5,7 +5,8 @@ import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { addToCatalog } from '../engine/catalog-add.ts';
-import { validateProject } from '../engine/project.ts';
+import { validateProject, projectFrameCount } from '../engine/project.ts';
+import { planPreview, previewSuffix } from '../engine/preview-plan.ts';
 import { callProvider, generateWithChain, PROVIDER_LABELS, PROVIDER_ORDER, DEFAULT_MODELS, ProviderError, type FetchFn, type CheckResult } from '../engine/ai-chain.ts';
 import { extractJson } from '../engine/ai-io.ts';
 import { splitReply, validateProjectReply } from '../engine/ai-project.ts';
@@ -231,6 +232,11 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
       }
       const declared = /N=(\d+)/.exec(line);
       if (declared) job.total = Number(declared[1]);
+      const single = /^записано .* \(PNG\b/.exec(line);
+      if (single) {
+        job.frame = 1;
+        job.total = 1;
+      }
     }
   }
 
@@ -279,6 +285,24 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
       sendJson(res, 200, { ok: false, errors: check.errors.map((e) => ({ path: String(e.path ?? ''), message: String(e.message ?? '') })) });
       return;
     }
+    const previewReq = isRecord(payload.preview) ? (payload.preview as { frame?: unknown; range?: unknown; scale?: unknown }) : undefined;
+    let previewArgs: string[] = [];
+    let suffix = '';
+    let ext: 'mp4' | 'png' = 'mp4';
+    if (previewReq) {
+      const fps = typeof project.fps === 'number' ? project.fps : 30;
+      const aspect = project.format === '9:16' ? '9:16' : '16:9';
+      const totalFrames = projectFrameCount(project as unknown as Parameters<typeof projectFrameCount>[0]);
+      const plan = planPreview(totalFrames, fps, aspect, previewReq as Parameters<typeof planPreview>[3]);
+      if (!plan.ok) {
+        sendJson(res, 200, { ok: false, errors: [{ path: 'preview', message: plan.message }] });
+        return;
+      }
+      if (plan.plan.mode === 'frame') { previewArgs.push('--frame', String(plan.plan.startFrame / fps)); ext = 'png'; }
+      else if (plan.plan.mode === 'clip') { previewArgs.push('--range', `${(plan.plan.startFrame / fps)}:${((plan.plan.startFrame + plan.plan.count) / fps)}`); }
+      if (plan.plan.scale !== 1) previewArgs.push('--scale', String(plan.plan.scale));
+      suffix = previewSuffix(plan.plan, fps);
+    }
     if (runningJob()) {
       sendJson(res, 409, { ok: false, errors: [{ path: '', message: 'Уже собирается другое видео. Дождитесь конца или отмените его.' }] });
       return;
@@ -288,13 +312,13 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
     const format = project.format === '9:16' ? '9:16' : '16:9';
     const title = typeof project.title === 'string' ? project.title : 'project';
     const tmpProject = path.join(exportTmpDir, `${jobId}.project.json`);
-    const outFile = path.join(exportDir, `${safeFileName(title)}_${formatFileToken(format)}_${jobId}.mp4`);
+    const outFile = path.join(exportDir, `${safeFileName(title)}_${formatFileToken(format)}${suffix}_${jobId}.${ext}`);
     fs.mkdirSync(exportTmpDir, { recursive: true });
     fs.writeFileSync(tmpProject, JSON.stringify(project, null, 2), 'utf8');
     const job: ExportJob = { id: jobId, state: 'running', frame: 0, total: 0, outFile, tmpProject, log: '', child: null };
     jobs.set(jobId, job);
     // Свой stdin, свои каналы вывода; переменные окружения те же, что у dev-сервера (ffmpeg ищется в PATH).
-    const child = spawn(process.execPath, [exportScript, '--project', tmpProject, '--out', outFile], {
+    const child = spawn(process.execPath, [exportScript, '--project', tmpProject, '--out', outFile, ...previewArgs], {
       cwd: root,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -379,8 +403,9 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
       return;
     }
     const name = path.basename(job.outFile);
+    const ext = path.extname(name).toLowerCase();
     res.statusCode = 200;
-    res.setHeader('content-type', 'video/mp4');
+    res.setHeader('content-type', ext === '.png' ? 'image/png' : 'video/mp4');
     res.setHeader('content-length', fs.statSync(job.outFile).size);
     res.setHeader('content-disposition', contentDisposition(name));
     fs.createReadStream(job.outFile).pipe(res);

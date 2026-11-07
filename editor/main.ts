@@ -59,6 +59,19 @@ const exportMp4Btn = document.getElementById('exportMp4') as HTMLButtonElement |
 const exportCancelBtn = document.getElementById('exportCancel') as HTMLButtonElement | null;
 const exportDownload = document.getElementById('exportDownload') as HTMLAnchorElement | null;
 const exportStatusEl = document.getElementById('exportStatus') as HTMLElement | null;
+const exportMode = document.getElementById('exportMode') as HTMLSelectElement | null;
+const exportFrom = document.getElementById('exportFrom') as HTMLInputElement | null;
+const exportTo = document.getElementById('exportTo') as HTMLInputElement | null;
+const exportFrameAt = document.getElementById('exportFrameAt') as HTMLInputElement | null;
+const exportScale = document.getElementById('exportScale') as HTMLSelectElement | null;
+const exportFromLabel = document.getElementById('exportFromLabel') as HTMLElement | null;
+const exportToLabel = document.getElementById('exportToLabel') as HTMLElement | null;
+const exportFrameLabel = document.getElementById('exportFrameLabel') as HTMLElement | null;
+const exportModeText = document.getElementById('exportModeText') as HTMLElement | null;
+const exportFromText = document.getElementById('exportFromText') as HTMLElement | null;
+const exportToText = document.getElementById('exportToText') as HTMLElement | null;
+const exportFrameText = document.getElementById('exportFrameText') as HTMLElement | null;
+const exportScaleText = document.getElementById('exportScaleText') as HTMLElement | null;
 
 // Каталог: ссылки на элементы
 const catalogTabBar = document.getElementById('catalogTabBar') as HTMLElement | null;
@@ -1067,9 +1080,11 @@ interface ExportReply {
   errors?: Array<{ path: string; message: string }>;
 }
 
-const EXPORT_OFFLINE_MESSAGE = 'Экспорт работает только при запуске через run.bat: локальный сервис не отвечает. В терминале — команда npm run export.';
+const EXPORT_OFFLINE_MESSAGE = EDITOR_STRINGS.exportOffline;
 let exportJobId: string | null = null;
 let exportPollTimer: number | null = null;
+let exportLastIsProbe = false;
+let exportLastIsFrame = false;
 
 function setExportStatus(message: string): void {
   if (!exportStatusEl) return;
@@ -1097,16 +1112,83 @@ async function fetchExportJson(url: string, init?: RequestInit): Promise<ExportR
   }
 }
 
+function projectDurationSec(): number {
+  return projectFrameCount(project) / project.fps;
+}
+
+type ExportMode = 'all' | 'range' | 'frame';
+
+function exportPreviewPayload(): { ok: true; preview?: { frame?: number; range?: { from: number; to: number }; scale?: number }; probe: boolean; frame: boolean } | { ok: false; message: string } {
+  const mode = (exportMode?.value as ExportMode) || 'all';
+  const scale = Number(exportScale?.value ?? '1');
+  const dur = projectDurationSec();
+  const isProbe = mode !== 'all' || scale !== 1;
+  if (mode === 'frame') {
+    const frame = Number(exportFrameAt?.value ?? '0');
+    if (!Number.isFinite(frame) || frame < 0 || frame >= dur) return { ok: false, message: `t=${frame} вне ролика (0 ≤ t < ${dur.toFixed(3)} с)` };
+    return { ok: true, preview: { frame, ...(scale !== 1 ? { scale } : {}) }, probe: isProbe, frame: true };
+  }
+  if (mode === 'range') {
+    const from = Number(exportFrom?.value ?? '0');
+    const to = Number(exportTo?.value ?? '0');
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to <= from) return { ok: false, message: `некорректный кусок: нужно 0 ≤ от < до` };
+    if (to > dur + 1e-9) return { ok: false, message: `кусок заканчивается на ${to} с, а ролик длится ${dur.toFixed(3)} с` };
+    return { ok: true, preview: { range: { from, to }, ...(scale !== 1 ? { scale } : {}) }, probe: isProbe, frame: false };
+  }
+  if (scale !== 1) return { ok: true, preview: { scale }, probe: true, frame: false };
+  return { ok: true, probe: false, frame: false };
+}
+
+function updateExportUi(): void {
+  const mode = (exportMode?.value as ExportMode) || 'all';
+  if (exportFromLabel) exportFromLabel.hidden = mode !== 'range';
+  if (exportToLabel) exportToLabel.hidden = mode !== 'range';
+  if (exportFrameLabel) exportFrameLabel.hidden = mode !== 'frame';
+  const payload = exportPreviewPayload();
+  if (exportMp4Btn) exportMp4Btn.textContent = payload.ok && payload.probe ? EDITOR_STRINGS.exportBtnProbe : EDITOR_STRINGS.exportBtnMp4;
+}
+
+function initExportUi(): void {
+  if (exportModeText) exportModeText.textContent = EDITOR_STRINGS.exportMode;
+  if (exportFromText) exportFromText.textContent = EDITOR_STRINGS.exportFrom;
+  if (exportToText) exportToText.textContent = EDITOR_STRINGS.exportTo;
+  if (exportFrameText) exportFrameText.textContent = EDITOR_STRINGS.exportFrameAt;
+  if (exportScaleText) exportScaleText.textContent = EDITOR_STRINGS.exportScale;
+  if (exportMode) {
+    exportMode.textContent = '';
+    for (const [value, label] of [['all', EDITOR_STRINGS.exportModeAll], ['range', EDITOR_STRINGS.exportModeRange], ['frame', EDITOR_STRINGS.exportModeFrame]] as const) {
+      const opt = document.createElement('option'); opt.value = value; opt.textContent = label; exportMode.appendChild(opt);
+    }
+  }
+  if (exportScale) {
+    exportScale.textContent = '';
+    for (const [value, label] of [['1', '100%'], ['0.5', '50%'], ['0.25', '25%']] as const) {
+      const opt = document.createElement('option'); opt.value = value; opt.textContent = label; exportScale.appendChild(opt);
+    }
+  }
+  const dur = projectDurationSec();
+  if (exportTo && (exportTo.value === '' || Number(exportTo.value) <= 0)) exportTo.value = String(Math.min(5, Math.round(dur * 10) / 10));
+  if (exportFrameAt) exportFrameAt.max = String(Math.max(0, dur - 1 / Math.max(1, project.fps)));
+  if (exportFrom) exportFrom.max = String(dur);
+  if (exportTo) exportTo.max = String(dur);
+  for (const el of [exportMode, exportFrom, exportTo, exportFrameAt, exportScale]) el?.addEventListener('change', updateExportUi);
+  for (const el of [exportFrom, exportTo, exportFrameAt]) el?.addEventListener('input', updateExportUi);
+  updateExportUi();
+}
+
 function showExportResult(reply: ExportReply): void {
   if (exportMp4Btn) exportMp4Btn.disabled = false;
   if (exportCancelBtn) exportCancelBtn.hidden = true;
   if (reply.state === 'done') {
     if (exportDownload) {
       exportDownload.href = `/__api/export/file?id=${encodeURIComponent(exportJobId ?? '')}`;
-      exportDownload.textContent = 'Скачать MP4';
+      exportDownload.textContent = exportLastIsProbe
+        ? (exportLastIsFrame ? EDITOR_STRINGS.exportDownloadProbePng : EDITOR_STRINGS.exportDownloadProbeMp4)
+        : EDITOR_STRINGS.exportDownloadMp4;
       exportDownload.hidden = false;
     }
-    setExportStatus(`Готово: ${reply.file}`);
+    const done = exportLastIsProbe ? `${EDITOR_STRINGS.exportProbeNote}; ${reply.file}` : `Готово: ${reply.file}`;
+    setExportStatus(done);
   } else if (reply.state === 'cancelled') {
     setExportStatus('Экспорт отменён, файл не сохранён.');
   } else {
@@ -1138,11 +1220,15 @@ async function startExport(): Promise<void> {
     setExportStatus(EXPORT_OFFLINE_MESSAGE);
     return;
   }
+  const payload = exportPreviewPayload();
+  if (!payload.ok) { setExportStatus(payload.message); return; }
+  exportLastIsProbe = payload.probe;
+  exportLastIsFrame = payload.frame;
   setExportStatus('Отправляю проект…');
   const reply = await fetchExportJson('/__api/export', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ project: structuredClone(project) }),
+    body: JSON.stringify({ project: structuredClone(project), ...(payload.preview ? { preview: payload.preview } : {}) }),
   });
   if (!reply.ok || !reply.jobId) {
     setExportStatus(reply.ok ? 'Сервер не вернул id задания.' : issueMessage(reply.errors));
@@ -1152,7 +1238,7 @@ async function startExport(): Promise<void> {
   exportJobId = reply.jobId;
   if (exportMp4Btn) exportMp4Btn.disabled = true;
   if (exportCancelBtn) exportCancelBtn.hidden = false;
-  setExportStatus('Экспорт запущен, жду первый кадр…');
+  setExportStatus(payload.probe ? `${EDITOR_STRINGS.exportProbeNote}; собираю…` : 'Экспорт запущен, жду первый кадр…');
   await pollExportStatus();
 }
 
@@ -1165,6 +1251,7 @@ async function cancelExport(): Promise<void> {
 
 /** Кнопка активна только когда отвечает локальный сервис; офлайн остаётся подсказка про npm run export. */
 async function refreshExportPanel(): Promise<void> {
+  initExportUi();
   if (exportJobId) return;
   const online = await localApiAvailable();
   if (exportMp4Btn) exportMp4Btn.disabled = !online;

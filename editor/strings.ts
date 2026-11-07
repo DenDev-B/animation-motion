@@ -1,3 +1,18 @@
 export const EDITOR_STRINGS = {
   safeZones: 'Безопасные зоны',
+  exportMode: 'Что собрать',
+  exportModeAll: 'Весь ролик',
+  exportModeRange: 'Кусок',
+  exportModeFrame: 'Кадр',
+  exportFrom: 'от, с',
+  exportTo: 'до, с',
+  exportFrameAt: 't, с',
+  exportScale: 'Размер',
+  exportBtnMp4: 'Экспорт MP4',
+  exportBtnProbe: 'Проба',
+  exportDownloadMp4: 'Скачать MP4',
+  exportDownloadProbeMp4: 'Скачать пробу (MP4)',
+  exportDownloadProbePng: 'Скачать пробу (PNG)',
+  exportProbeNote: 'это проба, не финал',
+  exportOffline: 'Экспорт работает только при запуске через run.bat: локальный сервис не отвечает. В терминале — команда npm run export.',
 } as const;
