@@ -1148,7 +1148,22 @@ function updateExportUi(): void {
   if (exportMp4Btn) exportMp4Btn.textContent = payload.ok && payload.probe ? EDITOR_STRINGS.exportBtnProbe : EDITOR_STRINGS.exportBtnMp4;
 }
 
+let exportUiReady = false;
+
+/** Длительность ролика меняется при правках; поля пробы подстраиваем при каждом заходе на вкладку, выбор пользователя не трогаем. */
+function syncExportDuration(): void {
+  const dur = projectDurationSec();
+  const defaultTo = Math.min(5, Math.floor(dur * 10) / 10);
+  if (exportTo && (exportTo.value === '' || Number(exportTo.value) <= 0 || Number(exportTo.value) > dur)) exportTo.value = String(defaultTo);
+  if (exportFrameAt) exportFrameAt.max = String(Math.max(0, dur - 1 / Math.max(1, project.fps)));
+  if (exportFrom) exportFrom.max = String(dur);
+  if (exportTo) exportTo.max = String(dur);
+  updateExportUi();
+}
+
 function initExportUi(): void {
+  if (exportUiReady) { syncExportDuration(); return; }
+  exportUiReady = true;
   if (exportModeText) exportModeText.textContent = EDITOR_STRINGS.exportMode;
   if (exportFromText) exportFromText.textContent = EDITOR_STRINGS.exportFrom;
   if (exportToText) exportToText.textContent = EDITOR_STRINGS.exportTo;
@@ -1166,14 +1181,9 @@ function initExportUi(): void {
       const opt = document.createElement('option'); opt.value = value; opt.textContent = label; exportScale.appendChild(opt);
     }
   }
-  const dur = projectDurationSec();
-  if (exportTo && (exportTo.value === '' || Number(exportTo.value) <= 0)) exportTo.value = String(Math.min(5, Math.round(dur * 10) / 10));
-  if (exportFrameAt) exportFrameAt.max = String(Math.max(0, dur - 1 / Math.max(1, project.fps)));
-  if (exportFrom) exportFrom.max = String(dur);
-  if (exportTo) exportTo.max = String(dur);
   for (const el of [exportMode, exportFrom, exportTo, exportFrameAt, exportScale]) el?.addEventListener('change', updateExportUi);
   for (const el of [exportFrom, exportTo, exportFrameAt]) el?.addEventListener('input', updateExportUi);
-  updateExportUi();
+  syncExportDuration();
 }
 
 function showExportResult(reply: ExportReply): void {
