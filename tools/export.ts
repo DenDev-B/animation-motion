@@ -6,12 +6,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { createCanvas, Path2D } from '@napi-rs/canvas';
 import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
+import { planPreview, previewSuffix, scaledSize, type Aspect } from '../engine/preview-plan.ts';
 (globalThis as any).Path2D = Path2D;
 
 function log(m: string) { process.stdout.write(m + '\n'); }
 function fail(m: string): never { log(`ОШИБКА: ${m}`); process.exit(1); }
 
-function parseArgs(): { scene: string; project: string; format?: string; fps?: number; t0: number; t1?: number; out: string; crf: number; preset: string; overwrite: boolean } {
+function parseArgs(): { scene: string; project: string; format?: string; fps?: number; t0: number; t1?: number; hasRange: boolean; frame?: number; scale: number; out: string; crf: number; preset: string; overwrite: boolean } {
   const args = process.argv.slice(2);
   let scene = '';
   let format: string | undefined;
@@ -22,12 +23,16 @@ function parseArgs(): { scene: string; project: string; format?: string; fps?: n
   let crf = 18;
   let preset = 'veryfast';
   let overwrite = false;
+  let frame: number | undefined;
+  let scale = 1;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--project') project = args[++i];
     else if (a === '--format') format = args[++i];
     else if (a === '--fps') fps = +args[++i];
     else if (a === '--range') range = args[++i];
+    else if (a === '--frame') { frame = Number(args[++i]); if (!Number.isFinite(frame)) fail('--frame ждёт число секунд, например --frame 3.5'); }
+    else if (a === '--scale') { scale = Number(args[++i]); if (!Number.isFinite(scale)) fail('--scale ждёт число: 0.25, 0.5 или 1'); }
     else if (a === '--out') out = args[++i];
     else if (a === '--crf') crf = +args[++i];
     else if (a === '--preset') preset = args[++i];
@@ -40,7 +45,8 @@ function parseArgs(): { scene: string; project: string; format?: string; fps?: n
   if (fps !== undefined && fps <= 0) fail('fps должен быть больше 0');
   let t0 = 0, t1: number | undefined;
   if (range) { const [a, b] = range.split(':').map(Number); if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) fail(`некорректный --range ${range}`); t0 = a; t1 = b; }
-  return { scene, project, format, fps, t0, t1, out: out ?? '', crf, preset, overwrite };
+  if (range !== undefined && frame !== undefined) fail('--range и --frame вместе не используются');
+  return { scene, project, format, fps, t0, t1, hasRange: range !== undefined, frame, scale, out: out ?? '', crf, preset, overwrite };
 }
 
 async function ffprobe(file: string): Promise<Record<string, string>> {
@@ -82,14 +88,19 @@ async function main() {
   const aspect = format === 'h' || format === '16:9' ? '16:9' : format === 'v' || format === '9:16' ? '9:16' : '';
   if (!aspect) fail('format должен быть h, v, 16:9 или 9:16');
   const fps = args.fps ?? projectV1?.fps ?? 30;
-  const w = aspect === '16:9' ? 1920 : 1080;
-  const h = aspect === '16:9' ? 1080 : 1920;
-  const sceneDuration = sceneV1?.duration ?? projectFrameCount({ ...projectV1!, fps }) / fps;
-  const t1 = args.t1 ?? sceneDuration;
-  if (t1 > sceneDuration) fail(`--range заканчивается ${t1} > длительность ${sceneDuration}`);
-  if (t0 >= t1) fail(`--range начинается ${t0} >= длительность ${t1}`);
-  const N = projectV1 ? projectFrameCount({ ...projectV1, fps }) : Math.round((t1 - t0) * fps);
-  log(`${projectPath ? `проект: ${projectPath}` : `сцена: ${scene}`}, длительность=${t1} с, N=${N} при ${fps} fps`);
+  const totalFrames = projectV1 ? projectFrameCount({ ...projectV1, fps }) : Math.round(sceneV1!.duration * fps);
+  const planned = planPreview(totalFrames, fps, aspect as Aspect, {
+    frame: args.frame,
+    range: args.hasRange ? { from: t0, to: args.t1 as number } : undefined,
+    scale: args.scale,
+  });
+  if (!planned.ok) fail(planned.message);
+  const plan = planned.plan;
+  const { width: w, height: h } = plan;
+  const N = plan.count;
+  const isFull = plan.mode === 'all' && plan.scale === 1;
+  const modeText = plan.mode === 'frame' ? `кадр t=${(plan.startFrame / fps).toFixed(3)} с` : plan.mode === 'clip' ? `кусок ${(plan.startFrame / fps).toFixed(3)}–${((plan.startFrame + N) / fps).toFixed(3)} с` : 'весь ролик';
+  log(`${projectPath ? `проект: ${projectPath}` : `сцена: ${scene}`}, ${modeText}, N=${N} при ${fps} fps, ${w}x${h}${plan.scale !== 1 ? ` (масштаб ${plan.scale}, это проба, не финал)` : ''}`);
 
   const requestedOutFile = (() => {
     if (process.argv.includes('--out')) {
@@ -97,11 +108,12 @@ async function main() {
       return process.argv[i + 1];
     }
     const base = safeFileName(projectV1 ? projectV1.title : path.basename(scene, '.json'));
-    return path.join(__dirname, '..', projectV1 ? 'out/export' : 'out/video', `${base}_${formatFileToken(aspect as '16:9' | '9:16')}.mp4`);
+    const ext = plan.mode === 'frame' ? 'png' : 'mp4';
+    return path.join(__dirname, '..', projectV1 ? 'out/export' : 'out/video', `${base}_${formatFileToken(aspect as '16:9' | '9:16')}${previewSuffix(plan, fps)}.${ext}`);
   })();
   const outFileSafe = path.join(path.dirname(requestedOutFile), safeFileName(path.basename(requestedOutFile)));
   let outFile = outFileSafe;
-  if (!args.overwrite) { let suffix = 2; while (fs.existsSync(outFile)) outFile = outFileSafe.replace(/\.mp4$/, `_${suffix++}.mp4`); }
+  if (!args.overwrite) { let suffix = 2; while (fs.existsSync(outFile)) outFile = outFileSafe.replace(/\.(mp4|png)$/, (_m, e) => `_${suffix++}.${e}`); }
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
   // три переиспользуемых холста: кадры A/B и результат композитинга
@@ -114,14 +126,15 @@ async function main() {
   const cache = createRenderCache();
   const createCanvasFn = ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement;
 
-  const ffmpeg = spawn('ffmpeg', [
+  // режим «кадр» пишет PNG и ffmpeg не запускает
+  const ffmpeg = plan.mode === 'frame' ? null : spawn('ffmpeg', [
     '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${w}x${h}`, '-r', String(fps), '-i', '-',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-crf', String(crf),
     '-movflags', '+faststart', '-y', outFile
   ], { stdio: ['pipe', 'ignore', 'pipe'] });
   let ffmpegErr = '';
-  ffmpeg.stderr.on('data', (d) => { ffmpegErr += d; });
-  ffmpeg.on('error', (e) => { fail(`ffmpeg spawn error: ${e.message}`); });
+  ffmpeg?.stderr?.on('data', (d) => { ffmpegErr += d; });
+  ffmpeg?.on('error', (e) => { fail(`ffmpeg spawn error: ${e.message}`); });
 
   let totalRender = 0;
   let peakMem = 0;
@@ -130,7 +143,8 @@ async function main() {
   let secondSceneBaseline: Buffer | null = null;
 
   for (let i = 0; i < N; i++) {
-    const location = projectV1 ? locateFrame({ ...projectV1, fps }, i) : null;
+    const globalIndex = plan.startFrame + i;
+    const location = projectV1 ? locateFrame({ ...projectV1, fps }, globalIndex) : null;
     const tr0 = process.hrtime.bigint();
     let frameCtx = ctxA;
     if (projectV1) {
@@ -144,7 +158,15 @@ async function main() {
         frameCtx = ctxOut;
       }
     } else {
-      renderFrame(ctxA, sceneV1!, t0 + i / fps, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
+      renderFrame(ctxA, sceneV1!, globalIndex / fps, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
+    }
+    if (plan.mode === 'frame') {
+      const png = (frameCtx === ctxOut ? canvasOut : canvasA).toBuffer('image/png');
+      fs.writeFileSync(outFile, png);
+      log(`записано ${outFile} (PNG ${w}x${h}, ${png.length} байт)`);
+      log('не проверяет скрипт: цвет и вид на глаз; это один кадр, плавность не проверена.');
+      log('ЭКСПОРТ КАДРА: OK');
+      return;
     }
     const imgData = frameCtx.getImageData(0, 0, w, h);
     if (projectV1 && location!.frames.length === 1 && location!.frames[0].sceneIndex === 1 && location!.frames[0].t === 0) {
@@ -157,9 +179,9 @@ async function main() {
     }
     const tr1 = process.hrtime.bigint();
     totalRender += Number(tr1 - tr0) / 1e6;
-    const ok = ffmpeg.stdin.write(Buffer.from(imgData.data));
+    const ok = ffmpeg!.stdin!.write(Buffer.from(imgData.data));
     if (!ok) {
-      await new Promise<void>((resolve) => { ffmpeg.stdin!.once('drain', resolve); });
+      await new Promise<void>((resolve) => { ffmpeg!.stdin!.once('drain', resolve); });
     }
     const m = process.memoryUsage().rss;
     if (m > peakMem) peakMem = m;
@@ -173,8 +195,8 @@ async function main() {
     }
   }
 
-  ffmpeg.stdin.end();
-  const code = await new Promise<number>((resolve) => ffmpeg.on('close', resolve));
+  ffmpeg!.stdin!.end();
+  const code = await new Promise<number>((resolve) => ffmpeg!.on('close', resolve));
   const totalMs = Number(process.hrtime.bigint() - tStart) / 1e6;
   const msPerFrame = totalMs / N;
   const renderMsPerFrame = totalRender / N;
@@ -201,7 +223,7 @@ async function main() {
   checks.push({ name: 'fps', ok: fpsStr === `${fps}/1`, got: fpsStr ?? '', want: `${fps}/1` });
   checks.push({ name: 'число кадров', ok: nbFrames === N, got: String(nbFrames), want: String(N) });
   checks.push({ name: 'длительность', ok: Math.abs(duration - N / fps) <= 1 / fps, got: duration.toFixed(3), want: (N / fps).toFixed(3) });
-  if (projectV1 && projectV1.scenes[1]?.transition.type === 'cut') checks.push({ name: 'кадр второй сцены EXACT', ok: secondSceneBaseline !== null, got: secondSceneBaseline ? 'EXACT' : 'кадр не найден', want: 'EXACT' });
+  if (plan.mode === 'all' && projectV1 && projectV1.scenes[1]?.transition.type === 'cut') checks.push({ name: 'кадр второй сцены EXACT', ok: secondSceneBaseline !== null, got: secondSceneBaseline ? 'EXACT' : 'кадр не найден', want: 'EXACT' });
 
   let allPass = true;
   for (const c of checks) {
@@ -210,6 +232,7 @@ async function main() {
   }
 
   log('не проверяет скрипт: звук, плавность на глаз, цветопередачу, соответствие эталону M0, отсутствие артефактов сжатия.');
+  if (!isFull) log(`ЭТО ПРОБА (${modeText}, масштаб ${plan.scale}): финальный ролик не заменяет. Мелкие эффекты в пикселях (зерно, bloom) на другом размере выглядят чуть иначе.`);
 
   if (!allPass) process.exit(1);
   log(`ЭКСПОРТ: OK`);
