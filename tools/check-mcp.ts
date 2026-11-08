@@ -14,6 +14,13 @@ assert.throws(() => core.projectFile('../evil'), /не подходит/, 'об�
 assert.throws(() => core.projectFile('a/b'), /не подходит/, 'слэш в имени отклонён');
 assert.ok(core.exportArgs('night-city-car', 'h').includes('--overwrite'), 'аргументы экспорта собираются');
 
+// конфиг Open Code в корне репозитория указывает на существующий сервер
+const opencode = JSON.parse(fs.readFileSync(path.join(root, 'opencode.json'), 'utf8')) as { mcp?: Record<string, { type?: string; command?: string[]; enabled?: boolean }> };
+const entry = opencode.mcp?.['animation-motion'];
+assert.ok(entry && entry.type === 'local' && entry.enabled === true, 'opencode.json: сервер animation-motion включён');
+assert.deepEqual(entry.command, ['node', 'tools/mcp-server.ts'], 'opencode.json: команда запуска');
+assert.ok(fs.existsSync(path.join(root, 'tools', 'mcp-server.ts')), 'opencode.json: файл сервера существует');
+
 const client = new Client({ name: 'check', version: '1' });
 await client.connect(new StdioClientTransport({ command: process.execPath, args: ['tools/mcp-server.ts'], cwd: root }));
 const call = async (name: string, args: Record<string, unknown> = {}) => client.callTool({ name, arguments: args }) as Promise<{ isError?: boolean; content: Array<{ type: string; text?: string; data?: string }> }>;

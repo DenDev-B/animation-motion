@@ -33,6 +33,7 @@
     "check:shake": "node tools/check-shake.ts",
     "check:camera-time": "node tools/check-camera-time.ts",
     "mcp": "node tools/mcp-server.ts",
+    "mcp:ping": "node tools/mcp-ping.ts",
     "check:mcp": "node tools/check-mcp.ts",
     "check:catalog-code": "node tools/check-catalog-code.ts",
     "contact": "node tools/contact-sheet.ts",

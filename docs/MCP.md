@@ -20,7 +20,9 @@
 
 ## Подключение
 
-Open Code, файл `opencode.json` в корне проекта:
+Быстрый путь на Windows: `run-mcp.bat` в корне репозитория. Он проверяет сервер (`npm run mcp:ping`) и открывает Open Code в этой папке. Готовый тестовый промт: `docs/MCP-TEST.md`.
+
+Open Code: файл `opencode.json` уже лежит в корне репозитория, вот его содержимое:
 
 ```json
 {

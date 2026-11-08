@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "animation-motion": {
+      "type": "local",
+      "command": [
+        "node",
+        "tools/mcp-server.ts"
+      ],
+      "enabled": true
+    }
+  }
+}
