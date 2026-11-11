@@ -92,4 +92,6 @@ export type { ModelPromptOptions } from './ai-model.ts';
 export { NO_TEXT_KINDS } from './ai-project.ts';
 export { cameraShot, resolveCamera, CAMERA_SHOT_NAMES } from './camera-presets.ts';
 export { remapTime } from './time-remap.ts';
+export { applySceneStyle, setSceneShot } from './scene-look.ts';
+export type { LookResult, ShotChange } from './scene-look.ts';
 export type { CameraShot, CameraShotName, TimeRemap } from './schema.ts';
