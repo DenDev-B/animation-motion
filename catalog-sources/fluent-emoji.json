@@ -1,0 +1,2486 @@
+[
+ {
+  "icon": "cat",
+  "id": "cat-flat",
+  "name": "Кот",
+  "tags": [
+   "кот",
+   "кошка",
+   "cat",
+   "животное",
+   "pet",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.3,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "dog",
+  "id": "dog-flat",
+  "name": "Собака",
+  "tags": [
+   "собака",
+   "пёс",
+   "dog",
+   "животное",
+   "pet",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.6,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "horse",
+  "id": "horse-flat",
+  "name": "Лошадь",
+  "tags": [
+   "лошадь",
+   "конь",
+   "horse",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.6,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "cow",
+  "id": "cow-flat",
+  "name": "Корова",
+  "tags": [
+   "корова",
+   "cow",
+   "животное",
+   "ферма",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.4,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "pig",
+  "id": "pig-flat",
+  "name": "Свинья",
+  "tags": [
+   "свинья",
+   "pig",
+   "животное",
+   "ферма",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.9,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "ewe",
+  "id": "sheep-flat",
+  "name": "Овца",
+  "tags": [
+   "овца",
+   "sheep",
+   "животное",
+   "ферма",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.8,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "goat",
+  "id": "goat-flat",
+  "name": "Коза",
+  "tags": [
+   "коза",
+   "goat",
+   "животное",
+   "ферма",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.8,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "rabbit",
+  "id": "rabbit-flat",
+  "name": "Кролик",
+  "tags": [
+   "кролик",
+   "заяц",
+   "rabbit",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.25,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "mouse",
+  "id": "mouse-flat",
+  "name": "Мышь",
+  "tags": [
+   "мышь",
+   "mouse",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.08,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "tiger",
+  "id": "tiger-flat",
+  "name": "Тигр",
+  "tags": [
+   "тигр",
+   "tiger",
+   "животное",
+   "джунгли",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.0,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "leopard",
+  "id": "leopard-flat",
+  "name": "Леопард",
+  "tags": [
+   "леопард",
+   "leopard",
+   "животное",
+   "джунгли",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.7,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "elephant",
+  "id": "elephant-flat",
+  "name": "Слон",
+  "tags": [
+   "слон",
+   "elephant",
+   "животное",
+   "саванна",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 3.0,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "giraffe",
+  "id": "giraffe-flat",
+  "name": "Жираф",
+  "tags": [
+   "жираф",
+   "giraffe",
+   "животное",
+   "саванна",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 5.0,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "rhinoceros",
+  "id": "rhino-flat",
+  "name": "Носорог",
+  "tags": [
+   "носорог",
+   "rhino",
+   "животное",
+   "саванна",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.7,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "hippopotamus",
+  "id": "hippo-flat",
+  "name": "Бегемот",
+  "tags": [
+   "бегемот",
+   "hippo",
+   "животное",
+   "саванна",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.5,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "camel",
+  "id": "camel-flat",
+  "name": "Верблюд",
+  "tags": [
+   "верблюд",
+   "camel",
+   "животное",
+   "пустыня",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 2.1,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "bear",
+  "id": "bear-flat",
+  "name": "Медведь",
+  "tags": [
+   "медведь",
+   "bear",
+   "животное",
+   "лес",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.4,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "fox",
+  "id": "fox-flat",
+  "name": "Лиса",
+  "tags": [
+   "лиса",
+   "fox",
+   "животное",
+   "лес",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.4,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "wolf",
+  "id": "wolf-flat",
+  "name": "Волк",
+  "tags": [
+   "волк",
+   "wolf",
+   "животное",
+   "лес",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.8,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "deer",
+  "id": "deer-flat",
+  "name": "Олень",
+  "tags": [
+   "олень",
+   "deer",
+   "животное",
+   "лес",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.2,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "turtle",
+  "id": "turtle-flat",
+  "name": "Черепаха",
+  "tags": [
+   "черепаха",
+   "turtle",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.3,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "crocodile",
+  "id": "crocodile-flat",
+  "name": "Крокодил",
+  "tags": [
+   "крокодил",
+   "crocodile",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.0,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "snake",
+  "id": "snake-flat",
+  "name": "Змея",
+  "tags": [
+   "змея",
+   "snake",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.5,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "dolphin",
+  "id": "dolphin-flat",
+  "name": "Дельфин",
+  "tags": [
+   "дельфин",
+   "dolphin",
+   "море",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 2.5,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "shark",
+  "id": "shark-flat",
+  "name": "Акула",
+  "tags": [
+   "акула",
+   "shark",
+   "море",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.0,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "octopus",
+  "id": "octopus-flat",
+  "name": "Осьминог",
+  "tags": [
+   "осьминог",
+   "octopus",
+   "море",
+   "животное",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.6,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "fish",
+  "id": "fish-flat",
+  "name": "Рыба",
+  "tags": [
+   "рыба",
+   "fish",
+   "море",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.4,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "tropical-fish",
+  "id": "tropical-fish-flat",
+  "name": "Тропическая рыбка",
+  "tags": [
+   "рыбка",
+   "tropical",
+   "fish",
+   "море",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.15,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "crab",
+  "id": "crab-flat",
+  "name": "Краб",
+  "tags": [
+   "краб",
+   "crab",
+   "море",
+   "животное",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.2,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "butterfly",
+  "id": "butterfly-flat",
+  "name": "Бабочка",
+  "tags": [
+   "бабочка",
+   "butterfly",
+   "насекомое",
+   "flat"
+  ],
+  "view": "top",
+  "sizeM": 0.06,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "honeybee",
+  "id": "bee-flat",
+  "name": "Пчела",
+  "tags": [
+   "пчела",
+   "bee",
+   "насекомое",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.015,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "lady-beetle",
+  "id": "ladybug-flat",
+  "name": "Божья коровка",
+  "tags": [
+   "божья коровка",
+   "ladybug",
+   "насекомое",
+   "flat"
+  ],
+  "view": "top",
+  "sizeM": 0.008,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "bird",
+  "id": "bird-flat",
+  "name": "Птица",
+  "tags": [
+   "птица",
+   "bird",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.2,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "eagle",
+  "id": "eagle-flat",
+  "name": "Орёл",
+  "tags": [
+   "орёл",
+   "eagle",
+   "птица",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.8,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "owl",
+  "id": "owl-flat",
+  "name": "Сова",
+  "tags": [
+   "сова",
+   "owl",
+   "птица",
+   "животное",
+   "ночь",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.4,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "duck",
+  "id": "duck-flat",
+  "name": "Утка",
+  "tags": [
+   "утка",
+   "duck",
+   "птица",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.4,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "swan",
+  "id": "swan-flat",
+  "name": "Лебедь",
+  "tags": [
+   "лебедь",
+   "swan",
+   "птица",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.1,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "chicken",
+  "id": "chicken-flat",
+  "name": "Курица",
+  "tags": [
+   "курица",
+   "chicken",
+   "птица",
+   "ферма",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.4,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "rooster",
+  "id": "rooster-flat",
+  "name": "Петух",
+  "tags": [
+   "петух",
+   "rooster",
+   "птица",
+   "ферма",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.6,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "penguin",
+  "id": "penguin-flat",
+  "name": "Пингвин",
+  "tags": [
+   "пингвин",
+   "penguin",
+   "птица",
+   "животное",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.7,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "flamingo",
+  "id": "flamingo-flat",
+  "name": "Фламинго",
+  "tags": [
+   "фламинго",
+   "flamingo",
+   "птица",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.4,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "parrot",
+  "id": "parrot-flat",
+  "name": "Попугай",
+  "tags": [
+   "попугай",
+   "parrot",
+   "птица",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.35,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "bat",
+  "id": "bat-flat",
+  "name": "Летучая мышь",
+  "tags": [
+   "летучая мышь",
+   "bat",
+   "животное",
+   "ночь",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "dragon",
+  "id": "dragon-flat",
+  "name": "Дракон",
+  "tags": [
+   "дракон",
+   "dragon",
+   "фэнтези",
+   "сказка",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 6.0,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "unicorn",
+  "id": "unicorn-flat",
+  "name": "Единорог",
+  "tags": [
+   "единорог",
+   "unicorn",
+   "фэнтези",
+   "сказка",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.7,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "t-rex",
+  "id": "trex-flat",
+  "name": "Тираннозавр",
+  "tags": [
+   "динозавр",
+   "тираннозавр",
+   "trex",
+   "dinosaur",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.0,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "sauropod",
+  "id": "sauropod-flat",
+  "name": "Завропод",
+  "tags": [
+   "динозавр",
+   "sauropod",
+   "dinosaur",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 6.0,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "whale",
+  "id": "whale-flat",
+  "name": "Кит (плоский)",
+  "tags": [
+   "кит",
+   "whale",
+   "море",
+   "животное",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 15.0,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "spouting-whale",
+  "id": "whale-spout-flat",
+  "name": "Кит с фонтаном",
+  "tags": [
+   "кит",
+   "whale",
+   "фонтан",
+   "море",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 15.0,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "house",
+  "id": "house-flat",
+  "name": "Дом (плоский)",
+  "tags": [
+   "дом",
+   "house",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 7.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "house-with-garden",
+  "id": "house-garden-flat",
+  "name": "Дом с садом",
+  "tags": [
+   "дом",
+   "сад",
+   "house",
+   "garden",
+   "здание",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 7.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "houses",
+  "id": "houses-flat",
+  "name": "Дома",
+  "tags": [
+   "дома",
+   "houses",
+   "здания",
+   "город",
+   "улица",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 8.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "office-building",
+  "id": "office-flat",
+  "name": "Офисное здание",
+  "tags": [
+   "офис",
+   "office",
+   "здание",
+   "город",
+   "небоскрёб",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 40.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "hospital",
+  "id": "hospital-flat",
+  "name": "Больница",
+  "tags": [
+   "больница",
+   "hospital",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 15.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "school",
+  "id": "school-flat",
+  "name": "Школа",
+  "tags": [
+   "школа",
+   "school",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 12.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "bank",
+  "id": "bank-flat",
+  "name": "Банк",
+  "tags": [
+   "банк",
+   "bank",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 12.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "hotel",
+  "id": "hotel-flat",
+  "name": "Отель",
+  "tags": [
+   "отель",
+   "hotel",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 25.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "department-store",
+  "id": "store-flat",
+  "name": "Универмаг",
+  "tags": [
+   "магазин",
+   "универмаг",
+   "store",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 14.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "convenience-store",
+  "id": "shop-flat",
+  "name": "Магазин",
+  "tags": [
+   "магазин",
+   "shop",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 6.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "post-office",
+  "id": "post-office-flat",
+  "name": "Почта",
+  "tags": [
+   "почта",
+   "post",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 8.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "factory",
+  "id": "factory-flat",
+  "name": "Завод",
+  "tags": [
+   "завод",
+   "фабрика",
+   "factory",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 20.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "stadium",
+  "id": "stadium-flat",
+  "name": "Стадион",
+  "tags": [
+   "стадион",
+   "stadium",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 40.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "church",
+  "id": "church-flat",
+  "name": "Церковь",
+  "tags": [
+   "церковь",
+   "church",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 20.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "classical-building",
+  "id": "classical-flat",
+  "name": "Здание с колоннами",
+  "tags": [
+   "колонны",
+   "classical",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 15.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "castle",
+  "id": "castle-flat",
+  "name": "Замок",
+  "tags": [
+   "замок",
+   "castle",
+   "здание",
+   "сказка",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 30.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "japanese-castle",
+  "id": "castle-japanese-flat",
+  "name": "Японский замок",
+  "tags": [
+   "замок",
+   "япония",
+   "castle",
+   "здание",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 30.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "tokyo-tower",
+  "id": "tower-flat",
+  "name": "Башня",
+  "tags": [
+   "башня",
+   "tower",
+   "здание",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 333.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "statue-of-liberty",
+  "id": "statue-liberty-flat",
+  "name": "Статуя Свободы",
+  "tags": [
+   "статуя",
+   "statue",
+   "город",
+   "америка",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 93.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "hut",
+  "id": "hut-flat",
+  "name": "Хижина",
+  "tags": [
+   "хижина",
+   "hut",
+   "здание",
+   "деревня",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 3.5,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "tent",
+  "id": "tent-flat",
+  "name": "Палатка",
+  "tags": [
+   "палатка",
+   "tent",
+   "лагерь",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.5,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "automobile",
+  "id": "car-flat",
+  "name": "Машина",
+  "tags": [
+   "машина",
+   "автомобиль",
+   "car",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.5,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "taxi",
+  "id": "taxi-flat",
+  "name": "Такси",
+  "tags": [
+   "такси",
+   "taxi",
+   "транспорт",
+   "город",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.5,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "bus",
+  "id": "bus-flat",
+  "name": "Автобус",
+  "tags": [
+   "автобус",
+   "bus",
+   "транспорт",
+   "город",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 12.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "police-car",
+  "id": "police-car-flat",
+  "name": "Полицейская машина",
+  "tags": [
+   "полиция",
+   "police",
+   "машина",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.8,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "ambulance",
+  "id": "ambulance-flat",
+  "name": "Скорая помощь",
+  "tags": [
+   "скорая",
+   "ambulance",
+   "машина",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 6.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "fire-engine",
+  "id": "fire-engine-flat",
+  "name": "Пожарная машина",
+  "tags": [
+   "пожарная",
+   "fire",
+   "машина",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 9.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "delivery-truck",
+  "id": "truck-flat",
+  "name": "Грузовик",
+  "tags": [
+   "грузовик",
+   "truck",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 7.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "articulated-lorry",
+  "id": "lorry-flat",
+  "name": "Фура",
+  "tags": [
+   "фура",
+   "lorry",
+   "грузовик",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 16.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "tractor",
+  "id": "tractor-flat",
+  "name": "Трактор",
+  "tags": [
+   "трактор",
+   "tractor",
+   "ферма",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 4.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "racing-car",
+  "id": "racing-car-flat",
+  "name": "Гоночная машина",
+  "tags": [
+   "гонки",
+   "racing",
+   "машина",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 5.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "motorcycle",
+  "id": "motorcycle-flat",
+  "name": "Мотоцикл",
+  "tags": [
+   "мотоцикл",
+   "motorcycle",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 2.2,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "bicycle",
+  "id": "bicycle-flat",
+  "name": "Велосипед",
+  "tags": [
+   "велосипед",
+   "bicycle",
+   "bike",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.8,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "kick-scooter",
+  "id": "scooter-flat",
+  "name": "Самокат",
+  "tags": [
+   "самокат",
+   "scooter",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "airplane",
+  "id": "plane-flat",
+  "name": "Самолёт (сверху, по диагонали)",
+  "tags": [
+   "самолёт",
+   "plane",
+   "airplane",
+   "транспорт",
+   "авиация",
+   "flat"
+  ],
+  "view": "top",
+  "sizeM": 35.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "helicopter",
+  "id": "helicopter-flat",
+  "name": "Вертолёт",
+  "tags": [
+   "вертолёт",
+   "helicopter",
+   "транспорт",
+   "авиация",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 13.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "rocket",
+  "id": "rocket-flat",
+  "name": "Ракета (по диагонали)",
+  "tags": [
+   "ракета",
+   "rocket",
+   "космос",
+   "транспорт",
+   "flat"
+  ],
+  "view": "three-quarter",
+  "sizeM": 50.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "flying-saucer",
+  "id": "ufo-flat",
+  "name": "НЛО",
+  "tags": [
+   "нло",
+   "ufo",
+   "тарелка",
+   "космос",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 10.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "ship",
+  "id": "ship-flat",
+  "name": "Корабль",
+  "tags": [
+   "корабль",
+   "ship",
+   "море",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 150.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "sailboat",
+  "id": "sailboat-flat",
+  "name": "Парусник",
+  "tags": [
+   "парусник",
+   "sailboat",
+   "море",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 8.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "speedboat",
+  "id": "speedboat-flat",
+  "name": "Катер",
+  "tags": [
+   "катер",
+   "speedboat",
+   "море",
+   "транспорт",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 7.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "train",
+  "id": "train-flat",
+  "name": "Поезд (спереди)",
+  "tags": [
+   "поезд",
+   "train",
+   "транспорт",
+   "железная дорога",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 4.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "locomotive",
+  "id": "locomotive-flat",
+  "name": "Паровоз",
+  "tags": [
+   "паровоз",
+   "locomotive",
+   "транспорт",
+   "железная дорога",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 20.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "tram",
+  "id": "tram-flat",
+  "name": "Трамвай (спереди)",
+  "tags": [
+   "трамвай",
+   "tram",
+   "транспорт",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 3.5,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "deciduous-tree",
+  "id": "tree-flat",
+  "name": "Дерево",
+  "tags": [
+   "дерево",
+   "tree",
+   "природа",
+   "лес",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 8.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "evergreen-tree",
+  "id": "pine-flat",
+  "name": "Ель",
+  "tags": [
+   "ель",
+   "сосна",
+   "pine",
+   "tree",
+   "дерево",
+   "природа",
+   "лес",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 10.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "palm-tree",
+  "id": "palm-flat",
+  "name": "Пальма",
+  "tags": [
+   "пальма",
+   "palm",
+   "дерево",
+   "природа",
+   "пляж",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 8.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "christmas-tree",
+  "id": "xmas-tree-flat",
+  "name": "Новогодняя ёлка",
+  "tags": [
+   "ёлка",
+   "елка",
+   "christmas",
+   "tree",
+   "новый год",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 3.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "cactus",
+  "id": "cactus-flat",
+  "name": "Кактус",
+  "tags": [
+   "кактус",
+   "cactus",
+   "природа",
+   "пустыня",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.5,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "sunflower",
+  "id": "sunflower-flat",
+  "name": "Подсолнух",
+  "tags": [
+   "подсолнух",
+   "sunflower",
+   "цветок",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.8,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "rose",
+  "id": "rose-flat",
+  "name": "Роза",
+  "tags": [
+   "роза",
+   "rose",
+   "цветок",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.6,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "tulip",
+  "id": "tulip-flat",
+  "name": "Тюльпан",
+  "tags": [
+   "тюльпан",
+   "tulip",
+   "цветок",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.4,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "cherry-blossom",
+  "id": "sakura-flat",
+  "name": "Сакура",
+  "tags": [
+   "сакура",
+   "цветок",
+   "sakura",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "mushroom",
+  "id": "mushroom-flat",
+  "name": "Гриб",
+  "tags": [
+   "гриб",
+   "mushroom",
+   "природа",
+   "лес",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "maple-leaf",
+  "id": "maple-leaf-flat",
+  "name": "Кленовый лист",
+  "tags": [
+   "лист",
+   "кленовый",
+   "leaf",
+   "осень",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "four-leaf-clover",
+  "id": "clover-flat",
+  "name": "Клевер",
+  "tags": [
+   "клевер",
+   "clover",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.05,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "potted-plant",
+  "id": "plant-pot-flat",
+  "name": "Комнатное растение",
+  "tags": [
+   "растение",
+   "цветок",
+   "plant",
+   "комната",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.6,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "mountain",
+  "id": "mountain-flat",
+  "name": "Гора",
+  "tags": [
+   "гора",
+   "mountain",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 2000.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "snow-capped-mountain",
+  "id": "mountain-snow-flat",
+  "name": "Заснеженная гора",
+  "tags": [
+   "гора",
+   "снег",
+   "mountain",
+   "snow",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 3000.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "volcano",
+  "id": "volcano-flat",
+  "name": "Вулкан",
+  "tags": [
+   "вулкан",
+   "volcano",
+   "природа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1500.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "sun",
+  "id": "sun-flat",
+  "name": "Солнце",
+  "tags": [
+   "солнце",
+   "sun",
+   "небо",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 4.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "full-moon",
+  "id": "moon-full-flat",
+  "name": "Полная луна",
+  "tags": [
+   "луна",
+   "moon",
+   "небо",
+   "ночь",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 4.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "crescent-moon",
+  "id": "moon-crescent-flat",
+  "name": "Месяц",
+  "tags": [
+   "месяц",
+   "луна",
+   "moon",
+   "небо",
+   "ночь",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 4.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "star",
+  "id": "star-flat",
+  "name": "Звезда",
+  "tags": [
+   "звезда",
+   "star",
+   "небо",
+   "ночь",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "cloud",
+  "id": "cloud-flat",
+  "name": "Облако",
+  "tags": [
+   "облако",
+   "cloud",
+   "небо",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 100.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "cloud-with-rain",
+  "id": "cloud-rain-flat",
+  "name": "Облако с дождём",
+  "tags": [
+   "облако",
+   "дождь",
+   "cloud",
+   "rain",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 100.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "cloud-with-snow",
+  "id": "cloud-snow-flat",
+  "name": "Облако со снегом",
+  "tags": [
+   "облако",
+   "снег",
+   "cloud",
+   "snow",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 100.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "cloud-with-lightning",
+  "id": "cloud-lightning-flat",
+  "name": "Облако с молнией",
+  "tags": [
+   "облако",
+   "молния",
+   "гроза",
+   "cloud",
+   "lightning",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 100.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "rainbow",
+  "id": "rainbow-flat",
+  "name": "Радуга",
+  "tags": [
+   "радуга",
+   "rainbow",
+   "небо",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 300.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "snowflake",
+  "id": "snowflake-flat",
+  "name": "Снежинка",
+  "tags": [
+   "снежинка",
+   "snowflake",
+   "зима",
+   "погода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.02,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "fire",
+  "id": "fire-flat",
+  "name": "Огонь",
+  "tags": [
+   "огонь",
+   "костёр",
+   "fire",
+   "пламя",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "droplet",
+  "id": "droplet-flat",
+  "name": "Капля",
+  "tags": [
+   "капля",
+   "droplet",
+   "вода",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.01,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "comet",
+  "id": "comet-flat",
+  "name": "Комета",
+  "tags": [
+   "комета",
+   "comet",
+   "космос",
+   "небо",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 500.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "ringed-planet",
+  "id": "planet-ringed-flat",
+  "name": "Планета с кольцом",
+  "tags": [
+   "планета",
+   "сатурн",
+   "planet",
+   "космос",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 100000.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "fountain",
+  "id": "fountain-flat",
+  "name": "Фонтан",
+  "tags": [
+   "фонтан",
+   "fountain",
+   "город",
+   "парк",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 4.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "ferris-wheel",
+  "id": "ferris-wheel-flat",
+  "name": "Колесо обозрения",
+  "tags": [
+   "колесо обозрения",
+   "ferris",
+   "парк",
+   "город",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 50.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "carousel-horse",
+  "id": "carousel-horse-flat",
+  "name": "Карусельная лошадка",
+  "tags": [
+   "карусель",
+   "лошадка",
+   "carousel",
+   "парк",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 1.5,
+  "sizeAxis": "height",
+  "facing": "left"
+ },
+ {
+  "icon": "circus-tent",
+  "id": "circus-tent-flat",
+  "name": "Цирк-шапито",
+  "tags": [
+   "цирк",
+   "шапито",
+   "circus",
+   "tent",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 15.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "vertical-traffic-light",
+  "id": "traffic-light-flat",
+  "name": "Светофор",
+  "tags": [
+   "светофор",
+   "traffic light",
+   "город",
+   "улица",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 3.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "stop-sign",
+  "id": "stop-sign-flat",
+  "name": "Знак стоп",
+  "tags": [
+   "знак",
+   "стоп",
+   "stop",
+   "sign",
+   "улица",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 2.5,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "door",
+  "id": "door-flat",
+  "name": "Дверь",
+  "tags": [
+   "дверь",
+   "door",
+   "комната",
+   "дом",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 2.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "window",
+  "id": "window-flat",
+  "name": "Окно",
+  "tags": [
+   "окно",
+   "window",
+   "комната",
+   "дом",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.4,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "couch-and-lamp",
+  "id": "couch-lamp-flat",
+  "name": "Диван с лампой",
+  "tags": [
+   "диван",
+   "лампа",
+   "couch",
+   "комната",
+   "мебель",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.0,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "bed",
+  "id": "bed-flat",
+  "name": "Кровать",
+  "tags": [
+   "кровать",
+   "bed",
+   "комната",
+   "мебель",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 2.0,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "chair",
+  "id": "chair-flat",
+  "name": "Стул",
+  "tags": [
+   "стул",
+   "chair",
+   "комната",
+   "мебель",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.9,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "television",
+  "id": "tv-flat",
+  "name": "Телевизор",
+  "tags": [
+   "телевизор",
+   "tv",
+   "комната",
+   "техника",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.5,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "laptop",
+  "id": "laptop-flat",
+  "name": "Ноутбук",
+  "tags": [
+   "ноутбук",
+   "laptop",
+   "компьютер",
+   "техника",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.25,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "desktop-computer",
+  "id": "computer-flat",
+  "name": "Компьютер",
+  "tags": [
+   "компьютер",
+   "computer",
+   "pc",
+   "техника",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.45,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "keyboard",
+  "id": "keyboard-flat",
+  "name": "Клавиатура",
+  "tags": [
+   "клавиатура",
+   "keyboard",
+   "компьютер",
+   "техника",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.45,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "computer-mouse",
+  "id": "mouse-pc-flat",
+  "name": "Компьютерная мышь",
+  "tags": [
+   "мышь",
+   "mouse",
+   "компьютер",
+   "техника",
+   "flat"
+  ],
+  "view": "top",
+  "sizeM": 0.11,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "mobile-phone",
+  "id": "phone-flat",
+  "name": "Телефон",
+  "tags": [
+   "телефон",
+   "phone",
+   "смартфон",
+   "техника",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "joystick",
+  "id": "joystick-flat",
+  "name": "Джойстик",
+  "tags": [
+   "джойстик",
+   "joystick",
+   "игры",
+   "техника",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "video-game",
+  "id": "gamepad-flat",
+  "name": "Геймпад",
+  "tags": [
+   "геймпад",
+   "gamepad",
+   "игры",
+   "техника",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "floppy-disk",
+  "id": "floppy-flat",
+  "name": "Дискета",
+  "tags": [
+   "дискета",
+   "floppy",
+   "компьютер",
+   "техника",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.09,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "robot",
+  "id": "robot-flat",
+  "name": "Робот",
+  "tags": [
+   "робот",
+   "robot",
+   "техника",
+   "будущее",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.7,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "light-bulb",
+  "id": "bulb-flat",
+  "name": "Лампочка",
+  "tags": [
+   "лампочка",
+   "идея",
+   "bulb",
+   "idea",
+   "техника",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.1,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "bug",
+  "id": "bug-flat",
+  "name": "Гусеница (баг)",
+  "tags": [
+   "баг",
+   "жук",
+   "гусеница",
+   "bug",
+   "насекомое",
+   "программирование",
+   "flat"
+  ],
+  "view": "side",
+  "sizeM": 0.03,
+  "sizeAxis": "width",
+  "facing": "left"
+ },
+ {
+  "icon": "hot-beverage",
+  "id": "coffee-flat",
+  "name": "Кофе",
+  "tags": [
+   "кофе",
+   "чай",
+   "coffee",
+   "напиток",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.1,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "pizza",
+  "id": "pizza-flat",
+  "name": "Пицца",
+  "tags": [
+   "пицца",
+   "pizza",
+   "еда",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "bar-chart",
+  "id": "bar-chart-flat",
+  "name": "График-столбцы",
+  "tags": [
+   "график",
+   "диаграмма",
+   "chart",
+   "отчёт",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "chart-increasing",
+  "id": "chart-up-flat",
+  "name": "График вверх",
+  "tags": [
+   "график",
+   "рост",
+   "chart",
+   "отчёт",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "money-bag",
+  "id": "money-bag-flat",
+  "name": "Мешок денег",
+  "tags": [
+   "деньги",
+   "money",
+   "мешок",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.4,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "briefcase",
+  "id": "briefcase-flat",
+  "name": "Портфель",
+  "tags": [
+   "портфель",
+   "briefcase",
+   "работа",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "books",
+  "id": "books-flat",
+  "name": "Книги",
+  "tags": [
+   "книги",
+   "books",
+   "учёба",
+   "комната",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "wrapped-gift",
+  "id": "gift-flat",
+  "name": "Подарок",
+  "tags": [
+   "подарок",
+   "gift",
+   "праздник",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "balloon",
+  "id": "balloon-flat",
+  "name": "Воздушный шарик",
+  "tags": [
+   "шарик",
+   "balloon",
+   "праздник",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.3,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "trophy",
+  "id": "trophy-flat",
+  "name": "Кубок",
+  "tags": [
+   "кубок",
+   "trophy",
+   "награда",
+   "игры",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.4,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "crown",
+  "id": "crown-flat",
+  "name": "Корона",
+  "tags": [
+   "корона",
+   "crown",
+   "сказка",
+   "король",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.2,
+  "sizeAxis": "width"
+ },
+ {
+  "icon": "key",
+  "id": "key-flat",
+  "name": "Ключ",
+  "tags": [
+   "ключ",
+   "key",
+   "предмет",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.1,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "bell",
+  "id": "bell-flat",
+  "name": "Колокольчик",
+  "tags": [
+   "колокольчик",
+   "bell",
+   "предмет",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.1,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "alarm-clock",
+  "id": "alarm-clock-flat",
+  "name": "Будильник",
+  "tags": [
+   "будильник",
+   "часы",
+   "clock",
+   "комната",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.15,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "umbrella",
+  "id": "umbrella-flat",
+  "name": "Зонт",
+  "tags": [
+   "зонт",
+   "umbrella",
+   "дождь",
+   "предмет",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 0.9,
+  "sizeAxis": "height"
+ },
+ {
+  "icon": "guitar",
+  "id": "guitar-flat",
+  "name": "Гитара",
+  "tags": [
+   "гитара",
+   "guitar",
+   "музыка",
+   "flat"
+  ],
+  "view": "front",
+  "sizeM": 1.0,
+  "sizeAxis": "height"
+ }
+]

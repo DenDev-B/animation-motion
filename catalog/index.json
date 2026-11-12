@@ -165,5 +165,3093 @@
     },
     "license": "own",
     "attribution": false
+  },
+  {
+    "id": "cat-flat",
+    "name": "Кот",
+    "file": "cat-flat.json",
+    "tags": [
+      "кот",
+      "кошка",
+      "cat",
+      "животное",
+      "pet",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.31110788319981725
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "dog-flat",
+    "name": "Собака",
+    "file": "dog-flat.json",
+    "tags": [
+      "собака",
+      "пёс",
+      "dog",
+      "животное",
+      "pet",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.6,
+      "widthM": 0.672017643388114
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "horse-flat",
+    "name": "Лошадь",
+    "file": "horse-flat.json",
+    "tags": [
+      "лошадь",
+      "конь",
+      "horse",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.6,
+      "widthM": 1.6000557638998225
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "cow-flat",
+    "name": "Корова",
+    "file": "cow-flat.json",
+    "tags": [
+      "корова",
+      "cow",
+      "животное",
+      "ферма",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.4,
+      "widthM": 1.47924524779013
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "pig-flat",
+    "name": "Свинья",
+    "file": "pig-flat.json",
+    "tags": [
+      "свинья",
+      "pig",
+      "животное",
+      "ферма",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.9,
+      "widthM": 1.1999999999999995
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "sheep-flat",
+    "name": "Овца",
+    "file": "sheep-flat.json",
+    "tags": [
+      "овца",
+      "sheep",
+      "животное",
+      "ферма",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.8,
+      "widthM": 0.7997064157817227
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "goat-flat",
+    "name": "Коза",
+    "file": "goat-flat.json",
+    "tags": [
+      "коза",
+      "goat",
+      "животное",
+      "ферма",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.8,
+      "widthM": 0.8615384615384616
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "rabbit-flat",
+    "name": "Кролик",
+    "file": "rabbit-flat.json",
+    "tags": [
+      "кролик",
+      "заяц",
+      "rabbit",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.25,
+      "widthM": 0.2586143218991375
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "mouse-flat",
+    "name": "Мышь",
+    "file": "mouse-flat.json",
+    "tags": [
+      "мышь",
+      "mouse",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.08,
+      "widthM": 0.07999999973409695
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tiger-flat",
+    "name": "Тигр",
+    "file": "tiger-flat.json",
+    "tags": [
+      "тигр",
+      "tiger",
+      "животное",
+      "джунгли",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1,
+      "widthM": 1.2727272727272727
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "leopard-flat",
+    "name": "Леопард",
+    "file": "leopard-flat.json",
+    "tags": [
+      "леопард",
+      "leopard",
+      "животное",
+      "джунгли",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.7,
+      "widthM": 0.8909090909090907
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "elephant-flat",
+    "name": "Слон",
+    "file": "elephant-flat.json",
+    "tags": [
+      "слон",
+      "elephant",
+      "животное",
+      "саванна",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3,
+      "widthM": 3.6508716123364584
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "giraffe-flat",
+    "name": "Жираф",
+    "file": "giraffe-flat.json",
+    "tags": [
+      "жираф",
+      "giraffe",
+      "животное",
+      "саванна",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 5,
+      "widthM": 4.708928571428571
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "rhino-flat",
+    "name": "Носорог",
+    "file": "rhino-flat.json",
+    "tags": [
+      "носорог",
+      "rhino",
+      "животное",
+      "саванна",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.7,
+      "widthM": 2.2666665952856073
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "hippo-flat",
+    "name": "Бегемот",
+    "file": "hippo-flat.json",
+    "tags": [
+      "бегемот",
+      "hippo",
+      "животное",
+      "саванна",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.5,
+      "widthM": 2.334497307824832
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "camel-flat",
+    "name": "Верблюд",
+    "file": "camel-flat.json",
+    "tags": [
+      "верблюд",
+      "camel",
+      "животное",
+      "пустыня",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 2.1,
+      "widthM": 2.177877076205388
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bear-flat",
+    "name": "Медведь",
+    "file": "bear-flat.json",
+    "tags": [
+      "медведь",
+      "bear",
+      "животное",
+      "лес",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.4,
+      "widthM": 1.5858738839962616
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "fox-flat",
+    "name": "Лиса",
+    "file": "fox-flat.json",
+    "tags": [
+      "лиса",
+      "fox",
+      "животное",
+      "лес",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.3877972417889301
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "wolf-flat",
+    "name": "Волк",
+    "file": "wolf-flat.json",
+    "tags": [
+      "волк",
+      "wolf",
+      "животное",
+      "лес",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.8,
+      "widthM": 0.8018406242523141
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "deer-flat",
+    "name": "Олень",
+    "file": "deer-flat.json",
+    "tags": [
+      "олень",
+      "deer",
+      "животное",
+      "лес",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.2,
+      "widthM": 1.2
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "turtle-flat",
+    "name": "Черепаха",
+    "file": "turtle-flat.json",
+    "tags": [
+      "черепаха",
+      "turtle",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.49412044862112464
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "crocodile-flat",
+    "name": "Крокодил",
+    "file": "crocodile-flat.json",
+    "tags": [
+      "крокодил",
+      "crocodile",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3.9853485531296045,
+      "widthM": 4
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "snake-flat",
+    "name": "Змея",
+    "file": "snake-flat.json",
+    "tags": [
+      "змея",
+      "snake",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.4997801831779207,
+      "widthM": 1.5
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "dolphin-flat",
+    "name": "Дельфин",
+    "file": "dolphin-flat.json",
+    "tags": [
+      "дельфин",
+      "dolphin",
+      "море",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3.1535256597394747,
+      "widthM": 2.5
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "shark-flat",
+    "name": "Акула",
+    "file": "shark-flat.json",
+    "tags": [
+      "акула",
+      "shark",
+      "море",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 4.000569034292277,
+      "widthM": 4
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "octopus-flat",
+    "name": "Осьминог",
+    "file": "octopus-flat.json",
+    "tags": [
+      "осьминог",
+      "octopus",
+      "море",
+      "животное",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.6,
+      "widthM": 0.6214524536644015
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "fish-flat",
+    "name": "Рыба",
+    "file": "fish-flat.json",
+    "tags": [
+      "рыба",
+      "fish",
+      "море",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.34679550394562914,
+      "widthM": 0.4
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tropical-fish-flat",
+    "name": "Тропическая рыбка",
+    "file": "tropical-fish-flat.json",
+    "tags": [
+      "рыбка",
+      "tropical",
+      "fish",
+      "море",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.123348340544007,
+      "widthM": 0.15
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "crab-flat",
+    "name": "Краб",
+    "file": "crab-flat.json",
+    "tags": [
+      "краб",
+      "crab",
+      "море",
+      "животное",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.17823694862916373,
+      "widthM": 0.2
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "butterfly-flat",
+    "name": "Бабочка",
+    "file": "butterfly-flat.json",
+    "tags": [
+      "бабочка",
+      "butterfly",
+      "насекомое",
+      "flat"
+    ],
+    "view": "top",
+    "realSize": {
+      "heightM": 0.06000063651161066,
+      "widthM": 0.06
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bee-flat",
+    "name": "Пчела",
+    "file": "bee-flat.json",
+    "tags": [
+      "пчела",
+      "bee",
+      "насекомое",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.013920120358701157,
+      "widthM": 0.015
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "ladybug-flat",
+    "name": "Божья коровка",
+    "file": "ladybug-flat.json",
+    "tags": [
+      "божья коровка",
+      "ladybug",
+      "насекомое",
+      "flat"
+    ],
+    "view": "top",
+    "realSize": {
+      "heightM": 0.008,
+      "widthM": 0.008001990442043645
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bird-flat",
+    "name": "Птица",
+    "file": "bird-flat.json",
+    "tags": [
+      "птица",
+      "bird",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.2,
+      "widthM": 0.19170105361128806
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "eagle-flat",
+    "name": "Орёл",
+    "file": "eagle-flat.json",
+    "tags": [
+      "орёл",
+      "eagle",
+      "птица",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.8,
+      "widthM": 1.1299404078158064
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "owl-flat",
+    "name": "Сова",
+    "file": "owl-flat.json",
+    "tags": [
+      "сова",
+      "owl",
+      "птица",
+      "животное",
+      "ночь",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.31428575777390555
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "duck-flat",
+    "name": "Утка",
+    "file": "duck-flat.json",
+    "tags": [
+      "утка",
+      "duck",
+      "птица",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.40004203547050543
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "swan-flat",
+    "name": "Лебедь",
+    "file": "swan-flat.json",
+    "tags": [
+      "лебедь",
+      "swan",
+      "птица",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.1,
+      "widthM": 1.1784689391501932
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "chicken-flat",
+    "name": "Курица",
+    "file": "chicken-flat.json",
+    "tags": [
+      "курица",
+      "chicken",
+      "птица",
+      "ферма",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.37876040402530103
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "rooster-flat",
+    "name": "Петух",
+    "file": "rooster-flat.json",
+    "tags": [
+      "петух",
+      "rooster",
+      "птица",
+      "ферма",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.6,
+      "widthM": 0.5786380877122289
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "penguin-flat",
+    "name": "Пингвин",
+    "file": "penguin-flat.json",
+    "tags": [
+      "пингвин",
+      "penguin",
+      "птица",
+      "животное",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.7,
+      "widthM": 0.7009291740506459
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "flamingo-flat",
+    "name": "Фламинго",
+    "file": "flamingo-flat.json",
+    "tags": [
+      "фламинго",
+      "flamingo",
+      "птица",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.4,
+      "widthM": 1.0982402072487234
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "parrot-flat",
+    "name": "Попугай",
+    "file": "parrot-flat.json",
+    "tags": [
+      "попугай",
+      "parrot",
+      "птица",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.35,
+      "widthM": 0.2994165370177895
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bat-flat",
+    "name": "Летучая мышь",
+    "file": "bat-flat.json",
+    "tags": [
+      "летучая мышь",
+      "bat",
+      "животное",
+      "ночь",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.30002188634859883,
+      "widthM": 0.3
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "dragon-flat",
+    "name": "Дракон",
+    "file": "dragon-flat.json",
+    "tags": [
+      "дракон",
+      "dragon",
+      "фэнтези",
+      "сказка",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 6.197749596443106,
+      "widthM": 6
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "unicorn-flat",
+    "name": "Единорог",
+    "file": "unicorn-flat.json",
+    "tags": [
+      "единорог",
+      "unicorn",
+      "фэнтези",
+      "сказка",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.7,
+      "widthM": 1.671150802184145
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "trex-flat",
+    "name": "Тираннозавр",
+    "file": "trex-flat.json",
+    "tags": [
+      "динозавр",
+      "тираннозавр",
+      "trex",
+      "dinosaur",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 4,
+      "widthM": 4.300605234155356
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "sauropod-flat",
+    "name": "Завропод",
+    "file": "sauropod-flat.json",
+    "tags": [
+      "динозавр",
+      "sauropod",
+      "dinosaur",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 6,
+      "widthM": 6.040558032503956
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "whale-flat",
+    "name": "Кит (плоский)",
+    "file": "whale-flat.json",
+    "tags": [
+      "кит",
+      "whale",
+      "море",
+      "животное",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 15.865548419933972,
+      "widthM": 15
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "whale-spout-flat",
+    "name": "Кит с фонтаном",
+    "file": "whale-spout-flat.json",
+    "tags": [
+      "кит",
+      "whale",
+      "фонтан",
+      "море",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 15.810922058738749,
+      "widthM": 15
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "house-flat",
+    "name": "Дом (плоский)",
+    "file": "house-flat.json",
+    "tags": [
+      "дом",
+      "house",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 7,
+      "widthM": 7.258855989482065
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "house-garden-flat",
+    "name": "Дом с садом",
+    "file": "house-garden-flat.json",
+    "tags": [
+      "дом",
+      "сад",
+      "house",
+      "garden",
+      "здание",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 7,
+      "widthM": 8.166671914818325
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "houses-flat",
+    "name": "Дома",
+    "file": "houses-flat.json",
+    "tags": [
+      "дома",
+      "houses",
+      "здания",
+      "город",
+      "улица",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 8,
+      "widthM": 9.268671882893004
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "office-flat",
+    "name": "Офисное здание",
+    "file": "office-flat.json",
+    "tags": [
+      "офис",
+      "office",
+      "здание",
+      "город",
+      "небоскрёб",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 40,
+      "widthM": 40.00000000000001
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "hospital-flat",
+    "name": "Больница",
+    "file": "hospital-flat.json",
+    "tags": [
+      "больница",
+      "hospital",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 15,
+      "widthM": 12.321428571428571
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "school-flat",
+    "name": "Школа",
+    "file": "school-flat.json",
+    "tags": [
+      "школа",
+      "school",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 12,
+      "widthM": 11.99571581578008
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bank-flat",
+    "name": "Банк",
+    "file": "bank-flat.json",
+    "tags": [
+      "банк",
+      "bank",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 12,
+      "widthM": 12.431782443807233
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "hotel-flat",
+    "name": "Отель",
+    "file": "hotel-flat.json",
+    "tags": [
+      "отель",
+      "hotel",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 25,
+      "widthM": 24.946740963965624
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "store-flat",
+    "name": "Универмаг",
+    "file": "store-flat.json",
+    "tags": [
+      "магазин",
+      "универмаг",
+      "store",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 14,
+      "widthM": 13
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "shop-flat",
+    "name": "Магазин",
+    "file": "shop-flat.json",
+    "tags": [
+      "магазин",
+      "shop",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 6,
+      "widthM": 6.719712115153937
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "post-office-flat",
+    "name": "Почта",
+    "file": "post-office-flat.json",
+    "tags": [
+      "почта",
+      "post",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 8,
+      "widthM": 8
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "factory-flat",
+    "name": "Завод",
+    "file": "factory-flat.json",
+    "tags": [
+      "завод",
+      "фабрика",
+      "factory",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 20,
+      "widthM": 20
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "stadium-flat",
+    "name": "Стадион",
+    "file": "stadium-flat.json",
+    "tags": [
+      "стадион",
+      "stadium",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 37.142857142857146,
+      "widthM": 40
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "church-flat",
+    "name": "Церковь",
+    "file": "church-flat.json",
+    "tags": [
+      "церковь",
+      "church",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 20,
+      "widthM": 20.028581636298682
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "classical-flat",
+    "name": "Здание с колоннами",
+    "file": "classical-flat.json",
+    "tags": [
+      "колонны",
+      "classical",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 15,
+      "widthM": 14.463182829333544
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "castle-flat",
+    "name": "Замок",
+    "file": "castle-flat.json",
+    "tags": [
+      "замок",
+      "castle",
+      "здание",
+      "сказка",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 30,
+      "widthM": 29.999309970594894
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "castle-japanese-flat",
+    "name": "Японский замок",
+    "file": "castle-japanese-flat.json",
+    "tags": [
+      "замок",
+      "япония",
+      "castle",
+      "здание",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 30,
+      "widthM": 30.000013273245777
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tower-flat",
+    "name": "Башня",
+    "file": "tower-flat.json",
+    "tags": [
+      "башня",
+      "tower",
+      "здание",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 333,
+      "widthM": 237.8571428545384
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "statue-liberty-flat",
+    "name": "Статуя Свободы",
+    "file": "statue-liberty-flat.json",
+    "tags": [
+      "статуя",
+      "statue",
+      "город",
+      "америка",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 93,
+      "widthM": 66.17527056114636
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "hut-flat",
+    "name": "Хижина",
+    "file": "hut-flat.json",
+    "tags": [
+      "хижина",
+      "hut",
+      "здание",
+      "деревня",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 3.5,
+      "widthM": 3.6205535600796024
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tent-flat",
+    "name": "Палатка",
+    "file": "tent-flat.json",
+    "tags": [
+      "палатка",
+      "tent",
+      "лагерь",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1.5,
+      "widthM": 1.7264804660430078
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "car-flat",
+    "name": "Машина",
+    "file": "car-flat.json",
+    "tags": [
+      "машина",
+      "автомобиль",
+      "car",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3.053571428571429,
+      "widthM": 4.5
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "taxi-flat",
+    "name": "Такси",
+    "file": "taxi-flat.json",
+    "tags": [
+      "такси",
+      "taxi",
+      "транспорт",
+      "город",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3.375,
+      "widthM": 4.5
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bus-flat",
+    "name": "Автобус",
+    "file": "bus-flat.json",
+    "tags": [
+      "автобус",
+      "bus",
+      "транспорт",
+      "город",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 9.428571428571429,
+      "widthM": 12
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "police-car-flat",
+    "name": "Полицейская машина",
+    "file": "police-car-flat.json",
+    "tags": [
+      "полиция",
+      "police",
+      "машина",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3.7712938823613444,
+      "widthM": 4.8
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "ambulance-flat",
+    "name": "Скорая помощь",
+    "file": "ambulance-flat.json",
+    "tags": [
+      "скорая",
+      "ambulance",
+      "машина",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 4.714285711076177,
+      "widthM": 6
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "fire-engine-flat",
+    "name": "Пожарная машина",
+    "file": "fire-engine-flat.json",
+    "tags": [
+      "пожарная",
+      "fire",
+      "машина",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 8.357142857142858,
+      "widthM": 9
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "truck-flat",
+    "name": "Грузовик",
+    "file": "truck-flat.json",
+    "tags": [
+      "грузовик",
+      "truck",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 5.75,
+      "widthM": 7
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "lorry-flat",
+    "name": "Фура",
+    "file": "lorry-flat.json",
+    "tags": [
+      "фура",
+      "lorry",
+      "грузовик",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 13.142870684277417,
+      "widthM": 16
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tractor-flat",
+    "name": "Трактор",
+    "file": "tractor-flat.json",
+    "tags": [
+      "трактор",
+      "tractor",
+      "ферма",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 3.2859692966797573,
+      "widthM": 4
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "racing-car-flat",
+    "name": "Гоночная машина",
+    "file": "racing-car-flat.json",
+    "tags": [
+      "гонки",
+      "racing",
+      "машина",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.9642857142857144,
+      "widthM": 5
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "motorcycle-flat",
+    "name": "Мотоцикл",
+    "file": "motorcycle-flat.json",
+    "tags": [
+      "мотоцикл",
+      "motorcycle",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.471498562865492,
+      "widthM": 2.2
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bicycle-flat",
+    "name": "Велосипед",
+    "file": "bicycle-flat.json",
+    "tags": [
+      "велосипед",
+      "bicycle",
+      "bike",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.35,
+      "widthM": 1.8
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "scooter-flat",
+    "name": "Самокат",
+    "file": "scooter-flat.json",
+    "tags": [
+      "самокат",
+      "scooter",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.8928571428571428,
+      "widthM": 1
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "plane-flat",
+    "name": "Самолёт (сверху, по диагонали)",
+    "file": "plane-flat.json",
+    "tags": [
+      "самолёт",
+      "plane",
+      "airplane",
+      "транспорт",
+      "авиация",
+      "flat"
+    ],
+    "view": "top",
+    "realSize": {
+      "heightM": 34.99892758654932,
+      "widthM": 35
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "helicopter-flat",
+    "name": "Вертолёт",
+    "file": "helicopter-flat.json",
+    "tags": [
+      "вертолёт",
+      "helicopter",
+      "транспорт",
+      "авиация",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 12.036154219337313,
+      "widthM": 13
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "rocket-flat",
+    "name": "Ракета (по диагонали)",
+    "file": "rocket-flat.json",
+    "tags": [
+      "ракета",
+      "rocket",
+      "космос",
+      "транспорт",
+      "flat"
+    ],
+    "view": "three-quarter",
+    "realSize": {
+      "heightM": 50,
+      "widthM": 50.71986420546067
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "ufo-flat",
+    "name": "НЛО",
+    "file": "ufo-flat.json",
+    "tags": [
+      "нло",
+      "ufo",
+      "тарелка",
+      "космос",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 8.39748075577327,
+      "widthM": 10
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "ship-flat",
+    "name": "Корабль",
+    "file": "ship-flat.json",
+    "tags": [
+      "корабль",
+      "ship",
+      "море",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 139.2360543953561,
+      "widthM": 150
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "sailboat-flat",
+    "name": "Парусник",
+    "file": "sailboat-flat.json",
+    "tags": [
+      "парусник",
+      "sailboat",
+      "море",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 8,
+      "widthM": 8.002857142857144
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "speedboat-flat",
+    "name": "Катер",
+    "file": "speedboat-flat.json",
+    "tags": [
+      "катер",
+      "speedboat",
+      "море",
+      "транспорт",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 4.249583898959017,
+      "widthM": 7
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "train-flat",
+    "name": "Поезд (спереди)",
+    "file": "train-flat.json",
+    "tags": [
+      "поезд",
+      "train",
+      "транспорт",
+      "железная дорога",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 4,
+      "widthM": 2.8571428388686066
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "locomotive-flat",
+    "name": "Паровоз",
+    "file": "locomotive-flat.json",
+    "tags": [
+      "паровоз",
+      "locomotive",
+      "транспорт",
+      "железная дорога",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 18.571570849374286,
+      "widthM": 20
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tram-flat",
+    "name": "Трамвай (спереди)",
+    "file": "tram-flat.json",
+    "tags": [
+      "трамвай",
+      "tram",
+      "транспорт",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 3.5,
+      "widthM": 2.3323716565110897
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tree-flat",
+    "name": "Дерево",
+    "file": "tree-flat.json",
+    "tags": [
+      "дерево",
+      "tree",
+      "природа",
+      "лес",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 8,
+      "widthM": 6.566738044254104
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "pine-flat",
+    "name": "Ель",
+    "file": "pine-flat.json",
+    "tags": [
+      "ель",
+      "сосна",
+      "pine",
+      "tree",
+      "дерево",
+      "природа",
+      "лес",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 10,
+      "widthM": 7.500014707784786
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "palm-flat",
+    "name": "Пальма",
+    "file": "palm-flat.json",
+    "tags": [
+      "пальма",
+      "palm",
+      "дерево",
+      "природа",
+      "пляж",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 8,
+      "widthM": 7.00058972126915
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "xmas-tree-flat",
+    "name": "Новогодняя ёлка",
+    "file": "xmas-tree-flat.json",
+    "tags": [
+      "ёлка",
+      "елка",
+      "christmas",
+      "tree",
+      "новый год",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 3,
+      "widthM": 1.9294008023274725
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "cactus-flat",
+    "name": "Кактус",
+    "file": "cactus-flat.json",
+    "tags": [
+      "кактус",
+      "cactus",
+      "природа",
+      "пустыня",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1.5,
+      "widthM": 1.3928571428571428
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "sunflower-flat",
+    "name": "Подсолнух",
+    "file": "sunflower-flat.json",
+    "tags": [
+      "подсолнух",
+      "sunflower",
+      "цветок",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1.8,
+      "widthM": 1.4186458241434077
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "rose-flat",
+    "name": "Роза",
+    "file": "rose-flat.json",
+    "tags": [
+      "роза",
+      "rose",
+      "цветок",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.6,
+      "widthM": 0.34287624176879355
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tulip-flat",
+    "name": "Тюльпан",
+    "file": "tulip-flat.json",
+    "tags": [
+      "тюльпан",
+      "tulip",
+      "цветок",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.2585133650677407
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "sakura-flat",
+    "name": "Сакура",
+    "file": "sakura-flat.json",
+    "tags": [
+      "сакура",
+      "цветок",
+      "sakura",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.14477493098081634,
+      "widthM": 0.15
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "mushroom-flat",
+    "name": "Гриб",
+    "file": "mushroom-flat.json",
+    "tags": [
+      "гриб",
+      "mushroom",
+      "природа",
+      "лес",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.15,
+      "widthM": 0.1499999653260564
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "maple-leaf-flat",
+    "name": "Кленовый лист",
+    "file": "maple-leaf-flat.json",
+    "tags": [
+      "лист",
+      "кленовый",
+      "leaf",
+      "осень",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.15,
+      "widthM": 0.1495116869350946
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "clover-flat",
+    "name": "Клевер",
+    "file": "clover-flat.json",
+    "tags": [
+      "клевер",
+      "clover",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.05,
+      "widthM": 0.03949662617024656
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "plant-pot-flat",
+    "name": "Комнатное растение",
+    "file": "plant-pot-flat.json",
+    "tags": [
+      "растение",
+      "цветок",
+      "plant",
+      "комната",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.6,
+      "widthM": 0.38608875127010833
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "mountain-flat",
+    "name": "Гора",
+    "file": "mountain-flat.json",
+    "tags": [
+      "гора",
+      "mountain",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1858.0771617740513,
+      "widthM": 2000
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "mountain-snow-flat",
+    "name": "Заснеженная гора",
+    "file": "mountain-snow-flat.json",
+    "tags": [
+      "гора",
+      "снег",
+      "mountain",
+      "snow",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 2788.0694884767577,
+      "widthM": 3000
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "volcano-flat",
+    "name": "Вулкан",
+    "file": "volcano-flat.json",
+    "tags": [
+      "вулкан",
+      "volcano",
+      "природа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1750.0855400717505,
+      "widthM": 1500
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "sun-flat",
+    "name": "Солнце",
+    "file": "sun-flat.json",
+    "tags": [
+      "солнце",
+      "sun",
+      "небо",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 4,
+      "widthM": 3.845643388405675
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "moon-full-flat",
+    "name": "Полная луна",
+    "file": "moon-full-flat.json",
+    "tags": [
+      "луна",
+      "moon",
+      "небо",
+      "ночь",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 4,
+      "widthM": 4
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "moon-crescent-flat",
+    "name": "Месяц",
+    "file": "moon-crescent-flat.json",
+    "tags": [
+      "месяц",
+      "луна",
+      "moon",
+      "небо",
+      "ночь",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 4,
+      "widthM": 4.192714237884421
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "star-flat",
+    "name": "Звезда",
+    "file": "star-flat.json",
+    "tags": [
+      "звезда",
+      "star",
+      "небо",
+      "ночь",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1,
+      "widthM": 1.0768760988188488
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "cloud-flat",
+    "name": "Облако",
+    "file": "cloud-flat.json",
+    "tags": [
+      "облако",
+      "cloud",
+      "небо",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 66.6793064593848,
+      "widthM": 100
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "cloud-rain-flat",
+    "name": "Облако с дождём",
+    "file": "cloud-rain-flat.json",
+    "tags": [
+      "облако",
+      "дождь",
+      "cloud",
+      "rain",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 86.66949765164215,
+      "widthM": 100
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "cloud-snow-flat",
+    "name": "Облако со снегом",
+    "file": "cloud-snow-flat.json",
+    "tags": [
+      "облако",
+      "снег",
+      "cloud",
+      "snow",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 96.75141317672721,
+      "widthM": 100
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "cloud-lightning-flat",
+    "name": "Облако с молнией",
+    "file": "cloud-lightning-flat.json",
+    "tags": [
+      "облако",
+      "молния",
+      "гроза",
+      "cloud",
+      "lightning",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 92.78256639536917,
+      "widthM": 100
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "rainbow-flat",
+    "name": "Радуга",
+    "file": "rainbow-flat.json",
+    "tags": [
+      "радуга",
+      "rainbow",
+      "небо",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 300.0859177072703,
+      "widthM": 300
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "snowflake-flat",
+    "name": "Снежинка",
+    "file": "snowflake-flat.json",
+    "tags": [
+      "снежинка",
+      "snowflake",
+      "зима",
+      "погода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.02,
+      "widthM": 0.019277540507679634
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "fire-flat",
+    "name": "Огонь",
+    "file": "fire-flat.json",
+    "tags": [
+      "огонь",
+      "костёр",
+      "fire",
+      "пламя",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1,
+      "widthM": 0.7500139778817
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "droplet-flat",
+    "name": "Капля",
+    "file": "droplet-flat.json",
+    "tags": [
+      "капля",
+      "droplet",
+      "вода",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.01,
+      "widthM": 0.007143456731830572
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "comet-flat",
+    "name": "Комета",
+    "file": "comet-flat.json",
+    "tags": [
+      "комета",
+      "comet",
+      "космос",
+      "небо",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 500.0938898316669,
+      "widthM": 500
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "planet-ringed-flat",
+    "name": "Планета с кольцом",
+    "file": "planet-ringed-flat.json",
+    "tags": [
+      "планета",
+      "сатурн",
+      "planet",
+      "космос",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 100000,
+      "widthM": 100203.2367411578
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "fountain-flat",
+    "name": "Фонтан",
+    "file": "fountain-flat.json",
+    "tags": [
+      "фонтан",
+      "fountain",
+      "город",
+      "парк",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 4,
+      "widthM": 3.83846367026644
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "ferris-wheel-flat",
+    "name": "Колесо обозрения",
+    "file": "ferris-wheel-flat.json",
+    "tags": [
+      "колесо обозрения",
+      "ferris",
+      "парк",
+      "город",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 50,
+      "widthM": 46.56188605108054
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "carousel-horse-flat",
+    "name": "Карусельная лошадка",
+    "file": "carousel-horse-flat.json",
+    "tags": [
+      "карусель",
+      "лошадка",
+      "carousel",
+      "парк",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.5,
+      "widthM": 1.4994881948729686
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "circus-tent-flat",
+    "name": "Цирк-шапито",
+    "file": "circus-tent-flat.json",
+    "tags": [
+      "цирк",
+      "шапито",
+      "circus",
+      "tent",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 15,
+      "widthM": 13.958210699613083
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "traffic-light-flat",
+    "name": "Светофор",
+    "file": "traffic-light-flat.json",
+    "tags": [
+      "светофор",
+      "traffic light",
+      "город",
+      "улица",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 3,
+      "widthM": 1.285714285714286
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "stop-sign-flat",
+    "name": "Знак стоп",
+    "file": "stop-sign-flat.json",
+    "tags": [
+      "знак",
+      "стоп",
+      "stop",
+      "sign",
+      "улица",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 2.5,
+      "widthM": 2.5
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "door-flat",
+    "name": "Дверь",
+    "file": "door-flat.json",
+    "tags": [
+      "дверь",
+      "door",
+      "комната",
+      "дом",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 2,
+      "widthM": 1.1428571428571428
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "window-flat",
+    "name": "Окно",
+    "file": "window-flat.json",
+    "tags": [
+      "окно",
+      "window",
+      "комната",
+      "дом",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1.4,
+      "widthM": 1.4
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "couch-lamp-flat",
+    "name": "Диван с лампой",
+    "file": "couch-lamp-flat.json",
+    "tags": [
+      "диван",
+      "лампа",
+      "couch",
+      "комната",
+      "мебель",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1,
+      "widthM": 0.9758771929824561
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bed-flat",
+    "name": "Кровать",
+    "file": "bed-flat.json",
+    "tags": [
+      "кровать",
+      "bed",
+      "комната",
+      "мебель",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 1.4285714285714286,
+      "widthM": 2
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "chair-flat",
+    "name": "Стул",
+    "file": "chair-flat.json",
+    "tags": [
+      "стул",
+      "chair",
+      "комната",
+      "мебель",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.9,
+      "widthM": 0.6193738996479677
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "tv-flat",
+    "name": "Телевизор",
+    "file": "tv-flat.json",
+    "tags": [
+      "телевизор",
+      "tv",
+      "комната",
+      "техника",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.5,
+      "widthM": 0.46618084992689035
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "laptop-flat",
+    "name": "Ноутбук",
+    "file": "laptop-flat.json",
+    "tags": [
+      "ноутбук",
+      "laptop",
+      "компьютер",
+      "техника",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.25,
+      "widthM": 0.24999770201920835
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "computer-flat",
+    "name": "Компьютер",
+    "file": "computer-flat.json",
+    "tags": [
+      "компьютер",
+      "computer",
+      "pc",
+      "техника",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.45,
+      "widthM": 0.4500000000000001
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "keyboard-flat",
+    "name": "Клавиатура",
+    "file": "keyboard-flat.json",
+    "tags": [
+      "клавиатура",
+      "keyboard",
+      "компьютер",
+      "техника",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3053571428571429,
+      "widthM": 0.45
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "mouse-pc-flat",
+    "name": "Компьютерная мышь",
+    "file": "mouse-pc-flat.json",
+    "tags": [
+      "мышь",
+      "mouse",
+      "компьютер",
+      "техника",
+      "flat"
+    ],
+    "view": "top",
+    "realSize": {
+      "heightM": 0.11,
+      "widthM": 0.07071428571428572
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "phone-flat",
+    "name": "Телефон",
+    "file": "phone-flat.json",
+    "tags": [
+      "телефон",
+      "phone",
+      "смартфон",
+      "техника",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.15,
+      "widthM": 0.10178571428571428
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "joystick-flat",
+    "name": "Джойстик",
+    "file": "joystick-flat.json",
+    "tags": [
+      "джойстик",
+      "joystick",
+      "игры",
+      "техника",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.15,
+      "widthM": 0.12857341463350716
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "gamepad-flat",
+    "name": "Геймпад",
+    "file": "gamepad-flat.json",
+    "tags": [
+      "геймпад",
+      "gamepad",
+      "игры",
+      "техника",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.11784767072478548,
+      "widthM": 0.15
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "floppy-flat",
+    "name": "Дискета",
+    "file": "floppy-flat.json",
+    "tags": [
+      "дискета",
+      "floppy",
+      "компьютер",
+      "техника",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.09,
+      "widthM": 0.0899999732210344
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "robot-flat",
+    "name": "Робот",
+    "file": "robot-flat.json",
+    "tags": [
+      "робот",
+      "robot",
+      "техника",
+      "будущее",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1.7,
+      "widthM": 1.703091296818347
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bulb-flat",
+    "name": "Лампочка",
+    "file": "bulb-flat.json",
+    "tags": [
+      "лампочка",
+      "идея",
+      "bulb",
+      "idea",
+      "техника",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.1,
+      "widthM": 0.062086877520889386
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bug-flat",
+    "name": "Гусеница (баг)",
+    "file": "bug-flat.json",
+    "tags": [
+      "баг",
+      "жук",
+      "гусеница",
+      "bug",
+      "насекомое",
+      "программирование",
+      "flat"
+    ],
+    "view": "side",
+    "realSize": {
+      "heightM": 0.027914886816190587,
+      "widthM": 0.03
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "coffee-flat",
+    "name": "Кофе",
+    "file": "coffee-flat.json",
+    "tags": [
+      "кофе",
+      "чай",
+      "coffee",
+      "напиток",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.1,
+      "widthM": 0.09628276135331845
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "pizza-flat",
+    "name": "Пицца",
+    "file": "pizza-flat.json",
+    "tags": [
+      "пицца",
+      "pizza",
+      "еда",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.33824171343971865,
+      "widthM": 0.3
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bar-chart-flat",
+    "name": "График-столбцы",
+    "file": "bar-chart-flat.json",
+    "tags": [
+      "график",
+      "диаграмма",
+      "chart",
+      "отчёт",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.30000000108566094
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "chart-up-flat",
+    "name": "График вверх",
+    "file": "chart-up-flat.json",
+    "tags": [
+      "график",
+      "рост",
+      "chart",
+      "отчёт",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.3000000150529734
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "money-bag-flat",
+    "name": "Мешок денег",
+    "file": "money-bag-flat.json",
+    "tags": [
+      "деньги",
+      "money",
+      "мешок",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.3384422666948365
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "briefcase-flat",
+    "name": "Портфель",
+    "file": "briefcase-flat.json",
+    "tags": [
+      "портфель",
+      "briefcase",
+      "работа",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.3360401843866925
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "books-flat",
+    "name": "Книги",
+    "file": "books-flat.json",
+    "tags": [
+      "книги",
+      "books",
+      "учёба",
+      "комната",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.32307681313631414
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "gift-flat",
+    "name": "Подарок",
+    "file": "gift-flat.json",
+    "tags": [
+      "подарок",
+      "gift",
+      "праздник",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.27856887336289166
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "balloon-flat",
+    "name": "Воздушный шарик",
+    "file": "balloon-flat.json",
+    "tags": [
+      "шарик",
+      "balloon",
+      "праздник",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.3,
+      "widthM": 0.2149126611094952
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "trophy-flat",
+    "name": "Кубок",
+    "file": "trophy-flat.json",
+    "tags": [
+      "кубок",
+      "trophy",
+      "награда",
+      "игры",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.4,
+      "widthM": 0.32947531058851304
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "crown-flat",
+    "name": "Корона",
+    "file": "crown-flat.json",
+    "tags": [
+      "корона",
+      "crown",
+      "сказка",
+      "король",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.16310670197669402,
+      "widthM": 0.2
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "key-flat",
+    "name": "Ключ",
+    "file": "key-flat.json",
+    "tags": [
+      "ключ",
+      "key",
+      "предмет",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.1,
+      "widthM": 0.10005705665004522
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "bell-flat",
+    "name": "Колокольчик",
+    "file": "bell-flat.json",
+    "tags": [
+      "колокольчик",
+      "bell",
+      "предмет",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.1,
+      "widthM": 0.09285722682350026
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "alarm-clock-flat",
+    "name": "Будильник",
+    "file": "alarm-clock-flat.json",
+    "tags": [
+      "будильник",
+      "часы",
+      "clock",
+      "комната",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.15,
+      "widthM": 0.13392790393976847
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "umbrella-flat",
+    "name": "Зонт",
+    "file": "umbrella-flat.json",
+    "tags": [
+      "зонт",
+      "umbrella",
+      "дождь",
+      "предмет",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 0.9,
+      "widthM": 0.8987126785737376
+    },
+    "license": "MIT",
+    "attribution": true
+  },
+  {
+    "id": "guitar-flat",
+    "name": "Гитара",
+    "file": "guitar-flat.json",
+    "tags": [
+      "гитара",
+      "guitar",
+      "музыка",
+      "flat"
+    ],
+    "view": "front",
+    "realSize": {
+      "heightM": 1,
+      "widthM": 1.0073507720517543
+    },
+    "license": "MIT",
+    "attribution": true
   }
 ]

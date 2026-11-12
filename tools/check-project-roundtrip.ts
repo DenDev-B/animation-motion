@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { buildProjectPrompt, PROJECT_PROMPT_MAX_BYTES, splitReply, validateProjectReply, type CatalogEntry } from '../engine/ai-project.ts';
+import { buildProjectPrompt, CATALOG_MAX_LINES, PROJECT_PROMPT_MAX_BYTES, splitReply, validateProjectReply, type CatalogEntry } from '../engine/ai-project.ts';
 import { readCatalogIds } from './catalog-ids.ts';
 
 let errors = 0;
@@ -17,7 +17,14 @@ for (const format of ['16:9', '9:16'] as const) {
   const prompt = buildProjectPrompt({ idea: 'Что если бы киты летали над городом', format, scenes: 5, sceneSeconds: 8, catalogIndex });
   const bytes = Buffer.byteLength(prompt, 'utf8');
   if (bytes > PROJECT_PROMPT_MAX_BYTES) fail(`промт ${format} ${bytes} байт > ${PROJECT_PROMPT_MAX_BYTES}`);
-  for (const e of catalogIndex) if (!prompt.includes(`- ${e.id} |`)) fail(`в промте нет модели ${e.id}`);
+  const catalogLines = prompt.split('\n').filter((line) => /^- [a-z0-9_-]+ \| /.test(line));
+  if (catalogIndex.length <= CATALOG_MAX_LINES) {
+    for (const e of catalogIndex) if (!prompt.includes(`- ${e.id} |`)) fail(`в промте нет модели ${e.id}`);
+  } else {
+    // большой каталог: в промт идут только подходящие идее строки (не больше CATALOG_MAX_LINES), остальное экономит промт
+    if (catalogLines.length > CATALOG_MAX_LINES) fail(`в промте ${catalogLines.length} строк каталога, лимит ${CATALOG_MAX_LINES}`);
+    for (const id of ['whale']) if (!prompt.includes(`- ${id} |`)) fail(`в промте нет модели ${id}, хотя идея про китов`);
+  }
   for (const must of ['unitsPerMeter', 'sizeM', 'suggestions', 'transition', 'skyline', 'swim', 'crossfade', 'Что если бы киты летали над городом']) if (!prompt.includes(must)) fail(`в промте нет «${must}»`);
   if (/\d+\.\d{4,}/.test(prompt)) fail('в промте есть числа с >=4 знаками после запятой');
 }

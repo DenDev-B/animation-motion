@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "droplet-flat",
+  "name": "Капля",
+  "bounds": [
+    -71.43,
+    -100,
+    142.87,
+    200
+  ],
+  "realSize": {
+    "heightM": 0.01,
+    "widthM": 0.007143456731830572
+  },
+  "meta": {
+    "view": "front",
+    "tags": [
+      "капля",
+      "droplet",
+      "вода",
+      "flat"
+    ],
+    "license": {
+      "name": "MIT",
+      "author": "Microsoft Corporation",
+      "source": "Fluent Emoji Flat (Iconify)",
+      "url": "https://github.com/microsoft/fluentui-emoji/blob/main/LICENSE",
+      "attribution": true
+    }
+  },
+  "parts": [
+    {
+      "id": "p1",
+      "name": "Часть 1",
+      "fill": "#26c9fc",
+      "d": "M 16.22 -90.09 C 9.14 -103.3 -9.95 -103.3 -16.95 -90.09 L -61.76 -5.8 C -89.21 41.21 -54.98 100 -0.23 100 L 1.27 100 C 55.23 100 88.89 42.14 61.95 -4.15 Z"
+    }
+  ]
+}
