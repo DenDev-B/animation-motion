@@ -1,15 +1,15 @@
-import { renderFrame, createRenderCache, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
+import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
-import { STYLE_PRESETS } from '../engine/styles.ts';
+import { STYLE_MOODS, STYLE_PRESETS, type StyleMood } from '../engine/styles.ts';
 import { SAFE_ZONES } from '../engine/spec.ts';
 import { EDITOR_STRINGS } from './strings.ts';
 import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, formatModelJson, previewAssetFor, catalogWithDraft, type CheckModelJsonResult, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import catalogIndexRaw from '../catalog/index.json';
-import type { CatalogAsset, Palette } from '../engine/schema.ts';
+import type { CameraShot, CameraShotName, CatalogAsset, Palette } from '../engine/schema.ts';
 import { EditorHistory } from './history.ts';
 import { applyTargetJson, targetJson, validateTargetJson, type JsonScope, type JsonTarget } from './json-patch.ts';
 
@@ -51,6 +51,26 @@ const panelSplice = document.getElementById('panelSplice') as HTMLElement | null
 const panelCatalog = document.getElementById('panelCatalog') as HTMLElement | null;
 const layerList = document.getElementById('layerList') as HTMLElement | null;
 const sceneOrder = document.getElementById('sceneOrder') as HTMLElement | null;
+// Панель «Образ сцены»
+const sceneLookTitleText = document.getElementById('sceneLookTitleText') as HTMLElement | null;
+const lookStyleText = document.getElementById('lookStyleText') as HTMLElement | null;
+const lookStyleSelect = document.getElementById('lookStyle') as HTMLSelectElement | null;
+const lookMoodText = document.getElementById('lookMoodText') as HTMLElement | null;
+const lookMoodSelect = document.getElementById('lookMood') as HTMLSelectElement | null;
+const lookStyleDesc = document.getElementById('lookStyleDesc') as HTMLElement | null;
+const lookApplyStyleBtn = document.getElementById('lookApplyStyle') as HTMLButtonElement | null;
+const lookApplyStyleAllBtn = document.getElementById('lookApplyStyleAll') as HTMLButtonElement | null;
+const lookShotText = document.getElementById('lookShotText') as HTMLElement | null;
+const lookShotSelect = document.getElementById('lookShot') as HTMLSelectElement | null;
+const lookShotT0Text = document.getElementById('lookShotT0Text') as HTMLElement | null;
+const lookShotT0 = document.getElementById('lookShotT0') as HTMLInputElement | null;
+const lookShotDurText = document.getElementById('lookShotDurText') as HTMLElement | null;
+const lookShotDur = document.getElementById('lookShotDur') as HTMLInputElement | null;
+const lookShotStrengthText = document.getElementById('lookShotStrengthText') as HTMLElement | null;
+const lookShotStrength = document.getElementById('lookShotStrength') as HTMLInputElement | null;
+const lookApplyShotBtn = document.getElementById('lookApplyShot') as HTMLButtonElement | null;
+const lookRemoveShotBtn = document.getElementById('lookRemoveShot') as HTMLButtonElement | null;
+const lookNoteText = document.getElementById('lookNoteText') as HTMLElement | null;
 const projectPreviewEl = document.getElementById('projectPreview') as HTMLCanvasElement | null;
 const projectScrub = document.getElementById('projectScrub') as HTMLInputElement | null;
 const projectTime = document.getElementById('projectTime') as HTMLElement | null;
@@ -2061,6 +2081,120 @@ if (resetBtn) resetBtn.onclick = () => {
 
 document.getElementById('undo')?.addEventListener('click', undoChange);
 document.getElementById('redo')?.addEventListener('click', redoChange);
+
+// ---------- панель «Образ сцены» ----------
+const lookMoodLabels: Record<StyleMood, string> = {
+  dawn: EDITOR_STRINGS.lookMoodDawn,
+  day: EDITOR_STRINGS.lookMoodDay,
+  dusk: EDITOR_STRINGS.lookMoodDusk,
+  night: EDITOR_STRINGS.lookMoodNight,
+};
+function lookShotLabel(name: string): string {
+  return EDITOR_STRINGS.cameraShots[name as keyof typeof EDITOR_STRINGS.cameraShots] ?? name;
+}
+function updateLookStyleDesc() {
+  if (!lookStyleDesc) return;
+  const preset = STYLE_PRESETS.find((item) => item.id === lookStyleSelect?.value);
+  lookStyleDesc.textContent = preset?.description ?? '';
+}
+function initSceneLookPanel() {
+  if (sceneLookTitleText) sceneLookTitleText.textContent = EDITOR_STRINGS.sceneLookTitle;
+  if (lookStyleText) lookStyleText.textContent = EDITOR_STRINGS.lookStyleLabel;
+  if (lookMoodText) lookMoodText.textContent = EDITOR_STRINGS.lookMoodLabel;
+  if (lookShotText) lookShotText.textContent = EDITOR_STRINGS.lookShotLabel;
+  if (lookShotT0Text) lookShotT0Text.textContent = EDITOR_STRINGS.lookShotT0Label;
+  if (lookShotDurText) lookShotDurText.textContent = EDITOR_STRINGS.lookShotDurationLabel;
+  if (lookShotStrengthText) lookShotStrengthText.textContent = EDITOR_STRINGS.lookShotStrengthLabel;
+  if (lookApplyStyleBtn) lookApplyStyleBtn.textContent = EDITOR_STRINGS.lookApplyStyle;
+  if (lookApplyStyleAllBtn) lookApplyStyleAllBtn.textContent = EDITOR_STRINGS.lookApplyStyleAll;
+  if (lookApplyShotBtn) lookApplyShotBtn.textContent = EDITOR_STRINGS.lookApplyShot;
+  if (lookRemoveShotBtn) lookRemoveShotBtn.textContent = EDITOR_STRINGS.lookRemoveShot;
+  if (lookNoteText) lookNoteText.textContent = EDITOR_STRINGS.lookPaletteNote;
+  if (lookStyleSelect) {
+    for (const preset of STYLE_PRESETS) {
+      const option = document.createElement('option');
+      option.value = preset.id;
+      option.textContent = preset.name;
+      lookStyleSelect.appendChild(option);
+    }
+    lookStyleSelect.addEventListener('change', updateLookStyleDesc);
+    updateLookStyleDesc();
+  }
+  if (lookMoodSelect) {
+    for (const mood of STYLE_MOODS) {
+      const option = document.createElement('option');
+      option.value = mood;
+      option.textContent = lookMoodLabels[mood];
+      lookMoodSelect.appendChild(option);
+    }
+  }
+  if (lookShotSelect) {
+    for (const name of CAMERA_SHOT_NAMES) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = lookShotLabel(name);
+      lookShotSelect.appendChild(option);
+    }
+  }
+}
+function lookStyleChoice(): { styleId: string; mood: StyleMood } {
+  return { styleId: lookStyleSelect?.value ?? '', mood: (lookMoodSelect?.value ?? 'day') as StyleMood };
+}
+function lookFieldNumber(input: HTMLInputElement | null): number | undefined {
+  const raw = (input?.value ?? '').trim();
+  if (!raw) return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : Number.NaN;
+}
+function applyLookStyleToScene(index: number): { ok: true; scene: SceneV1 } | { ok: false; message: string } {
+  const entry = project.scenes[index];
+  if (!entry) return { ok: false, message: `нет сцены №${index + 1}` };
+  const { styleId, mood } = lookStyleChoice();
+  const result = applySceneStyle(entry.scene, styleId, mood);
+  return result.ok ? { ok: true, scene: result.value } : { ok: false, message: result.message };
+}
+function onLookApplyStyle() {
+  const result = applyLookStyleToScene(activeSceneIndex);
+  if (!result.ok) { showErrors([{ path: 'style', message: result.message }]); return; }
+  applyChange('scene-style', () => { project.scenes[activeSceneIndex].scene = result.scene; });
+}
+function onLookApplyStyleAll() {
+  const results = project.scenes.map((_, index) => applyLookStyleToScene(index));
+  const failed = results.find((result) => !result.ok);
+  if (failed && !failed.ok) { showErrors([{ path: 'style', message: failed.message }]); return; }
+  applyChange('scene-style-all', () => {
+    project.scenes.forEach((entry, index) => {
+      const result = results[index];
+      if (result && result.ok) entry.scene = result.scene;
+    });
+  });
+}
+function onLookApplyShot() {
+  const entry = project.scenes[activeSceneIndex];
+  if (!entry) return;
+  const shot: CameraShot = { name: (lookShotSelect?.value ?? 'static') as CameraShotName };
+  const t0 = lookFieldNumber(lookShotT0);
+  if (t0 !== undefined) shot.t0 = t0;
+  const duration = lookFieldNumber(lookShotDur);
+  if (duration !== undefined) shot.duration = duration;
+  const strength = lookFieldNumber(lookShotStrength);
+  if (strength !== undefined) shot.strength = strength;
+  const keys = entry.scene.camera.keys.length;
+  if (keys > 0 && !confirm(EDITOR_STRINGS.lookKeysConfirm.replace('{count}', String(keys)))) return;
+  const result = setSceneShot(entry.scene, shot);
+  if (!result.ok) { showErrors([{ path: 'camera.shot', message: result.message }]); return; }
+  applyChange('scene-shot', () => { project.scenes[activeSceneIndex].scene = result.value.scene; });
+}
+function onLookRemoveShot() {
+  const result = setSceneShot(project.scenes[activeSceneIndex].scene, null);
+  if (!result.ok) { showErrors([{ path: 'camera.shot', message: result.message }]); return; }
+  applyChange('scene-shot-remove', () => { project.scenes[activeSceneIndex].scene = result.value.scene; });
+}
+initSceneLookPanel();
+if (lookApplyStyleBtn) lookApplyStyleBtn.onclick = onLookApplyStyle;
+if (lookApplyStyleAllBtn) lookApplyStyleAllBtn.onclick = onLookApplyStyleAll;
+if (lookApplyShotBtn) lookApplyShotBtn.onclick = onLookApplyShot;
+if (lookRemoveShotBtn) lookRemoveShotBtn.onclick = onLookRemoveShot;
 
 syncScopeRow();
 renderTemplates();

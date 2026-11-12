@@ -103,6 +103,29 @@
         <div id="sceneTabs" class="tabs" style="margin-bottom:8px"></div>
         <div class="btns"><button id="duplicateScene">Дублировать</button></div>
         <div id="projectDuration" class="hint"></div>
+        <div id="sceneLookPanel">
+          <h3 class="subhead"><span id="sceneLookTitleText"></span></h3>
+          <div class="bar">
+            <label class="f"><span id="lookStyleText"></span><select id="lookStyle"></select></label>
+            <label class="f"><span id="lookMoodText"></span><select id="lookMood"></select></label>
+          </div>
+          <div id="lookStyleDesc" class="hint" style="margin-top:4px"></div>
+          <div class="btns">
+            <button id="lookApplyStyle"></button>
+            <button id="lookApplyStyleAll"></button>
+          </div>
+          <div class="bar" style="margin-top:8px">
+            <label class="f"><span id="lookShotText"></span><select id="lookShot"></select></label>
+            <label class="f"><span id="lookShotT0Text"></span><input id="lookShotT0" type="number" min="0" step="0.1" placeholder="0" style="width:72px"></label>
+            <label class="f"><span id="lookShotDurText"></span><input id="lookShotDur" type="number" min="0" step="0.1" style="width:72px"></label>
+            <label class="f"><span id="lookShotStrengthText"></span><input id="lookShotStrength" type="number" min="0.1" max="3" step="0.1" value="1" style="width:72px"></label>
+          </div>
+          <div class="btns">
+            <button id="lookApplyShot" class="primary"></button>
+            <button id="lookRemoveShot"></button>
+          </div>
+          <p id="lookNoteText" class="hint" style="margin:8px 0 0"></p>
+        </div>
         <div class="hint" style="margin-top:8px">Превью текущей сцены — слева.</div>
         <h3 class="subhead">Слои и объекты</h3>
         <div id="layerList" class="layerlist"></div>
