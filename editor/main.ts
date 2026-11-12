@@ -178,6 +178,11 @@ const briefWarnEl = document.getElementById('briefWarnings') as HTMLUListElement
 const ideaAuto = document.getElementById('ideaAuto') as HTMLButtonElement | null;
 const ideaAiCheck = document.getElementById('ideaAiCheck') as HTMLButtonElement | null;
 const ideaAutoStatus = document.getElementById('ideaAutoStatus') as HTMLElement | null;
+const ideaAutoExport = document.getElementById('ideaAutoExport') as HTMLInputElement | null;
+const ideaAutoExportText = document.getElementById('ideaAutoExportText') as HTMLElement | null;
+const ideaSaveAllBtn = document.getElementById('ideaSaveAll') as HTMLButtonElement | null;
+const ideaSaveAllStatus = document.getElementById('ideaSaveAllStatus') as HTMLElement | null;
+const ideaSaveAllErrors = document.getElementById('ideaSaveAllErrors') as HTMLUListElement | null;
 const ideaCopyPrompt = document.getElementById('ideaCopyPrompt') as HTMLButtonElement | null;
 const ideaCopyProjectPrompt = document.getElementById('ideaCopyProjectPrompt') as HTMLButtonElement | null;
 const ideaPromptFallback = document.getElementById('ideaPromptFallback') as HTMLElement | null;
@@ -269,6 +274,7 @@ type TopTab = 'project' | 'scenes' | 'splice' | 'catalog';
 const TOP_TABS: ReadonlyArray<readonly [TopTab, string]> = [['project', 'Проект'], ['scenes', 'Сцены'], ['splice', 'Склейка'], ['catalog', 'Каталог']];
 const TAB_KEY = 'animation-motion/tab/v1';
 const SCENE_TAB_KEY = 'animation-motion/scene-tab/v1';
+const AUTO_EXPORT_KEY = 'animation-motion/auto-export/v1';
 const TRANSITION_OPTIONS = ['cut', 'fade', 'crossfade', 'slide', 'wipe', 'dip'] as const;
 let activeTopTab: TopTab = 'project';
 let spliceT = 0;
@@ -437,6 +443,14 @@ function storageGet(key: string): string | null {
 }
 function storageSet(key: string, value: string): void {
   try { sessionStorage.setItem(key, value); } catch {}
+}
+
+/** Флаг «Сразу собрать видео» живёт в localStorage и переживает закрытие вкладки; по умолчанию выключен. */
+function autoExportRequested(): boolean {
+  try { return localStorage.getItem(AUTO_EXPORT_KEY) === '1'; } catch { return false; }
+}
+function setAutoExportRequested(value: boolean): void {
+  try { localStorage.setItem(AUTO_EXPORT_KEY, value ? '1' : '0'); } catch {}
 }
 
 const PANELS: Record<TopTab, HTMLElement | null> = { project: panelProject, scenes: panelScenes, splice: panelSplice, catalog: panelCatalog };
@@ -1272,6 +1286,15 @@ async function startExport(): Promise<void> {
   await pollExportStatus();
 }
 
+/** Полный экспорт «как по кнопке»: вкладка склейки, режим «Весь ролик», 100% — и тот же startExport. */
+async function startFullExport(): Promise<void> {
+  setTopTab('splice');
+  if (exportMode) exportMode.value = 'all';
+  if (exportScale) exportScale.value = '1';
+  updateExportUi();
+  await startExport();
+}
+
 async function cancelExport(): Promise<void> {
   if (!exportJobId) return;
   stopExportPolling();
@@ -1401,6 +1424,41 @@ function previewTick(ts: number) {
   previewRaf = requestAnimationFrame(previewTick);
 }
 
+/** Пачкой сохраняем только то, что уже найдено в проекте как kind "shape"; остальное — пропущено. */
+async function saveAllSuggestions(): Promise<void> {
+  if (ideaSaveAllBtn) ideaSaveAllBtn.disabled = true;
+  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = EDITOR_STRINGS.saveAllRunning;
+  if (ideaSaveAllErrors) ideaSaveAllErrors.innerHTML = '';
+  let saved = 0;
+  let skipped = 0;
+  const failures: string[] = [];
+  for (const suggestion of ideaSuggestions) {
+    const model = suggestionToModel(suggestion);
+    if (!model) { skipped++; continue; }
+    const reply = await postCatalogAdd(model, false);
+    if (reply.ok) saved++;
+    else failures.push(issueMessage(reply.errors));
+  }
+  if (ideaSaveAllStatus) {
+    const summary = EDITOR_STRINGS.saveAllResult
+      .replace('{saved}', String(saved))
+      .replace('{skipped}', String(skipped))
+      .replace('{errors}', String(failures.length));
+    ideaSaveAllStatus.textContent = skipped > 0 ? `${summary} · ${EDITOR_STRINGS.saveAllNoShape}` : summary;
+  }
+  for (const message of failures) {
+    if (!ideaSaveAllErrors) break;
+    const item = document.createElement('li');
+    item.className = 'bad';
+    item.textContent = `✖ ${message}`;
+    ideaSaveAllErrors.appendChild(item);
+  }
+  if (ideaSaveAllBtn) ideaSaveAllBtn.disabled = false;
+  if (saved === 0) return;
+  saveAutosave();
+  window.setTimeout(() => location.reload(), 800);
+}
+
 function renderIdeaSuggestions() {
   const list = document.getElementById('ideaSuggestionsList') as HTMLElement | null;
   const panel = document.getElementById('ideaSuggestions') as HTMLElement | null;
@@ -1408,6 +1466,8 @@ function renderIdeaSuggestions() {
   if (ideaSuggestions.length === 0) { panel.hidden = true; list.innerHTML = ''; return; }
   panel.hidden = false;
   list.innerHTML = '';
+  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = '';
+  if (ideaSaveAllErrors) ideaSaveAllErrors.innerHTML = '';
   for (const s of ideaSuggestions) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:8px;align-items:center;border:1px solid #ddd5ca;border-radius:6px;padding:6px';
@@ -1493,6 +1553,7 @@ function applyIdeaProject(candidate: unknown) {
   if (ideaCreate) ideaCreate.disabled = true;
   if (ideaFix) ideaFix.hidden = true;
   setStatus('Проект создан из идеи. Отмена — Ctrl+Z.', false);
+  if (autoExportRequested()) void startFullExport();
 }
 function kindExample(kind: string): Record<string, unknown> {
   const spec = KIND_SPEC[kind as keyof typeof KIND_SPEC];
@@ -1980,6 +2041,15 @@ if (ideaAuto) ideaAuto.onclick = async () => {
   setIdeaAutoStatus(data.message ?? data.errors?.[0]?.message ?? 'Не удалось создать проект.', true);
   try { await copyProjectPrompt(prompt); } catch { /* буфер недоступен: промт можно скопировать кнопкой ниже */ }
 };
+if (ideaAutoExportText) ideaAutoExportText.textContent = EDITOR_STRINGS.ideaAutoExportLabel;
+if (ideaAutoExport) {
+  ideaAutoExport.checked = autoExportRequested();
+  ideaAutoExport.onchange = () => setAutoExportRequested(ideaAutoExport.checked);
+}
+if (ideaSaveAllBtn) {
+  ideaSaveAllBtn.textContent = EDITOR_STRINGS.saveAllButton;
+  ideaSaveAllBtn.onclick = () => void saveAllSuggestions();
+}
 if (ideaAiCheck) ideaAiCheck.onclick = async () => {
   ideaAiCheck.disabled = true;
   setIdeaAutoStatus('Проверяю подключение…', false);
@@ -2148,7 +2218,7 @@ function lookFieldNumber(input: HTMLInputElement | null): number | undefined {
 }
 function applyLookStyleToScene(index: number): { ok: true; scene: SceneV1 } | { ok: false; message: string } {
   const entry = project.scenes[index];
-  if (!entry) return { ok: false, message: `нет сцены №${index + 1}` };
+  if (!entry) return { ok: false, message: EDITOR_STRINGS.lookNoScene.replace('{number}', String(index + 1)) };
   const { styleId, mood } = lookStyleChoice();
   const result = applySceneStyle(entry.scene, styleId, mood);
   return result.ok ? { ok: true, scene: result.value } : { ok: false, message: result.message };

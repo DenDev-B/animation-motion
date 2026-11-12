@@ -69,6 +69,7 @@
         <div class="btns">
           <button id="ideaAuto" class="primary">Создать одной кнопкой (Gemini → Groq)</button>
           <button id="ideaAiCheck">Проверить подключение</button>
+          <label class="f" style="flex-direction:row;align-items:center;gap:4px"><input type="checkbox" id="ideaAutoExport"><span id="ideaAutoExportText"></span></label>
         </div>
         <div id="ideaAutoStatus" class="msg"></div>
         <div class="hint">Ключи лежат в файле .env.local рядом с проектом (образец — .env.example). Если оба ИИ не справятся, промт скопируется сам: вставьте его в любой браузерный ИИ и ответ в поле ниже.</div>
@@ -94,6 +95,11 @@
         <ul id="ideaWarnings" class="warns"></ul>
         <div id="ideaSuggestions" hidden style="margin-top:10px;border:1px solid #ddd5ca;border-radius:6px;padding:8px">
           <div style="font-weight:700;margin-bottom:4px">Предложено добавить в каталог:</div>
+          <div class="btns" style="margin-bottom:6px">
+            <button id="ideaSaveAll"></button>
+            <span id="ideaSaveAllStatus" class="hint"></span>
+          </div>
+          <ul id="ideaSaveAllErrors" class="errs"></ul>
           <div id="ideaSuggestionsList" style="display:flex;flex-direction:column;gap:4px"></div>
         </div>
       </div>
