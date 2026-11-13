@@ -79,6 +79,7 @@ const exportMp4Btn = document.getElementById('exportMp4') as HTMLButtonElement |
 const exportCancelBtn = document.getElementById('exportCancel') as HTMLButtonElement | null;
 const exportDownload = document.getElementById('exportDownload') as HTMLAnchorElement | null;
 const exportStatusEl = document.getElementById('exportStatus') as HTMLElement | null;
+const exportHintEl = document.getElementById('exportHint') as HTMLElement | null;
 const exportMode = document.getElementById('exportMode') as HTMLSelectElement | null;
 const exportFrom = document.getElementById('exportFrom') as HTMLInputElement | null;
 const exportTo = document.getElementById('exportTo') as HTMLInputElement | null;
@@ -252,7 +253,7 @@ let ideaCandidate: unknown;
 let ideaErrList: ValidationError[] = [];
 /** ТЗ из ответа ИИ (путь «ТЗ + проект одним ответом»); записывается в meta.brief при создании проекта. */
 let ideaReplyBrief = '';
-const SCOPE_LABELS: Record<JsonScope, string> = { scene: 'сцена', project: 'весь проект', object: 'выбранный объект' };
+const SCOPE_LABELS: Record<JsonScope, string> = EDITOR_STRINGS.scopeLabels;
 
 // Состояние каталога
 let catalogQuery = '';
@@ -271,7 +272,7 @@ let modelCandidate: unknown;
 let ideaSuggestions: Array<{ id: string; description: string; view?: string; sizeM?: number }> = [];
 
 type TopTab = 'project' | 'scenes' | 'splice' | 'catalog';
-const TOP_TABS: ReadonlyArray<readonly [TopTab, string]> = [['project', 'Проект'], ['scenes', 'Сцены'], ['splice', 'Склейка'], ['catalog', 'Каталог']];
+const TOP_TABS: ReadonlyArray<readonly [TopTab, string]> = EDITOR_STRINGS.topTabs;
 const TAB_KEY = 'animation-motion/tab/v1';
 const SCENE_TAB_KEY = 'animation-motion/scene-tab/v1';
 const AUTO_EXPORT_KEY = 'animation-motion/auto-export/v1';
@@ -1116,9 +1117,15 @@ interface ExportReply {
 
 const EXPORT_OFFLINE_MESSAGE = EDITOR_STRINGS.exportOffline;
 let exportJobId: string | null = null;
+let exportSubmitting = false;
 let exportPollTimer: number | null = null;
 let exportLastIsProbe = false;
 let exportLastIsFrame = false;
+
+/** Экспорт идёт: POST проекта (id ещё не вернулся) или живое задание на сервисе. */
+function isExportInFlight(): boolean {
+  return exportSubmitting || exportJobId !== null;
+}
 
 function setExportStatus(message: string): void {
   if (!exportStatusEl) return;
@@ -1203,6 +1210,7 @@ function initExportUi(): void {
   if (exportToText) exportToText.textContent = EDITOR_STRINGS.exportTo;
   if (exportFrameText) exportFrameText.textContent = EDITOR_STRINGS.exportFrameAt;
   if (exportScaleText) exportScaleText.textContent = EDITOR_STRINGS.exportScale;
+  if (exportHintEl) exportHintEl.textContent = EDITOR_STRINGS.exportHint;
   if (exportMode) {
     exportMode.textContent = '';
     for (const [value, label] of [['all', EDITOR_STRINGS.exportModeAll], ['range', EDITOR_STRINGS.exportModeRange], ['frame', EDITOR_STRINGS.exportModeFrame]] as const) {
@@ -1257,7 +1265,7 @@ async function pollExportStatus(): Promise<void> {
 }
 
 async function startExport(): Promise<void> {
-  if (exportJobId) return;
+  if (isExportInFlight()) return;
   if (exportDownload) exportDownload.hidden = true;
   if (!(await localApiAvailable())) {
     if (exportMp4Btn) exportMp4Btn.disabled = true;
@@ -1269,11 +1277,13 @@ async function startExport(): Promise<void> {
   exportLastIsProbe = payload.probe;
   exportLastIsFrame = payload.frame;
   setExportStatus('Отправляю проект…');
+  exportSubmitting = true;
   const reply = await fetchExportJson('/__api/export', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ project: structuredClone(project), ...(payload.preview ? { preview: payload.preview } : {}) }),
   });
+  exportSubmitting = false;
   if (!reply.ok || !reply.jobId) {
     setExportStatus(reply.ok ? 'Сервер не вернул id задания.' : issueMessage(reply.errors));
     if (exportMp4Btn) exportMp4Btn.disabled = false;
@@ -1305,8 +1315,10 @@ async function cancelExport(): Promise<void> {
 /** Кнопка активна только когда отвечает локальный сервис; офлайн остаётся подсказка про npm run export. */
 async function refreshExportPanel(): Promise<void> {
   initExportUi();
-  if (exportJobId) return;
+  if (isExportInFlight()) return;
   const online = await localApiAvailable();
+  // за время ping экспорт мог стартовать (авто-экспорт после «Создать одной кнопкой») — панель не трогаем
+  if (isExportInFlight()) return;
   if (exportMp4Btn) exportMp4Btn.disabled = !online;
   setExportStatus(online ? '' : EXPORT_OFFLINE_MESSAGE);
 }
@@ -1456,7 +1468,11 @@ async function saveAllSuggestions(): Promise<void> {
   if (ideaSaveAllBtn) ideaSaveAllBtn.disabled = false;
   if (saved === 0) return;
   saveAutosave();
-  window.setTimeout(() => location.reload(), 800);
+  if (!isExportInFlight()) {
+    window.setTimeout(() => location.reload(), 800);
+    return;
+  }
+  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = `${ideaSaveAllStatus.textContent} · ${EDITOR_STRINGS.saveAllWaitExport}`;
 }
 
 function renderIdeaSuggestions() {

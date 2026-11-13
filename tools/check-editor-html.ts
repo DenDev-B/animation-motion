@@ -12,9 +12,13 @@ if (/catalog\s*=\s*\{\s*whale/.test(main)) fail('в editor/main.ts вернул�
 const tabIds = ['topTabs', 'panelProject', 'panelScenes', 'panelSplice', 'panelCatalog', 'sceneTabs', 'layerList', 'sceneOrder', 'projectPreview', 'exportMp4', 'exportMode', 'exportFrom', 'exportTo', 'exportFrameAt', 'exportScale', 'sceneLookPanel', 'lookStyle', 'lookMood', 'lookShot', 'lookShotT0', 'lookShotDur', 'lookShotStrength', 'lookApplyStyle', 'lookApplyStyleAll', 'lookApplyShot', 'lookRemoveShot', 'ideaAutoExport', 'ideaSaveAll', 'ideaSaveAllStatus', 'ideaSaveAllErrors'];
 const missingTabs = tabIds.filter((id) => !html.includes(`id="${id}"`));
 if (missingTabs.length) fail(`в index.html нет контейнеров вкладок: ${missingTabs.join(', ')}`);
+const strings = fs.readFileSync('editor/strings.ts', 'utf8');
 for (const label of ['Проект', 'Сцены', 'Склейка', 'Каталог']) {
-  if (!main.includes(`'${label}'`)) fail(`в editor/main.ts нет подписи вкладки «${label}»`);
+  if (!strings.includes(`'${label}'`)) fail(`в editor/strings.ts нет подписи вкладки «${label}»`);
 }
+if (!main.includes('EDITOR_STRINGS.topTabs')) fail('подписи вкладок должны приходить из editor/strings.ts (EDITOR_STRINGS.topTabs)');
+if (/const TOP_TABS[^=]*=\s*\[\s*\['project'/.test(main)) fail('в editor/main.ts вернулся ручной список подписей вкладок: он живёт в editor/strings.ts');
+if (!main.includes('EDITOR_STRINGS.exportHint')) fail('подсказка под панелью экспорта должна приходить из editor/strings.ts (EDITOR_STRINGS.exportHint)');
 const ids = [...main.matchAll(/getElementById\('([A-Za-z0-9_-]+)'\)/g)].map((m) => m[1]);
 const missing = [...new Set(ids)].filter((id) => !html.includes(`id="${id}"`));
 if (missing.length) fail(`в index.html нет элементов, которые ищет editor/main.ts: ${missing.join(', ')}`);
