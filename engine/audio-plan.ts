@@ -32,7 +32,8 @@ export function buildAudioPlan(project: ProjectV1, window?: AudioWindow): AudioP
   const starts = sceneStartFrames(project);
   project.scenes.forEach((entry, sceneIndex) => {
     const voice = entry.voice;
-    if (!voice) return;
+    // Текст без файла — озвучка ещё не сделана: в миксе участвовать нечему.
+    if (!voice?.file) return;
     const startSec = starts[sceneIndex] / project.fps + (voice.offset ?? 0) - from;
     if (startSec >= to - from) return;
     items.push({ kind: 'voice', file: voice.file, startSec, gain: voice.gain ?? 1, sceneIndex });

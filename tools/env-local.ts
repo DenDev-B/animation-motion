@@ -24,14 +24,23 @@ const KEY_NAMES: Record<ProviderId, { key: string; model: string }> = {
   groq: { key: 'GROQ_API_KEY', model: 'GROQ_MODEL' },
 };
 
-/** Список настроенных провайдеров в порядке Gemini → Groq. Файл читается при каждом запросе: правка ключа не требует перезапуска. */
-export function loadProviders(root: string, env: NodeJS.ProcessEnv = process.env): ProviderSpec[] {
-  let file: Record<string, string> = {};
+/** Значение НЕ-секретной настройки: сначала .env.local, потом окружение. Пустая строка, если нигде нет. */
+export function loadSetting(root: string, name: string, env: NodeJS.ProcessEnv = process.env): string {
+  return (readEnvFile(root)[name] ?? env[name] ?? '').trim();
+}
+
+function readEnvFile(root: string): Record<string, string> {
   try {
-    file = parseEnv(fs.readFileSync(path.join(root, '.env.local'), 'utf8'));
+    return parseEnv(fs.readFileSync(path.join(root, '.env.local'), 'utf8'));
   } catch {
     // файла нет: берём только переменные окружения
+    return {};
   }
+}
+
+/** Список настроенных провайдеров в порядке Gemini → Groq. Файл читается при каждом запросе: правка ключа не требует перезапуска. */
+export function loadProviders(root: string, env: NodeJS.ProcessEnv = process.env): ProviderSpec[] {
+  const file = readEnvFile(root);
   const pick = (name: string): string => (file[name] ?? env[name] ?? '').trim();
   const list: ProviderSpec[] = [];
   for (const id of PROVIDER_ORDER) {

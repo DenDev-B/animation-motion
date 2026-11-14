@@ -285,7 +285,7 @@ export const VOICE_TEXT_MAX_CHARS = 2000;
 export const AUDIO_FADE_SEC = 0.03;
 
 export const PROJECT_VOICE_SPEC: readonly FieldSpec[] = [
-  { name: 'file', type: 'string', description: `Путь к файлу озвучки относительно папки audio/ в корне репозитория; расширения: ${AUDIO_EXTENSIONS.join(', ')}.` },
+  { name: 'file', type: 'string', description: 'Путь к файлу озвучки относительно папки audio/ в корне репозитория; расширения: wav, mp3, m4a, ogg, flac. Может отсутствовать, пока задан только text — файл и words подставляет `npm run tts`.' },
   { name: 'offset', type: 'number', min: 0, default: 0, description: 'Задержка от начала сцены в секундах.' },
   { name: 'gain', type: 'number', min: 0, max: 2, default: 1, description: 'Громкость голоса.' },
   { name: 'text', type: 'string', description: `Текст озвучки, до ${VOICE_TEXT_MAX_CHARS} символов; в ролике ничего не рисует.` },

@@ -23,7 +23,8 @@ export interface VoiceWord {
 
 /** Озвучка сцены: готовая запись из папки audio/, наложенная на таймлайн проекта. */
 export interface ProjectVoiceV1 {
-  file: string;
+  /** Путь относительно audio/. Не заполнен, если текст ещё не озвучен — тогда файл ставит `npm run tts`. */
+  file?: string;
   /** Задержка от начала сцены, с. */
   offset?: number;
   /** 0..2, по умолчанию 1. */
@@ -110,7 +111,11 @@ function validateWords(value: unknown, path: string, err: (path: string, message
 
 function validateVoice(value: unknown, path: string, err: (path: string, message: string) => void): void {
   if (!isRecord(value)) { err(path, 'voice должен быть объектом; пример: {"file":"s1-voice.wav","offset":0.2}'); return; }
-  if (!isAudioFileRef(value.file)) err(`${path}.file`, AUDIO_FILE_HINT);
+  // {text} без {file} — это «текст есть, озвучить ещё нечем»: проект остаётся валидным, а npm run tts заполнит file и words.
+  const hasText = typeof value.text === 'string' && value.text.trim().length > 0;
+  if (value.file === undefined) {
+    if (!hasText) err(path, 'voice: нужен file (готовая запись) или text (озвучить через npm run tts); пример: {"file":"s1-voice.wav"}');
+  } else if (!isAudioFileRef(value.file)) err(`${path}.file`, AUDIO_FILE_HINT);
   if (value.offset !== undefined && (!isFiniteNum(value.offset) || value.offset < 0)) err(`${path}.offset`, 'offset должен быть конечным числом не меньше нуля; пример: 0.5');
   if (value.gain !== undefined && (!isFiniteNum(value.gain) || value.gain < 0 || value.gain > 2)) err(`${path}.gain`, 'gain должен быть числом от 0 до 2; пример: 1');
   if (value.text !== undefined) {
