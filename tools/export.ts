@@ -1,18 +1,19 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { createCanvas, Path2D } from '@napi-rs/canvas';
-import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, sceneStartFrames, buildAudioPlan, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
 import { planPreview, previewSuffix, scaledSize, type Aspect } from '../engine/preview-plan.ts';
+import { buildAudioFilter, buildFfmpegArgs, isAudioItemAudible, type AudioInputItem, type FfmpegAudioOptions } from './ffmpeg-audio.ts';
 (globalThis as any).Path2D = Path2D;
 
 function log(m: string) { process.stdout.write(m + '\n'); }
 function fail(m: string): never { log(`ОШИБКА: ${m}`); process.exit(1); }
 
-function parseArgs(): { scene: string; project: string; format?: string; fps?: number; t0: number; t1?: number; hasRange: boolean; frame?: number; scale: number; out: string; crf: number; preset: string; overwrite: boolean } {
+function parseArgs(): { scene: string; project: string; format?: string; fps?: number; t0: number; t1?: number; hasRange: boolean; frame?: number; scale: number; out: string; crf: number; preset: string; overwrite: boolean; audioDir: string } {
   const args = process.argv.slice(2);
   let scene = '';
   let format: string | undefined;
@@ -25,6 +26,7 @@ function parseArgs(): { scene: string; project: string; format?: string; fps?: n
   let overwrite = false;
   let frame: number | undefined;
   let scale = 1;
+  let audioDir = path.join(__dirname, '..', 'audio');
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--project') project = args[++i];
@@ -36,6 +38,7 @@ function parseArgs(): { scene: string; project: string; format?: string; fps?: n
     else if (a === '--out') out = args[++i];
     else if (a === '--crf') crf = +args[++i];
     else if (a === '--preset') preset = args[++i];
+    else if (a === '--audio-dir') audioDir = path.resolve(args[++i]);
     else if (a === '--overwrite') overwrite = true;
     else if (!a.startsWith('-')) scene = a;
     else fail(`неизвестный аргумент ${a}`);
@@ -46,13 +49,63 @@ function parseArgs(): { scene: string; project: string; format?: string; fps?: n
   let t0 = 0, t1: number | undefined;
   if (range) { const [a, b] = range.split(':').map(Number); if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) fail(`некорректный --range ${range}`); t0 = a; t1 = b; }
   if (range !== undefined && frame !== undefined) fail('--range и --frame вместе не используются');
-  return { scene, project, format, fps, t0, t1, hasRange: range !== undefined, frame, scale, out: out ?? '', crf, preset, overwrite };
+  return { scene, project, format, fps, t0, t1, hasRange: range !== undefined, frame, scale, out: out ?? '', crf, preset, overwrite, audioDir };
 }
 
 async function ffprobe(file: string): Promise<Record<string, string>> {
   const out = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt,width,height,r_frame_rate,nb_frames,duration -of json "${file}"`, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   const s = JSON.parse(out).streams[0];
   return s;
+}
+
+// Длительность аудиофайла: у части контейнеров stream=duration пустой, тогда берём format=duration.
+function audioDurationSec(file: string): number {
+  let out: string;
+  try {
+    out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=duration:format=duration', '-of', 'json', file], { encoding: 'utf8' });
+  } catch (e) {
+    fail(`ffprobe не прочитал ${file}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const json = JSON.parse(out) as { streams?: Array<{ duration?: string }>; format?: { duration?: string } };
+  const duration = Number(json.streams?.[0]?.duration ?? json.format?.duration);
+  if (!Number.isFinite(duration) || duration <= 0) fail(`ffprobe не дал длительность аудиофайла ${file}`);
+  return duration;
+}
+
+// Префлайт звука до рендера кадров: файлы на месте, их длительности, предупреждения о выходах за границы.
+function prepareAudio(project: ProjectV1, fps: number, audioDir: string, mode: 'clip' | 'all', startFrame: number, count: number): FfmpegAudioOptions | null {
+  const effective: ProjectV1 = { ...project, fps };
+  const window = mode === 'clip' ? { startSec: startFrame / fps, endSec: (startFrame + count) / fps } : undefined;
+  const audioPlan = buildAudioPlan(effective, window);
+  if (audioPlan.items.length === 0) return null;
+  const from = window?.startSec ?? 0;
+  const videoEnd = from + audioPlan.totalSec;
+  const starts = sceneStartFrames(effective);
+  const duck = project.audio?.music?.duck !== false;
+  const durations = new Map<string, number>();
+  const missing: string[] = [];
+  const items: AudioInputItem[] = [];
+  for (const item of audioPlan.items) {
+    const filePath = path.join(audioDir, item.file);
+    if (!fs.existsSync(filePath)) { missing.push(filePath); continue; }
+    let durationSec = durations.get(filePath);
+    if (durationSec === undefined) {
+      durationSec = audioDurationSec(filePath);
+      durations.set(filePath, durationSec);
+    }
+    const input: AudioInputItem = { ...item, filePath, durationSec, duck: item.kind === 'music' ? duck : undefined };
+    if (!isAudioItemAudible(input, audioPlan.totalSec)) continue;
+    if (item.kind === 'voice' && item.sceneIndex !== undefined) {
+      const entry = project.scenes[item.sceneIndex];
+      const end = item.startSec + from + durationSec;
+      const sceneEnd = starts[item.sceneIndex] / fps + entry.scene.duration;
+      if (end > sceneEnd + 1e-6) log(`ПРЕДУПРЕЖДЕНИЕ: голос сцены ${item.sceneIndex + 1} («${entry.name}») заканчивается на ${end.toFixed(2)} с, сцена — на ${sceneEnd.toFixed(2)} с: выходит за сцену на ${(end - sceneEnd).toFixed(2)} с, не обрезаем`);
+      if (end > videoEnd + 1e-6) log(`ПРЕДУПРЕЖДЕНИЕ: голос сцены ${item.sceneIndex + 1} («${entry.name}») выходит за конец ролика (${videoEnd.toFixed(2)} с) на ${(end - videoEnd).toFixed(2)} с, обрезаем по концу ролика`);
+    }
+    items.push(input);
+  }
+  if (missing.length) fail(`нет файлов звука (${missing.length}):\n${missing.join('\n')}\nПапка звука: ${audioDir}; другую папку задают флагом --audio-dir`);
+  return { items, totalSec: audioPlan.totalSec };
 }
 
 async function main() {
@@ -116,6 +169,13 @@ async function main() {
   if (!args.overwrite) { let suffix = 2; while (fs.existsSync(outFile)) outFile = outFileSafe.replace(/\.(mp4|png)$/, (_m, e) => `_${suffix++}.${e}`); }
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
+  // звук проверяется до рендера кадров: отсутствующий файл — ошибка до долгой работы
+  const audio = projectV1 && plan.mode !== 'frame' ? prepareAudio(projectV1, fps, args.audioDir, plan.mode, plan.startFrame, N) : null;
+  if (audio) {
+    log(`звук: ${audio.items.length} файл(ов), дорожка ${audio.totalSec.toFixed(2)} с`);
+    log(`звук filter_complex: ${buildAudioFilter(audio.items, audio.totalSec)}`);
+  }
+
   // три переиспользуемых холста: кадры A/B и результат композитинга
   const canvasA = createCanvas(w, h);
   const ctxA = canvasA.getContext('2d') as unknown as CanvasRenderingContext2D;
@@ -127,11 +187,9 @@ async function main() {
   const createCanvasFn = ((w2: number, h2: number) => createCanvas(w2, h2)) as unknown as (w: number, h: number) => HTMLCanvasElement;
 
   // режим «кадр» пишет PNG и ffmpeg не запускает
-  const ffmpeg = plan.mode === 'frame' ? null : spawn('ffmpeg', [
-    '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${w}x${h}`, '-r', String(fps), '-i', '-',
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', preset, '-crf', String(crf),
-    '-movflags', '+faststart', '-y', outFile
-  ], { stdio: ['pipe', 'ignore', 'pipe'] });
+  const ffmpeg = plan.mode === 'frame' ? null : spawn('ffmpeg', buildFfmpegArgs({
+    width: w, height: h, fps, preset, crf, outFile, audio: audio ?? undefined,
+  }), { stdio: ['pipe', 'ignore', 'pipe'] });
   let ffmpegErr = '';
   ffmpeg?.stderr?.on('data', (d) => { ffmpegErr += d; });
   ffmpeg?.on('error', (e) => { fail(`ffmpeg spawn error: ${e.message}`); });
@@ -231,7 +289,7 @@ async function main() {
     if (!c.ok) allPass = false;
   }
 
-  log('не проверяет скрипт: звук, плавность на глаз, цветопередачу, соответствие эталону M0, отсутствие артефактов сжатия.');
+  log(audio ? 'не проверяет скрипт: звук на слух (разборчивость, баланс голоса и музыки), плавность на глаз, цветопередачу, соответствие эталону M0, отсутствие артефактов сжатия.' : 'не проверяет скрипт: звук, плавность на глаз, цветопередачу, соответствие эталону M0, отсутствие артефактов сжатия.');
   if (!isFull) log(`ЭТО ПРОБА (${modeText}, масштаб ${plan.scale}): финальный ролик не заменяет. Мелкие эффекты в пикселях (зерно, bloom) на другом размере выглядят чуть иначе.`);
 
   if (!allPass) process.exit(1);

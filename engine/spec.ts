@@ -279,6 +279,25 @@ export const PROJECT_META_SPEC: readonly FieldSpec[] = [
   { name: 'styleId', type: 'string', description: 'id пресета стиля из engine/styles.ts; необязательное.' },
 ];
 
+// Звук: файлы лежат в audio/ в корне репозитория, в проект записывается путь относительно этой папки.
+export const AUDIO_EXTENSIONS = ['wav', 'mp3', 'm4a', 'ogg', 'flac'] as const;
+export const VOICE_TEXT_MAX_CHARS = 2000;
+export const AUDIO_FADE_SEC = 0.03;
+
+export const PROJECT_VOICE_SPEC: readonly FieldSpec[] = [
+  { name: 'file', type: 'string', description: `Путь к файлу озвучки относительно папки audio/ в корне репозитория; расширения: ${AUDIO_EXTENSIONS.join(', ')}.` },
+  { name: 'offset', type: 'number', min: 0, default: 0, description: 'Задержка от начала сцены в секундах.' },
+  { name: 'gain', type: 'number', min: 0, max: 2, default: 1, description: 'Громкость голоса.' },
+  { name: 'text', type: 'string', description: `Текст озвучки, до ${VOICE_TEXT_MAX_CHARS} символов; в ролике ничего не рисует.` },
+  { name: 'words', type: 'array', description: 'Тайминг слов [{w, t0, t1}] в секундах от начала файла; t0 < t1, порядок по возрастанию.' },
+];
+
+export const PROJECT_MUSIC_SPEC: readonly FieldSpec[] = [
+  { name: 'file', type: 'string', description: `Путь к файлу музыки относительно папки audio/; те же расширения, что у голоса.` },
+  { name: 'gain', type: 'number', min: 0, max: 1, default: 0.25, description: 'Громкость музыки под голосом.' },
+  { name: 'duck', type: 'bool', default: true, description: 'Приглушать музыку, когда говорит голос.' },
+];
+
 export const SPEC_KEYS = {
   scene: SCENE_SPEC.fields.map(({ name }) => name),
   layer: SCENE_SPEC.layer.map(({ name }) => name),

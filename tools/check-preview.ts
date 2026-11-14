@@ -81,6 +81,8 @@ fs.mkdirSync(dir, { recursive: true });
 const projectFile = path.join(dir, 'mini.project.json');
 fs.writeFileSync(projectFile, JSON.stringify(project, null, 2), 'utf8');
 const run = (script: string, args: string[]) => spawnSync(process.execPath, [path.join(root, 'tools', script), ...args], { cwd: root, encoding: 'utf8' });
+// проект со звуком проходит и аудиоприёмку: флаг подставляется по содержанию проекта, а не вручную
+const audioFlags = project.scenes.some((entry) => !!entry.voice) || !!project.audio?.music ? ['--expect-audio'] : [];
 
 const cc = ((w: number, h: number) => createCanvas(w, h)) as unknown as (w: number, h: number) => HTMLCanvasElement;
 function inProcess(index: number, w: number, h: number): Buffer {
@@ -133,7 +135,7 @@ const clipMp4 = path.join(dir, 'clip.mp4');
 const rc = run('export.ts', ['--project', projectFile, '--range', '2.2:2.8', '--out', clipMp4, '--overwrite']);
 ok(rc.status === 0 && fs.existsSync(clipMp4), `--range 2.2:2.8 завершился успешно${rc.status === 0 ? '' : `: ${rc.stdout.slice(-300)}`}`);
 if (fs.existsSync(clipMp4)) {
-  const v = run('verify-export.ts', [clipMp4, '1920', '1080', '30', '0.6']);
+  const v = run('verify-export.ts', [clipMp4, '1920', '1080', '30', '0.6', ...audioFlags]);
   ok(v.status === 0, `кусок проходит приёмку MP4: 1920x1080, 30 fps, 18 кадров${v.status === 0 ? '' : `\n${v.stdout}`}`);
   const first = path.join(dir, 'clip-first.png');
   const last = path.join(dir, 'clip-last.png');
@@ -156,7 +158,7 @@ if (fs.existsSync(clipMp4)) {
 const smallMp4 = path.join(dir, 'clip-small-v.mp4');
 const rs = run('export.ts', ['--project', projectFile, '--format', 'v', '--range', '1:2', '--scale', '0.5', '--out', smallMp4, '--overwrite']);
 ok(rs.status === 0 && fs.existsSync(smallMp4), '--range 1:2 --scale 0.5 в 9:16 завершился успешно');
-if (fs.existsSync(smallMp4)) ok(run('verify-export.ts', [smallMp4, '540', '960', '30', '1']).status === 0, 'проба 9:16 при 0.5 проходит приёмку: 540x960, 30 кадров');
+if (fs.existsSync(smallMp4)) ok(run('verify-export.ts', [smallMp4, '540', '960', '30', '1', ...audioFlags]).status === 0, 'проба 9:16 при 0.5 проходит приёмку: 540x960, 30 кадров');
 
 // 2.5 отказы: внятное сообщение и ненулевой код выхода
 const bad: Array<[string, string[]]> = [

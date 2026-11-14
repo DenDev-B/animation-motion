@@ -16,3 +16,7 @@ docs/*_files/
 assets-src/downloads/
 # Собственные SVG агента отслеживаются
 !assets-src/own/*.svg
+# Файлы звука (записи владельца) в git не попадают; в репозитории остаётся только папка
+audio/*
+!audio/.gitkeep
+

@@ -1,5 +1,5 @@
 import { validateScene, type ValidateOpts, type ValidationError } from './validate.ts';
-import { TRANSITION_DIRS, TRANSITION_TYPES } from './spec.ts';
+import { AUDIO_EXTENSIONS, TRANSITION_DIRS, TRANSITION_TYPES, VOICE_TEXT_MAX_CHARS } from './spec.ts';
 import type { SceneV1 } from './schema.ts';
 import { BRIEF_MAX_CHARS } from './ai-brief.ts';
 import { getStyle, STYLE_PRESETS } from './styles.ts';
@@ -14,14 +14,47 @@ export interface Transition {
   color?: string;
 }
 
+/** Слово озвучки с таймингом в секундах от начала аудиофайла. */
+export interface VoiceWord {
+  w: string;
+  t0: number;
+  t1: number;
+}
+
+/** Озвучка сцены: готовая запись из папки audio/, наложенная на таймлайн проекта. */
+export interface ProjectVoiceV1 {
+  file: string;
+  /** Задержка от начала сцены, с. */
+  offset?: number;
+  /** 0..2, по умолчанию 1. */
+  gain?: number;
+  text?: string;
+  words?: VoiceWord[];
+}
+
+/** Музыка на весь ролик: повторяется, если короче ролика, и приглушается под голосом. */
+export interface ProjectMusicV1 {
+  file: string;
+  /** 0..1, по умолчанию 0.25. */
+  gain?: number;
+  /** По умолчанию true: sidechain-приглушение по шине голоса. */
+  duck?: boolean;
+}
+
+export interface ProjectAudioV1 {
+  music?: ProjectMusicV1;
+}
+
 export interface ProjectSceneV1 {
   id: string;
   name: string;
   scene: SceneV1;
   transition: Transition;
+  voice?: ProjectVoiceV1;
 }
 
 const HEX_RE = /^#(?:[\da-fA-F]{3}|[\da-fA-F]{6}|[\da-fA-F]{8})$/;
+const AUDIO_EXT_RE = new RegExp(`\\.(?:${AUDIO_EXTENSIONS.join('|')})$`, 'i');
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isFiniteNum = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
@@ -47,6 +80,56 @@ function validateTransition(value: unknown, index: number, duration: number | un
   }
 }
 
+// Путь внутри audio/: только относительный, без «..», без ведущего слэша и без буквы диска.
+function isAudioFileRef(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  if (value.includes('\\') || value.startsWith('/') || /^[a-zA-Z]:/.test(value)) return false;
+  if (!AUDIO_EXT_RE.test(value)) return false;
+  return value.split('/').every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+}
+
+const AUDIO_FILE_EXAMPLE = 's1-voice.wav';
+const AUDIO_FILE_HINT = `file должен быть относительным путём внутри audio/ с расширением ${AUDIO_EXTENSIONS.join(', ')}; допустимо: "song.mp3", "voice/${AUDIO_FILE_EXAMPLE}"; пример: "${AUDIO_FILE_EXAMPLE}"`;
+
+function validateWords(value: unknown, path: string, err: (path: string, message: string) => void): void {
+  if (!Array.isArray(value)) { err(`${path}.words`, 'words должен быть массивом слов; пример: [{"w":"привет","t0":0.1,"t1":0.4}]'); return; }
+  let previousT0: number | undefined;
+  value.forEach((raw, index) => {
+    const base = `${path}.words[${index}]`;
+    if (!isRecord(raw)) { err(base, 'слово должно быть объектом; пример: {"w":"привет","t0":0.1,"t1":0.4}'); return; }
+    if (typeof raw.w !== 'string' || !raw.w) err(`${base}.w`, 'w должен быть непустой строкой; пример: привет');
+    if (!isFiniteNum(raw.t0) || raw.t0 < 0) err(`${base}.t0`, 't0 должен быть конечным числом не меньше нуля; пример: 0.1');
+    if (!isFiniteNum(raw.t1) || raw.t1 < 0) err(`${base}.t1`, 't1 должен быть конечным числом не меньше нуля; пример: 0.4');
+    if (isFiniteNum(raw.t0) && isFiniteNum(raw.t1) && raw.t1 <= raw.t0) err(`${base}.t1`, `t1 должен быть больше t0 (${raw.t0}); пример: ${(raw.t0 as number) + 0.3}`);
+    if (isFiniteNum(raw.t0)) {
+      if (previousT0 !== undefined && raw.t0 <= previousT0) err(`${base}.t0`, `t0 должен идти по возрастанию, предыдущее слово начинается с ${previousT0}; пример: ${previousT0 + 0.3}`);
+      previousT0 = raw.t0;
+    }
+  });
+}
+
+function validateVoice(value: unknown, path: string, err: (path: string, message: string) => void): void {
+  if (!isRecord(value)) { err(path, 'voice должен быть объектом; пример: {"file":"s1-voice.wav","offset":0.2}'); return; }
+  if (!isAudioFileRef(value.file)) err(`${path}.file`, AUDIO_FILE_HINT);
+  if (value.offset !== undefined && (!isFiniteNum(value.offset) || value.offset < 0)) err(`${path}.offset`, 'offset должен быть конечным числом не меньше нуля; пример: 0.5');
+  if (value.gain !== undefined && (!isFiniteNum(value.gain) || value.gain < 0 || value.gain > 2)) err(`${path}.gain`, 'gain должен быть числом от 0 до 2; пример: 1');
+  if (value.text !== undefined) {
+    if (typeof value.text !== 'string') err(`${path}.text`, 'text должен быть строкой (текст озвучки)');
+    else if (value.text.length > VOICE_TEXT_MAX_CHARS) err(`${path}.text`, `text длиннее ${VOICE_TEXT_MAX_CHARS} символов (${value.text.length}); сократите текст озвучки`);
+  }
+  if (value.words !== undefined) validateWords(value.words, path, err);
+}
+
+function validateAudio(value: unknown, err: (path: string, message: string) => void): void {
+  if (!isRecord(value)) { err('audio', 'audio должен быть объектом; пример: {"music":{"file":"song.mp3"}}'); return; }
+  if (value.music === undefined) return;
+  const music = value.music;
+  if (!isRecord(music)) { err('audio.music', 'music должен быть объектом; пример: {"file":"song.mp3","gain":0.25}'); return; }
+  if (!isAudioFileRef(music.file)) err('audio.music.file', AUDIO_FILE_HINT);
+  if (music.gain !== undefined && (!isFiniteNum(music.gain) || music.gain < 0 || music.gain > 1)) err('audio.music.gain', 'gain должен быть числом от 0 до 1; пример: 0.25');
+  if (music.duck !== undefined && typeof music.duck !== 'boolean') err('audio.music.duck', 'duck должен быть true или false; пример: true');
+}
+
 export interface ProjectMetaV1 {
   /** ТЗ режиссёра в Markdown, до BRIEF_MAX_CHARS символов. */
   brief?: string;
@@ -63,6 +146,7 @@ export interface ProjectV1 {
   format: '16:9' | '9:16';
   scenes: ProjectSceneV1[];
   meta?: ProjectMetaV1;
+  audio?: ProjectAudioV1;
 }
 
 export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: boolean; errors: ValidationError[]; warnings: ValidationError[] } {
@@ -93,9 +177,11 @@ export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: b
       for (const warning of result.warnings) warnings.push({ ...warning, path: `${base}.scene${warning.path ? `.${warning.path}` : ''}` });
       const sceneDuration = isRecord(entry.scene) && isFiniteNum(entry.scene.duration) ? entry.scene.duration : undefined;
       validateTransition(entry.transition, index, sceneDuration, previousDuration, `${base}.transition`, err);
+      if (entry.voice !== undefined) validateVoice(entry.voice, `${base}.voice`, err);
       if (sceneDuration !== undefined) previousDuration = sceneDuration;
     });
   }
+  if (project.audio !== undefined) validateAudio(project.audio, err);
   if (project.meta !== undefined) {
     if (!isRecord(project.meta)) err('meta', 'meta должен быть объектом; пример: {"brief":"# ТЗ режиссёра: ...","styleId":"warm-dusk"}');
     else {
@@ -139,6 +225,17 @@ function overlapFrames(project: ProjectV1, index: number): number {
   return Math.min(Math.round(transition.duration * project.fps), sceneFrames(project, index - 1), sceneFrames(project, index));
 }
 
+/** Начало каждой сцены на таймлайне проекта в кадрах: с учётом наложений переходов. */
+export function sceneStartFrames(project: ProjectV1): number[] {
+  const starts: number[] = [];
+  let start = 0;
+  for (let index = 0; index < project.scenes.length; index++) {
+    starts.push(start);
+    start += sceneFrames(project, index) - overlapFrames(project, index + 1);
+  }
+  return starts;
+}
+
 export function projectFrameCount(project: ProjectV1): number {
   const total = project.scenes.reduce((sum, _entry, index) => sum + sceneFrames(project, index), 0);
   const overlaps = project.scenes.reduce((sum, _entry, index) => sum + overlapFrames(project, index), 0);
@@ -148,12 +245,7 @@ export function projectFrameCount(project: ProjectV1): number {
 export function locateFrame(project: ProjectV1, globalIndex: number): FrameLocation {
   const total = projectFrameCount(project);
   if (!Number.isInteger(globalIndex) || globalIndex < 0 || globalIndex >= total) throw new RangeError('globalIndex вне диапазона проекта');
-  const starts: number[] = [];
-  let start = 0;
-  for (let index = 0; index < project.scenes.length; index++) {
-    starts.push(start);
-    start += sceneFrames(project, index) - overlapFrames(project, index + 1);
-  }
+  const starts = sceneStartFrames(project);
   const frames: LocatedScene[] = [];
   for (let index = 0; index < project.scenes.length; index++) {
     const local = globalIndex - starts[index];
