@@ -6,7 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildAudioPlan, projectFrameCount, sceneStartFrames, validateProject, type AudioPlanItem, type ProjectV1 } from '../engine/index.ts';
-import { buildFfmpegArgs, isAudioItemAudible, type AudioInputItem } from './ffmpeg-audio.ts';
+import { buildAudioFilter, buildFfmpegArgs, buildMeasureFilter, isAudioItemAudible, masterFilter, GAIN_LIMIT_DB, type AudioInputItem } from './ffmpeg-audio.ts';
+import { gainDbFrom, parseLoudnormReport } from './audio-gain.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 30;
@@ -15,6 +16,9 @@ const SILENCE_FLOOR_DB = -60;
 const SILENCE_MIN_SEC = 0.05;
 const DUCK_DROP_DB = 3;
 const TAIL_FLOOR_DB = -40;
+const LOUD_TARGET_DB = -14;
+// Потолок приёмки true peak: на 0.5 дБ ниже потолка alimiter (−1.5 dBTP) — запас на кодирование AAC.
+const PEAK_CEILING_DB = -1.0;
 const VOICE_HZ = 4000;
 const MUSIC_HZ = 200;
 // Измеряет уровень музыки, не глядя на голос: два lowpass режут 4000 Гц больше чем на 40 дБ.
@@ -70,10 +74,19 @@ function firstSoundSec(file: string): number | null {
   return log.includes('silence_start') ? null : 0;
 }
 
-const scene = (title: string) => ({
+/** Интегральная громкость и true peak всего файла по ebur128 — тот же измеритель, что проверяет verify-export. */
+function loudnessOf(file: string): { i: number; tp: number } {
+  const log = audioFilterLog(file, 'ebur128=peak=true');
+  const i = /Summary:[\s\S]*?\n\s*I:\s*(-?[\d.]+|-inf) LUFS/.exec(log)?.[1];
+  const tp = /True peak:\s*\n\s*Peak:\s*(-?[\d.]+|-inf) dBFS/.exec(log)?.[1];
+  if (i === undefined || tp === undefined) throw new Error(`ebur128 не дал I или True peak у ${file}`);
+  return { i: Number(i), tp: Number(tp) };
+}
+
+const scene = (title: string, duration = 3) => ({
   version: 1,
   title,
-  duration: 3,
+  duration,
   palette: { sky: ['#123', '#456'] },
   camera: { keys: [] },
   assets: {},
@@ -89,6 +102,15 @@ function makeProject(opts: { firstVoice?: boolean; secondVoice?: boolean; music?
   const project: Record<string, unknown> = { version: 1, title: 'Звук', fps: FPS, format: '16:9', scenes };
   if (opts.music) project.audio = { music: { file: 'music.m4a', ...opts.music } };
   return project as unknown as ProjectV1;
+}
+
+/** Одна сцена заданной длины с одним голосом: случай «реплика короче сцены», где один проход loudnorm не сходился. */
+function toneProject(file: string, sceneSec: number, gain?: number): ProjectV1 {
+  const entry: Record<string, unknown> = {
+    id: 's1', name: 'Тон', scene: scene('Тон', sceneSec), transition: { type: 'cut' },
+    voice: { file, ...(gain === undefined ? {} : { gain }) },
+  };
+  return { version: 1, title: 'Громкость', fps: FPS, format: '16:9', scenes: [entry] } as unknown as ProjectV1;
 }
 
 function exportProject(project: ProjectV1, audioDir: string, out: string, extra: string[] = []) {
@@ -182,7 +204,10 @@ try {
     ok(exportMix.status === 0, `export.ts со звуком завершился${exportMix.status === 0 ? '' : `: ${exportMix.stdout.slice(-500)}${exportMix.stderr.slice(-300)}`}`);
     const graph = /звук filter_complex: (.+)/.exec(exportMix.stdout ?? '')?.[1] ?? '(строка не найдена)';
     console.log(`filter_complex: ${graph}`);
-    ok(graph.includes('loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000'), 'после loudnorm стоит aresample=48000');
+    ok(graph.includes('alimiter=limit=0.84:level=disabled,aresample=48000'), 'мастер-шина: потолок пиков, затем aresample=48000');
+    ok(!graph.includes('loudnorm'), 'в основном проходе loudnorm нет — громкость берётся из измерения прохода 1');
+    const applied = /volume=(-?[\d.]+)dB/.exec(graph)?.[1];
+    ok(applied !== undefined && Math.abs(Number(applied)) <= GAIN_LIMIT_DB, `усиление мастер-шины в пределе ±${GAIN_LIMIT_DB} дБ: volume=${applied ?? 'не найдено'}dB`);
     ok(graph.includes('sidechaincompress'), 'музыка приглушается по голосу (duck по умолчанию)');
     const verifyMix = run('verify-export.ts', [mixMp4, '480', '270', String(FPS), '5.2', '--expect-audio']);
     ok(verifyMix.status === 0, `verify-export --expect-audio PASS на полном ролике${verifyMix.status === 0 ? '' : `\n${verifyMix.stdout}`}`);
@@ -237,15 +262,111 @@ try {
     const REFERENCE_ARGS = ['-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', '1920x1080', '-r', '30', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'slow', '-crf', '20', '-movflags', '+faststart', '-y', 'out.mp4'];
     const baseArgs = { width: 1920, height: 1080, fps: FPS, preset: 'slow', crf: 20, outFile: 'out.mp4' };
     ok(JSON.stringify(buildFfmpegArgs(baseArgs)) === JSON.stringify(REFERENCE_ARGS), 'без audio: массив аргументов побайтово равен прежнему');
-    ok(JSON.stringify(buildFfmpegArgs({ ...baseArgs, audio: { items: [], totalSec: 0 } })) === JSON.stringify(REFERENCE_ARGS), 'audio с пустым списком: тот же массив, без -filter_complex и без -c:a');
-    const withAudio = buildFfmpegArgs({ ...baseArgs, audio: { items: [{ kind: 'music', file: 'music.m4a', startSec: 0, gain: 0.5, filePath: path.join(audioDir, 'music.m4a'), durationSec: 2 }], totalSec: 5.2 } });
+    ok(JSON.stringify(buildFfmpegArgs({ ...baseArgs, audio: { items: [], totalSec: 0, gainDb: null } })) === JSON.stringify(REFERENCE_ARGS), 'audio с пустым списком: тот же массив, без -filter_complex и без -c:a');
+    const musicItem: AudioInputItem = { kind: 'music', file: 'music.m4a', startSec: 0, gain: 0.5, filePath: path.join(audioDir, 'music.m4a'), durationSec: 2 };
+    const withAudio = buildFfmpegArgs({ ...baseArgs, audio: { items: [musicItem], totalSec: 5.2, gainDb: 4.2 } });
     ok(withAudio.join(' ').includes('-c:a aac -b:a 192k -ar 48000'), 'со звуком к тем же аргументам добавлены -c:a aac -ar 48000');
+
+    console.log('--- к) мастер-шина: усиление из измерения, предел, разбор JSON ---');
+    ok(masterFilter(4.2, 6) === 'volume=4.2dB,alimiter=limit=0.84:level=disabled,aresample=48000,apad,atrim=0:6', 'усиление → потолок пиков → ровная длина дорожки');
+    ok(masterFilter(null, 6) === 'aresample=48000,apad,atrim=0:6', 'пропуск нормализации: в мастер-шине остаётся только длина');
+    ok(buildAudioFilter([musicItem], 6, 4.2).includes('volume=4.2dB'), 'граф основного прохода использует то же усиление');
+    ok(!buildAudioFilter([musicItem], 6, 4.2).includes('loudnorm'), 'в основном проходе loudnorm нет');
+    ok(buildMeasureFilter([musicItem], 6).includes('apad,atrim=0:6,loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json[aout]'), 'проход 1: та же длина дорожки и loudnorm только на печать измерения');
+    ok(gainDbFrom(-18.23) !== null && Math.abs(gainDbFrom(-18.23)! - 4.23) < 1e-9, 'усиление = цель − измеренная громкость (−18.23 → +4.23 дБ)');
+    ok(gainDbFrom(-50) === GAIN_LIMIT_DB, `очень тихий вход ограничен +${GAIN_LIMIT_DB} дБ`);
+    ok(gainDbFrom(10) === -GAIN_LIMIT_DB, `очень громкий вход ограничен −${GAIN_LIMIT_DB} дБ`);
+    ok(gainDbFrom(-70) === null && gainDbFrom(null) === null, 'пустой вход: усиление не назначается');
+    const report = parseLoudnormReport(['лог ffmpeg', '{"input_i" : "-99.99"}', '{', '"input_i" : "-18.23",', '"input_tp" : "-21.07",', '"input_lra" : "7.6"', '}'].join('\n'));
+    ok(report.inputI === -18.23 && report.inputTp === -21.07, 'разбор берёт последний JSON с input_i, а не первый объект лога');
+    ok(parseLoudnormReport('{"input_i" : "-inf",\n"input_tp" : "-inf"\n}').inputI === null, 'тишина: -inf читается как «нет измерения»');
+    ok(parseLoudnormReport('stderr без единого json').inputI === null, 'пустое измерение не роняет экспорт');
 
     console.log('--- приёмка пустой дорожки ---');
     const silentMp4 = path.join(tmp, 'silent.mp4');
     ffmpegTo(['-f', 'lavfi', '-i', 'color=c=black:s=320x240:r=30', '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', '1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-movflags', '+faststart', '-shortest', silentMp4], 'пустой mp4');
     const verifySilent = run('verify-export.ts', [silentMp4, '320', '240', String(FPS), '1', '--expect-audio']);
     ok(verifySilent.status === 0 && verifySilent.stdout.includes('громкость пропущена'), `полностью тихая дорожка проходит без проверки LUFS${verifySilent.stdout.includes('громкость пропущена') ? '' : `\n${verifySilent.stdout}`}`);
+
+    console.log('--- л) нормализация по измерению на реальных роликах ---');
+    // тон в −6 dBFS (громкость около −2.9 LUFS): тогда и gain 0.05, и gain 2 требуют усиления в пределах ±20 дБ
+    ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${VOICE_HZ}:duration=6:sample_rate=48000`, '-af', 'volume=12dB', '-ac', '1', '-c:a', 'pcm_s16le', path.join(audioDir, 'loud.wav')], 'loud.wav');
+    ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${VOICE_HZ}:duration=2.3:sample_rate=48000`, '-ac', '1', '-c:a', 'pcm_s16le', path.join(audioDir, 'rare.wav')], 'rare.wav');
+    ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${VOICE_HZ}:duration=6:sample_rate=48000`, '-ac', '1', '-c:a', 'pcm_s16le', path.join(audioDir, 'dense.wav')], 'dense.wav');
+    ffmpegTo(['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', '6', '-c:a', 'pcm_s16le', path.join(audioDir, 'silence.wav')], 'silence.wav');
+    const gainLine = (stdout: string) => /громкость: [^\n]*/.exec(stdout ?? '')?.[0] ?? '(строка про громкость не найдена)';
+    const loudOf = (label: string, mp4: string) => {
+      const l = loudnessOf(mp4);
+      console.log(`${label}: ${l.i.toFixed(1)} LUFS, true peak ${l.tp.toFixed(1)} dBFS (ebur128=peak=true)`);
+      return l;
+    };
+
+    // л1 — редкий звук: 2.3 с реплики в 6-секундной сцене, тот случай, где однопроходный loudnorm давал −8.2 LUFS
+    const rareMp4 = path.join(tmp, 'rare.mp4');
+    const rare = exportProject(toneProject('rare.wav', 6), audioDir, rareMp4);
+    ok(rare.status === 0, `экспорт редкого звука завершился${rare.status === 0 ? '' : `: ${(rare.stdout ?? '').slice(-400)}`}`);
+    console.log(`проход 1: ${gainLine(rare.stdout)}`);
+    const rareL = loudOf('л1 редкий звук 2.3 с в 6 с', rareMp4);
+    ok(Math.abs(rareL.i - LOUD_TARGET_DB) <= 1, `редкий звук в ${LOUD_TARGET_DB} ±1 LUFS (получено ${rareL.i.toFixed(1)})`);
+    const verifyRare = run('verify-export.ts', [rareMp4, '480', '270', String(FPS), '6', '--expect-audio']);
+    ok(verifyRare.status === 0, `verify-export --expect-audio PASS на редком звуке${verifyRare.status === 0 ? '' : `\n${verifyRare.stdout}`}`);
+
+    // л2 — плотный звук: проверка не ухудшилась там, где прежний способ работал
+    const denseMp4 = path.join(tmp, 'dense.mp4');
+    const dense = exportProject(toneProject('dense.wav', 6), audioDir, denseMp4);
+    ok(dense.status === 0, `экспорт плотного звука завершился${dense.status === 0 ? '' : `: ${(dense.stdout ?? '').slice(-400)}`}`);
+    const denseL = loudOf('л2 плотный звук 6 с в 6 с', denseMp4);
+    ok(Math.abs(denseL.i - LOUD_TARGET_DB) <= 1, `плотный звук в ${LOUD_TARGET_DB} ±1 LUFS (получено ${denseL.i.toFixed(1)})`);
+
+    // л3 — очень тихий и очень громкий входы: усиление остаётся в ±20 дБ, пики — под ограничителем
+    const quietMp4 = path.join(tmp, 'quiet.mp4');
+    const quiet = exportProject(toneProject('loud.wav', 6, 0.05), audioDir, quietMp4);
+    ok(quiet.status === 0, `экспорт тихого входа (gain 0.05) завершился${quiet.status === 0 ? '' : `: ${(quiet.stdout ?? '').slice(-400)}`}`);
+    console.log(`проход 1: ${gainLine(quiet.stdout)}`);
+    const quietL = loudOf('л3 gain 0.05', quietMp4);
+    ok(Math.abs(quietL.i - LOUD_TARGET_DB) <= 1.5, `тихий вход в ${LOUD_TARGET_DB} ±1.5 LUFS (получено ${quietL.i.toFixed(1)})`);
+    const loudMp4 = path.join(tmp, 'loud.mp4');
+    const loudEntry = exportProject(toneProject('loud.wav', 6, 2), audioDir, loudMp4);
+    ok(loudEntry.status === 0, `экспорт громкого входа (gain 2) завершился${loudEntry.status === 0 ? '' : `: ${(loudEntry.stdout ?? '').slice(-400)}`}`);
+    console.log(`проход 1: ${gainLine(loudEntry.stdout)}`);
+    const loudL = loudOf('л3 gain 2', loudMp4);
+    ok(Math.abs(loudL.i - LOUD_TARGET_DB) <= 1.5, `громкий вход в ${LOUD_TARGET_DB} ±1.5 LUFS (получено ${loudL.i.toFixed(1)})`);
+    ok(quietL.tp <= PEAK_CEILING_DB && loudL.tp <= PEAK_CEILING_DB, `true peak обоих роликов ≤ ${PEAK_CEILING_DB} dBFS (получено ${quietL.tp.toFixed(1)} и ${loudL.tp.toFixed(1)})`);
+
+    // л4 — пустая дорожка: измерение не назначает усиление, экспорт не падает
+    const muteMp4 = path.join(tmp, 'mute.mp4');
+    const mute = exportProject(toneProject('silence.wav', 6), audioDir, muteMp4);
+    ok(mute.status === 0, `экспорт с полностью тихим файлом завершился${mute.status === 0 ? '' : `: ${(mute.stdout ?? '').slice(-400)}`}`);
+    ok(/звук пустой, нормализация пропущена/.test(mute.stdout ?? ''), `в логе есть строка про пропуск: ${gainLine(mute.stdout)}`);
+
+    // л5 — кусок: окно тоже меряется своим планом, поэтому громкость держится и внутри ролика
+    const rareClipMp4 = path.join(tmp, 'rare-clip.mp4');
+    const rareClip = exportProject(toneProject('rare.wav', 6), audioDir, rareClipMp4, ['--range', '0:4']);
+    ok(rareClip.status === 0, `экспорт куска 0:4 со звуком завершился${rareClip.status === 0 ? '' : `: ${(rareClip.stdout ?? '').slice(-400)}`}`);
+    const clipDurations = ['v:0', 'a:0'].map((sel) => Number(ffprobeJson(rareClipMp4, 'stream=duration', sel).streams[0]?.duration));
+    ok(clipDurations.every(Number.isFinite) && Math.abs(clipDurations[0] - clipDurations[1]) <= TOL_SEC, `кусок: видео ${clipDurations[0].toFixed(3)} с, аудио ${clipDurations[1].toFixed(3)} с, допуск ${TOL_SEC} с`);
+    const clipL = loudOf('л5 кусок 0:4', rareClipMp4);
+    ok(Math.abs(clipL.i - LOUD_TARGET_DB) <= 1.5, `кусок в ${LOUD_TARGET_DB} ±1.5 LUFS (получено ${clipL.i.toFixed(1)})`);
+    const verifyRareClip = run('verify-export.ts', [rareClipMp4, '480', '270', String(FPS), '4', '--expect-audio']);
+    ok(verifyRareClip.status === 0, `приёмка куска с нормализованным звуком PASS${verifyRareClip.status === 0 ? '' : `\n${verifyRareClip.stdout}`}`);
+
+    // л6 — потолок пиков: щёлчки с гребнем 14 дБ без ограничителя дали бы около нуля dBTP.
+    // Материал с гребнем больше 12.5 дБ (цель −14 LUFS минус потолок −1.5 dBTP) в цель не влезает по определению,
+    // поэтому тут проверяется работа ограничителя, а громкость — только то, что он её не съел.
+    ffmpegTo(['-f', 'lavfi', '-i', 'aevalsrc=sin(2*PI*1000*t)*lt(mod(t\\,0.25)\\,0.01):d=4:s=48000', '-ac', '2', '-c:a', 'pcm_s16le', path.join(audioDir, 'clicks.wav')], 'clicks.wav');
+    const clicksMp4 = path.join(tmp, 'clicks.mp4');
+    const clicks = exportProject(toneProject('clicks.wav', 4), audioDir, clicksMp4);
+    ok(clicks.status === 0, `экспорт пиковой нагрузки завершился${clicks.status === 0 ? '' : `: ${(clicks.stdout ?? '').slice(-400)}`}`);
+    console.log(`проход 1: ${gainLine(clicks.stdout)}`);
+    const clickGain = Number(/усиление ([+-]?[\d.]+) дБ/.exec(clicks.stdout ?? '')?.[1] ?? NaN);
+    const clickSource = loudnessOf(path.join(audioDir, 'clicks.wav'));
+    const clickWouldBe = clickSource.tp + clickGain;
+    console.log(`без ограничителя: пики входа ${clickSource.tp.toFixed(1)} dBTP + усиление ${clickGain.toFixed(1)} дБ = ${clickWouldBe.toFixed(1)} dBTP (гребень ${(clickSource.tp - clickSource.i).toFixed(1)} дБ)`);
+    ok(clickWouldBe > PEAK_CEILING_DB, 'фикстура реально перегружает потолок пиков (иначе проверка ограничителя ничего не доказывает)');
+    const clicksL = loudOf('л6 щёлчки с ограничителем', clicksMp4);
+    ok(clicksL.tp <= PEAK_CEILING_DB, `alimiter держит true peak ≤ ${PEAK_CEILING_DB} dBFS (было бы ${clickWouldBe.toFixed(1)}, стало ${clicksL.tp.toFixed(1)})`);
+    ok(clicksL.tp < clickWouldBe - 0.5, `ограничитель реально снизил пики на ${(clickWouldBe - clicksL.tp).toFixed(1)} дБ`);
+    ok(clicksL.i >= LOUD_TARGET_DB - 2, `ограничитель не съел громкость: ${clicksL.i.toFixed(1)} LUFS не тише ${LOUD_TARGET_DB - 2}`);
 
     console.log(failures.length ? `check:audio FAIL (${failures.length})` : 'check:audio PASS');
     process.exitCode = failures.length ? 1 : 0;

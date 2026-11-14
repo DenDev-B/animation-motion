@@ -4,6 +4,12 @@ import type { AudioPlanItem } from '../engine/audio-plan.ts';
 const SAMPLE_RATE = 48000;
 const FADE_SEC = 0.03;
 const DUCK_THRESHOLD = 0.01;
+/** Целевая интегральная громкость ролика — та же, что проверяет verify-export. */
+export const LOUDNESS_TARGET_DB = -14;
+/** Потолок усиления мастер-шины: выше — разгон тишины и шума квантования вместо полезного звука. */
+export const GAIN_LIMIT_DB = 20;
+/** Потолок пиков вместо dynamic-режима loudnorm: 0.84 по линейной шкале ≈ −1.5 dBTP. */
+export const PEAK_LIMIT = 0.84;
 const INPUT_HEAD = `aresample=${SAMPLE_RATE},aformat=sample_fmts=fltp:channel_layouts=stereo`;
 
 /** Плановый предмет звука + то, что известно только экспортеру: путь и длительность файла. */
@@ -20,6 +26,8 @@ export interface FfmpegAudioOptions {
   items: AudioInputItem[];
   /** Длительность звуковой дорожки = длительность собираемого видео. */
   totalSec: number;
+  /** Усиление мастер-шины в дБ из прохода 1; null — звука нет, нормализацию пропускаем. */
+  gainDb: number | null;
 }
 
 export interface FfmpegArgsOptions {
@@ -68,13 +76,29 @@ function musicChain(item: AudioInputItem, totalSec: number): string[] {
   return chain;
 }
 
-/** filter_complex для аудиодорожки: голоса в шину, музыка под неё, итог — loudnorm и ровная длина. */
-export function buildAudioFilter(items: AudioInputItem[], totalSec: number): string {
+/** Хвост мастер-шины основного прохода: измеренное усиление → потолок пиков → ровная длина дорожки. */
+export function masterFilter(gainDb: number | null, totalSec: number): string {
+  const length = `aresample=${SAMPLE_RATE},apad,atrim=0:${num(totalSec)}`;
+  return gainDb === null ? length : `volume=${num(gainDb)}dB,alimiter=limit=${PEAK_LIMIT}:level=disabled,${length}`;
+}
+
+/** Проход 1: тот же микс без нормализации — по нему loudnorm в print-режиме измеряет «живую» часть дорожки. */
+export function buildMeasureFilter(items: AudioInputItem[], totalSec: number): string {
+  // видеопотока в этом проходе нет, поэтому файлы звука начинаются с индекса 0, а не с 1
+  return audioGraph(items, totalSec, `apad,atrim=0:${num(totalSec)},loudnorm=I=${LOUDNESS_TARGET_DB}:TP=-1.5:LRA=11:print_format=json`, 0);
+}
+
+/** filter_complex для аудиодорожки: голоса в шину, музыка под неё, итог — мастер-шина заданной длины. */
+export function buildAudioFilter(items: AudioInputItem[], totalSec: number, gainDb: number | null): string {
+  return audioGraph(items, totalSec, masterFilter(gainDb, totalSec), 1);
+}
+
+function audioGraph(items: AudioInputItem[], totalSec: number, master: string, firstInputStream: number): string {
   const graph: string[] = [];
   const voiceLabels: string[] = [];
   const musicLabels: { label: string; duck: boolean }[] = [];
   items.forEach((item, index) => {
-    const source = `${index + 1}:a`;
+    const source = `${index + firstInputStream}:a`;
     if (item.kind === 'music') {
       const label = `mu${index}`;
       graph.push(`[${source}]${musicChain(item, totalSec).join(',')}[${label}]`);
@@ -93,7 +117,6 @@ export function buildAudioFilter(items: AudioInputItem[], totalSec: number): str
     voiceBus = 'abus';
   }
 
-  const master = `loudnorm=I=-14:TP=-1.5:LRA=11,aresample=${SAMPLE_RATE},apad,atrim=0:${num(totalSec)}`;
   const music = musicLabels[0];
   const mixLabels: string[] = [];
   if (music && voiceBus && music.duck) {
@@ -129,7 +152,7 @@ export function buildFfmpegArgs(options: FfmpegArgsOptions): string[] {
   }
   for (const item of items) args.push('-i', item.filePath);
   return [...args,
-    '-filter_complex', buildAudioFilter(items, options.audio!.totalSec),
+    '-filter_complex', buildAudioFilter(items, options.audio!.totalSec, options.audio!.gainDb),
     '-map', '0:v', '-map', '[aout]',
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', options.preset, '-crf', String(options.crf),
     '-c:a', 'aac', '-b:a', '192k', '-ar', String(SAMPLE_RATE),

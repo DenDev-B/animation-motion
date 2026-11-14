@@ -8,6 +8,7 @@ import { renderFrame, createRenderCache, validateAsset, validateScene, validateP
 import { formatFileToken, safeFileName } from './file-names.ts';
 import { planPreview, previewSuffix, scaledSize, type Aspect } from '../engine/preview-plan.ts';
 import { buildAudioFilter, buildFfmpegArgs, isAudioItemAudible, type AudioInputItem, type FfmpegAudioOptions } from './ffmpeg-audio.ts';
+import { measureAudioGain } from './audio-gain.ts';
 (globalThis as any).Path2D = Path2D;
 
 function log(m: string) { process.stdout.write(m + '\n'); }
@@ -105,7 +106,7 @@ function prepareAudio(project: ProjectV1, fps: number, audioDir: string, mode: '
     items.push(input);
   }
   if (missing.length) fail(`нет файлов звука (${missing.length}):\n${missing.join('\n')}\nПапка звука: ${audioDir}; другую папку задают флагом --audio-dir`);
-  return { items, totalSec: audioPlan.totalSec };
+  return { items, totalSec: audioPlan.totalSec, gainDb: null };
 }
 
 async function main() {
@@ -173,7 +174,13 @@ async function main() {
   const audio = projectV1 && plan.mode !== 'frame' ? prepareAudio(projectV1, fps, args.audioDir, plan.mode, plan.startFrame, N) : null;
   if (audio) {
     log(`звук: ${audio.items.length} файл(ов), дорожка ${audio.totalSec.toFixed(2)} с`);
-    log(`звук filter_complex: ${buildAudioFilter(audio.items, audio.totalSec)}`);
+    // проход 1 до рендера кадров: тот же микс без нормализации даёт измеренную громкость «живой» части
+    const gain = await measureAudioGain(audio.items, audio.totalSec).catch((e: unknown) => {
+      fail(`не удалось измерить громкость: ${e instanceof Error ? e.message : String(e)}`);
+    });
+    audio.gainDb = gain.gainDb;
+    log(gain.message);
+    log(`звук filter_complex: ${buildAudioFilter(audio.items, audio.totalSec, audio.gainDb)}`);
   }
 
   // три переиспользуемых холста: кадры A/B и результат композитинга
