@@ -567,6 +567,7 @@ function focusSceneCard(index: number) {
 function transitionControl(index: number, entry: ProjectSceneV1): HTMLElement {
   const transition = document.createElement('div');
   transition.className = 'order-transition';
+  transition.addEventListener('dragstart', (event) => event.preventDefault());
   const type = entry.transition?.type ?? 'cut';
   const limit = transitionLimit(index);
   const typeLabel = document.createElement('label');
@@ -603,7 +604,6 @@ function renderSceneOrder() {
   if (!sceneOrder) return;
   sceneOrder.innerHTML = '';
   project.scenes.forEach((entry, index) => {
-    if (index > 0) sceneOrder.appendChild(transitionControl(index, entry));
     const row = document.createElement('div');
     row.className = 'order-row';
     row.tabIndex = 0;
@@ -611,6 +611,7 @@ function renderSceneOrder() {
     row.dataset.index = String(index);
     row.title = EDITOR_STRINGS.scenes.dragHint;
     row.appendChild(sceneThumbnail(entry, index));
+    if (index > 0) row.appendChild(transitionControl(index, entry));
     const head = document.createElement('div');
     head.className = 'order-head';
     const name = document.createElement('div');
@@ -623,7 +624,7 @@ function renderSceneOrder() {
     row.appendChild(head);
     row.appendChild(sceneVoiceBlock(entry));
     row.addEventListener('keydown', (event) => {
-      if ((event.target as HTMLElement).closest('.voice-block')) return;
+      if ((event.target as HTMLElement).closest('.voice-block, .order-transition')) return;
       if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
       event.preventDefault();
       const target = event.key === 'ArrowLeft' ? index - 1 : index + 1;
@@ -1523,13 +1524,19 @@ function applyProjectMusicDuck(value: boolean): void {
 }
 
 async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId: string, status: HTMLElement): Promise<void> {
-  if (voiceSynthBusy) { status.textContent = EDITOR_STRINGS.voice.busy; return; }
-  if (isExportInFlight()) { status.textContent = EDITOR_STRINGS.voice.busyExport; return; }
+  const setStatus = (message: string, kind?: 'ok' | 'warn' | 'err') => {
+    status.textContent = message;
+    status.classList.toggle('err', kind === 'err');
+    status.classList.toggle('warn', kind === 'warn');
+    status.classList.toggle('ok', kind === 'ok');
+  };
+  if (voiceSynthBusy) { setStatus(EDITOR_STRINGS.voice.busy, 'warn'); return; }
+  if (isExportInFlight()) { setStatus(EDITOR_STRINGS.voice.busyExport, 'warn'); return; }
   const text = rawText.trim();
-  if (!text) { status.textContent = EDITOR_STRINGS.voice.emptyText; return; }
-  if (voiceAdaptersState !== 'online') { status.textContent = EDITOR_STRINGS.voice.offline; return; }
+  if (!text) { setStatus(EDITOR_STRINGS.voice.emptyText, 'warn'); return; }
+  if (voiceAdaptersState !== 'online') { setStatus(EDITOR_STRINGS.voice.offline, 'err'); return; }
   voiceSynthBusy = true;
-  status.textContent = EDITOR_STRINGS.voice.synthesizing;
+  setStatus(EDITOR_STRINGS.voice.synthesizing);
   syncVoiceButtons();
   try {
     const reply = await voiceFetch<VoiceSynthesizeReply>('/__api/tts/synthesize', {
@@ -1538,19 +1545,21 @@ async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId:
       body: JSON.stringify({ text, ...(adapterId ? { adapter: adapterId } : {}) }),
     });
     if (!reply.ok || reply.data?.ok !== true || !reply.data.file) {
-      status.textContent = voiceIssueMessage(reply.data?.errors) || reply.message;
+      setStatus(voiceIssueMessage(reply.data?.errors) || reply.message, 'err');
       return;
     }
     const data = reply.data;
     const entry = findProjectScene(sceneId);
-    if (!entry) { status.textContent = EDITOR_STRINGS.voice.sceneMissing; return; }
-    if ((entry.voice?.text ?? '').trim() !== text) { status.textContent = EDITOR_STRINGS.voice.textChanged; return; }
+    if (!entry) { setStatus(EDITOR_STRINGS.voice.sceneMissing, 'err'); return; }
+    if ((entry.voice?.text ?? '').trim() !== text) { setStatus(EDITOR_STRINGS.voice.textChanged, 'err'); return; }
     const seconds = Number(data.durationSec ?? 0).toFixed(2);
     const words = Array.isArray(data.words) ? data.words.length : 0;
     let message = data.cached ? EDITOR_STRINGS.voice.cached(seconds, words) : EDITOR_STRINGS.voice.fresh(seconds, words);
     const end = Number(entry.voice?.offset ?? 0) + Number(data.durationSec ?? 0);
-    if (end > entry.scene.duration + 1e-6) message += `; ${EDITOR_STRINGS.voice.tooLong((end - entry.scene.duration).toFixed(2))}`;
+    const tooLong = end > entry.scene.duration + 1e-6;
+    if (tooLong) message += `; ${EDITOR_STRINGS.voice.tooLong((end - entry.scene.duration).toFixed(2))}`;
     voiceSceneStatus.set(sceneId, message);
+    setStatus(message, tooLong ? 'warn' : 'ok');
     applyChange('scene-voice-synthesize', () => {
       const voice = { ...(entry.voice ?? {}) };
       voice.text = text;
@@ -2549,7 +2558,7 @@ function renderTabs() {
   });
   const add = document.createElement('button');
   add.type = 'button';
-  add.className = 'scene-add';
+  add.className = 'scene-add ghost';
   add.textContent = '+';
   add.title = EDITOR_STRINGS.scenes.newScene;
   add.onclick = addScene;
