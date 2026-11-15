@@ -3,17 +3,27 @@ import fs from 'fs';
 import path from 'path';
 import { createCanvas, Path2D } from '@napi-rs/canvas';
 import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { listAudioFiles } from './audio-files.ts';
+import { synthesizeVoice, type SynthesizeVoiceResult } from './tts/synthesize.ts';
 (globalThis as any).Path2D = Path2D;
 
 export interface Issue { path: string; message: string }
 export type Parsed = { kind: 'project'; value: ProjectV1 } | { kind: 'scene'; value: SceneV1 };
 export interface Source { file?: string; json?: unknown }
 
+export interface CoreOptions {
+  /** Куда класть wav озвучки; по умолчанию <root>/audio. */
+  audioDir?: string;
+  /** Разрешить скрытый адаптер fake: только проверки. */
+  allowFake?: boolean;
+}
+
 const NAME_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-export function createCore(root: string) {
+export function createCore(root: string, options: CoreOptions = {}) {
   const projectsDir = path.join(root, 'projects');
   const catalogDir = path.join(root, 'catalog');
+  const audioDir = options.audioDir ? path.resolve(options.audioDir) : path.join(root, 'audio');
 
   function loadCatalog(): Record<string, CatalogAsset> {
     const catalog: Record<string, CatalogAsset> = {};
@@ -127,5 +137,22 @@ export function createCore(root: string) {
     return args;
   }
 
-  return { loadCatalog, validate, render, save, listProjects, listCatalog, getSchema, exportArgs, projectFile };
+  /** Аудиофайлы audio/ (включая tts/) — их можно ставить в voice.file и audio.music.file. */
+  function listAudio(): string[] {
+    return listAudioFiles(audioDir);
+  }
+
+  /** Синтез в audio/tts: в проект ничего не пишет, вызывающий сам кладёт file и words через save_project. */
+  async function ttsSynthesize(input: { text: string; adapter?: string; lang?: string; force?: boolean }): Promise<SynthesizeVoiceResult> {
+    return synthesizeVoice({
+      text: input.text,
+      adapterId: input.adapter,
+      lang: input.lang,
+      audioDir,
+      force: input.force,
+      allowFake: options.allowFake === true,
+    });
+  }
+
+  return { loadCatalog, validate, render, save, listProjects, listCatalog, getSchema, exportArgs, projectFile, listAudio, ttsSynthesize };
 }

@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
+import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
@@ -51,6 +51,7 @@ const panelSplice = document.getElementById('panelSplice') as HTMLElement | null
 const panelCatalog = document.getElementById('panelCatalog') as HTMLElement | null;
 const layerList = document.getElementById('layerList') as HTMLElement | null;
 const sceneOrder = document.getElementById('sceneOrder') as HTMLElement | null;
+const voicePanel = document.getElementById('voicePanel') as HTMLElement | null;
 // Панель «Образ сцены»
 const sceneLookTitleText = document.getElementById('sceneLookTitleText') as HTMLElement | null;
 const lookStyleText = document.getElementById('lookStyleText') as HTMLElement | null;
@@ -479,7 +480,7 @@ function setTopTab(tab: TopTab, persist = true) {
   if (appEl) appEl.classList.toggle('full', tab !== 'scenes');
   renderTopTabs();
   if (persist) storageSet(TAB_KEY, tab);
-  if (tab === 'splice') { renderSceneOrder(); renderProjectPreview(); void refreshExportPanel(); }
+  if (tab === 'splice') { renderSceneOrder(); renderProjectPreview(); void refreshExportPanel(); void refreshVoicePanel(); }
   else if (tab === 'catalog') renderCatalogList();
   else if (tab === 'scenes') frame();
 }
@@ -622,7 +623,9 @@ function renderSceneOrder() {
     duration.textContent = `${entry.scene.duration.toFixed(1)} с`;
     head.append(name, duration);
     row.appendChild(head);
+    row.appendChild(sceneVoiceBlock(entry));
     row.addEventListener('keydown', (event) => {
+      if ((event.target as HTMLElement).closest('.voice-block')) return;
       if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
       event.preventDefault();
       const target = event.key === 'ArrowLeft' ? index - 1 : index + 1;
@@ -646,6 +649,7 @@ function renderSceneOrder() {
     });
     sceneOrder.appendChild(row);
   });
+  renderVoicePanel();
 }
 
 function renderProjectPreview() {
@@ -1247,6 +1251,7 @@ function showExportResult(reply: ExportReply): void {
     setExportStatus(reply.message || issueMessage(reply.errors));
   }
   exportJobId = null;
+  syncVoiceButtons();
 }
 
 async function pollExportStatus(): Promise<void> {
@@ -1278,6 +1283,7 @@ async function startExport(): Promise<void> {
   exportLastIsFrame = payload.frame;
   setExportStatus('Отправляю проект…');
   exportSubmitting = true;
+  syncVoiceButtons();
   const reply = await fetchExportJson('/__api/export', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -1287,6 +1293,7 @@ async function startExport(): Promise<void> {
   if (!reply.ok || !reply.jobId) {
     setExportStatus(reply.ok ? 'Сервер не вернул id задания.' : issueMessage(reply.errors));
     if (exportMp4Btn) exportMp4Btn.disabled = false;
+    syncVoiceButtons();
     return;
   }
   exportJobId = reply.jobId;
@@ -1321,6 +1328,480 @@ async function refreshExportPanel(): Promise<void> {
   if (isExportInFlight()) return;
   if (exportMp4Btn) exportMp4Btn.disabled = !online;
   setExportStatus(online ? '' : EXPORT_OFFLINE_MESSAGE);
+}
+
+// ---------- voice panel: scene TTS and project music ----------
+interface TtsAdapterInfo {
+  id: string;
+  label: string;
+  ok: boolean;
+  reason?: string;
+}
+
+interface VoiceSynthesizeReply {
+  ok?: boolean;
+  file?: string;
+  durationSec?: number;
+  words?: VoiceWord[];
+  cached?: boolean;
+  warnings?: string[];
+  errors?: Array<{ path?: string; message?: string }>;
+}
+
+const VOICE_TEXT_MAX = 2000;
+let voiceAdapters: TtsAdapterInfo[] = [];
+let voiceAdaptersState: 'unknown' | 'online' | 'offline' = 'unknown';
+let voiceAdaptersError = '';
+let voiceAudioFiles: string[] = [];
+let voiceAudioState: 'unknown' | 'online' | 'offline' = 'unknown';
+let voiceSynthBusy = false;
+const voiceSceneStatus = new Map<string, string>();
+const voiceOpenState = new Map<string, boolean>();
+const voiceAdapterChoice = new Map<string, string>();
+
+function fillTemplate(template: string, values: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
+}
+
+function voiceIssueMessage(errors: Array<{ path?: string; message?: string }> | undefined): string {
+  const first = errors?.[0];
+  if (!first) return '';
+  return `${first.path ? `${first.path}: ` : ''}${first.message ?? ''}`;
+}
+
+interface VoiceFetchResult<T> {
+  ok: boolean;
+  data?: T;
+  message: string;
+}
+
+async function voiceFetch<T>(url: string, init?: RequestInit): Promise<VoiceFetchResult<T>> {
+  try {
+    const response = await fetch(url, init);
+    const text = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { ok: false, message: fillTemplate(EDITOR_STRINGS.voice.serverNotJson, { code: response.status }) };
+    }
+    if (!response.ok) {
+      const errors = (data as { errors?: Array<{ path?: string; message?: string }> }).errors;
+      return { ok: false, data: data as T, message: voiceIssueMessage(errors) || `HTTP ${response.status}` };
+    }
+    return { ok: true, data: data as T, message: '' };
+  } catch (error) {
+    localApiReady = false;
+    return { ok: false, message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function availableVoiceAdapters(): TtsAdapterInfo[] {
+  return voiceAdapters.filter((adapter) => adapter.ok);
+}
+
+async function loadVoiceAdapters(): Promise<void> {
+  const reply = await voiceFetch<{ ok?: boolean; adapters?: TtsAdapterInfo[] }>('/__api/tts/adapters', { headers: { accept: 'application/json' } });
+  if (reply.ok && reply.data?.ok === true && Array.isArray(reply.data.adapters)) {
+    voiceAdapters = reply.data.adapters;
+    voiceAdaptersState = 'online';
+    voiceAdaptersError = availableVoiceAdapters().length === 0
+      ? fillTemplate(EDITOR_STRINGS.voice.noAdapter, { reasons: voiceAdapters.map((adapter) => `${adapter.label}: ${adapter.reason ?? ''}`).join('; ') })
+      : '';
+  } else {
+    voiceAdaptersState = 'offline';
+    voiceAdaptersError = reply.message;
+  }
+}
+
+async function loadVoiceAudio(): Promise<void> {
+  const reply = await voiceFetch<{ ok?: boolean; files?: string[] }>('/__api/audio/list', { headers: { accept: 'application/json' } });
+  if (reply.ok && reply.data?.ok === true && Array.isArray(reply.data.files)) {
+    voiceAudioFiles = reply.data.files;
+    voiceAudioState = 'online';
+  } else {
+    voiceAudioState = 'offline';
+  }
+}
+
+async function refreshVoicePanel(): Promise<void> {
+  renderSceneOrder();
+  renderVoicePanel();
+  if (!(await localApiAvailable())) {
+    voiceAdaptersState = 'offline';
+    voiceAudioState = 'offline';
+    renderSceneOrder();
+    renderVoicePanel();
+    return;
+  }
+  await Promise.all([loadVoiceAdapters(), loadVoiceAudio()]);
+  renderSceneOrder();
+  renderVoicePanel();
+}
+
+function findProjectScene(sceneId: string): ProjectSceneV1 | undefined {
+  return project.scenes.find((entry) => entry.id === sceneId);
+}
+
+function voiceStatusElement(sceneId: string): HTMLElement | null {
+  return sceneOrder?.querySelector<HTMLElement>(`.voice-block[data-scene-id="${sceneId}"] .voice-status`) ?? null;
+}
+
+function syncVoiceButtons(): void {
+  const busy = voiceSynthBusy || isExportInFlight();
+  for (const button of document.querySelectorAll<HTMLButtonElement>('.voice-synth, .voice-remove')) {
+    button.disabled = busy || button.dataset.voiceDisabled === '1';
+  }
+}
+
+function applySceneVoiceText(sceneId: string, rawText: string): void {
+  const entry = findProjectScene(sceneId);
+  if (!entry) return;
+  const text = rawText.trim();
+  if (text === (entry.voice?.text ?? '').trim()) return;
+  voiceSceneStatus.delete(sceneId);
+  applyChange('scene-voice-text', () => {
+    if (!text) {
+      if (!entry.voice) return;
+      delete entry.voice.text;
+      if (!entry.voice.file) delete entry.voice;
+      return;
+    }
+    entry.voice = { ...(entry.voice ?? {}), text };
+  });
+}
+
+function applySceneVoiceNumber(sceneId: string, field: 'offset' | 'gain', value: number): void {
+  const entry = findProjectScene(sceneId);
+  if (!entry?.voice) return;
+  const limit = field === 'gain' ? 2 : Number.POSITIVE_INFINITY;
+  if (!Number.isFinite(value) || value < 0 || value > limit) return;
+  if ((entry.voice[field] ?? (field === 'gain' ? 1 : 0)) === value) return;
+  applyChange(`scene-voice-${field}`, () => {
+    if (entry.voice) entry.voice[field] = value;
+  });
+}
+
+function removeSceneVoice(sceneId: string, name: string): void {
+  const entry = findProjectScene(sceneId);
+  if (!entry?.voice) return;
+  if (!confirm(fillTemplate(EDITOR_STRINGS.voice.removeConfirm, { name }))) return;
+  voiceSceneStatus.delete(sceneId);
+  applyChange('scene-voice-remove', () => {
+    delete entry.voice;
+  });
+}
+
+function applyProjectMusic(file: string): void {
+  const music = project.audio?.music;
+  if (!file) {
+    if (!music) return;
+    applyChange('project-music', () => {
+      if (!project.audio) return;
+      delete project.audio.music;
+      if (Object.keys(project.audio).length === 0) delete project.audio;
+    });
+    return;
+  }
+  if (music?.file === file) return;
+  applyChange('project-music', () => {
+    const audio = { ...(project.audio ?? {}) };
+    audio.music = { ...(audio.music ?? {}), file };
+    project.audio = audio;
+  });
+}
+
+function applyProjectMusicGain(value: number): void {
+  const music = project.audio?.music;
+  if (!music || !Number.isFinite(value) || value < 0 || value > 1 || music.gain === value) return;
+  applyChange('project-music-gain', () => {
+    music.gain = value;
+  });
+}
+
+function applyProjectMusicDuck(value: boolean): void {
+  const music = project.audio?.music;
+  if (!music || music.duck === value) return;
+  applyChange('project-music-duck', () => {
+    music.duck = value;
+  });
+}
+
+async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId: string, status: HTMLElement): Promise<void> {
+  if (voiceSynthBusy) { status.textContent = EDITOR_STRINGS.voice.busy; return; }
+  if (isExportInFlight()) { status.textContent = EDITOR_STRINGS.voice.busyExport; return; }
+  const text = rawText.trim();
+  if (!text) { status.textContent = EDITOR_STRINGS.voice.emptyText; return; }
+  if (voiceAdaptersState !== 'online') { status.textContent = EDITOR_STRINGS.voice.offline; return; }
+  voiceSynthBusy = true;
+  status.textContent = EDITOR_STRINGS.voice.synthesizing;
+  syncVoiceButtons();
+  try {
+    const reply = await voiceFetch<VoiceSynthesizeReply>('/__api/tts/synthesize', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text, ...(adapterId ? { adapter: adapterId } : {}) }),
+    });
+    if (!reply.ok || reply.data?.ok !== true || !reply.data.file) {
+      status.textContent = voiceIssueMessage(reply.data?.errors) || reply.message;
+      return;
+    }
+    const data = reply.data;
+    const entry = findProjectScene(sceneId);
+    if (!entry) { status.textContent = EDITOR_STRINGS.voice.sceneMissing; return; }
+    if ((entry.voice?.text ?? '').trim() !== text) { status.textContent = EDITOR_STRINGS.voice.textChanged; return; }
+    const seconds = Number(data.durationSec ?? 0).toFixed(2);
+    const words = Array.isArray(data.words) ? data.words.length : 0;
+    let message = fillTemplate(data.cached ? EDITOR_STRINGS.voice.cached : EDITOR_STRINGS.voice.fresh, { seconds, words });
+    const end = Number(entry.voice?.offset ?? 0) + Number(data.durationSec ?? 0);
+    if (end > entry.scene.duration + 1e-6) message += `; ${fillTemplate(EDITOR_STRINGS.voice.tooLong, { seconds: (end - entry.scene.duration).toFixed(2) })}`;
+    voiceSceneStatus.set(sceneId, message);
+    applyChange('scene-voice-synthesize', () => {
+      const voice = { ...(entry.voice ?? {}) };
+      voice.text = text;
+      voice.file = data.file as string;
+      voice.words = data.words as VoiceWord[];
+      entry.voice = voice;
+    });
+  } finally {
+    voiceSynthBusy = false;
+    syncVoiceButtons();
+  }
+}
+
+function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
+  const block = document.createElement('details');
+  block.className = 'voice-block';
+  block.dataset.sceneId = entry.id;
+  block.open = voiceOpenState.get(entry.id) ?? Boolean(entry.voice?.file);
+  block.addEventListener('toggle', () => voiceOpenState.set(entry.id, block.open));
+  block.addEventListener('dragstart', (event) => event.preventDefault());
+
+  const summary = document.createElement('summary');
+  summary.textContent = EDITOR_STRINGS.voice.title;
+  block.appendChild(summary);
+
+  const voice = entry.voice;
+  const status = document.createElement('div');
+  status.className = 'msg voice-status';
+  const savedStatus = voiceSceneStatus.get(entry.id);
+  if (savedStatus) status.textContent = savedStatus;
+
+  const textLabel = document.createElement('label');
+  textLabel.className = 'f';
+  const textTitle = document.createElement('span');
+  textTitle.textContent = EDITOR_STRINGS.voice.textLabel;
+  const counter = document.createElement('span');
+  counter.className = 'hint voice-counter';
+  textTitle.appendChild(counter);
+  const textArea = document.createElement('textarea');
+  textArea.rows = 3;
+  textArea.maxLength = VOICE_TEXT_MAX;
+  textArea.value = voice?.text ?? '';
+  textArea.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaText, { name: entry.name }));
+  const syncCounter = () => { counter.textContent = fillTemplate(EDITOR_STRINGS.voice.counter, { n: textArea.value.length, max: VOICE_TEXT_MAX }); };
+  syncCounter();
+  textArea.addEventListener('input', syncCounter);
+  textArea.addEventListener('change', () => applySceneVoiceText(entry.id, textArea.value));
+  textLabel.append(textTitle, textArea);
+  block.appendChild(textLabel);
+
+  const hasVoice = Boolean((voice?.text ?? '').trim() || voice?.file);
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+
+  const offsetLabel = document.createElement('label');
+  offsetLabel.className = 'f';
+  const offsetTitle = document.createElement('span');
+  offsetTitle.textContent = EDITOR_STRINGS.voice.offsetLabel;
+  const offset = document.createElement('input');
+  offset.type = 'number';
+  offset.min = '0';
+  offset.step = '0.1';
+  offset.style.width = '72px';
+  offset.value = String(voice?.offset ?? 0);
+  offset.disabled = !hasVoice;
+  offset.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaOffset, { name: entry.name }));
+  offset.addEventListener('change', () => applySceneVoiceNumber(entry.id, 'offset', Number(offset.value)));
+  offsetLabel.append(offsetTitle, offset);
+
+  const gainLabel = document.createElement('label');
+  gainLabel.className = 'f';
+  const gainTitle = document.createElement('span');
+  gainTitle.textContent = EDITOR_STRINGS.voice.gainLabel;
+  const gain = document.createElement('input');
+  gain.type = 'number';
+  gain.min = '0';
+  gain.max = '2';
+  gain.step = '0.05';
+  gain.style.width = '72px';
+  gain.value = String(voice?.gain ?? 1);
+  gain.disabled = !hasVoice;
+  gain.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaGain, { name: entry.name }));
+  gain.addEventListener('change', () => applySceneVoiceNumber(entry.id, 'gain', Number(gain.value)));
+  gainLabel.append(gainTitle, gain);
+
+  const adapterLabel = document.createElement('label');
+  adapterLabel.className = 'f';
+  const adapterTitle = document.createElement('span');
+  adapterTitle.textContent = EDITOR_STRINGS.voice.adapterLabel;
+  const select = document.createElement('select');
+  const auto = document.createElement('option');
+  auto.value = '';
+  auto.textContent = EDITOR_STRINGS.voice.adapterAuto;
+  select.appendChild(auto);
+  for (const adapter of voiceAdapters) {
+    const option = document.createElement('option');
+    option.value = adapter.id;
+    option.textContent = adapter.ok ? adapter.label : `${adapter.label} — ${adapter.reason ?? ''}`;
+    option.disabled = !adapter.ok;
+    select.appendChild(option);
+  }
+  const chosen = voiceAdapterChoice.get(entry.id) ?? '';
+  select.value = voiceAdapters.some((adapter) => adapter.id === chosen && adapter.ok) ? chosen : '';
+  select.disabled = voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0;
+  select.title = voiceAdaptersState === 'online' ? voiceAdaptersError : EDITOR_STRINGS.voice.offline;
+  select.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaAdapter, { name: entry.name }));
+  select.addEventListener('change', () => voiceAdapterChoice.set(entry.id, select.value));
+  adapterLabel.append(adapterTitle, select);
+
+  bar.append(offsetLabel, gainLabel, adapterLabel);
+  block.appendChild(bar);
+
+  const buttons = document.createElement('div');
+  buttons.className = 'btns';
+  const synth = document.createElement('button');
+  synth.type = 'button';
+  synth.className = 'voice-synth primary';
+  synth.textContent = EDITOR_STRINGS.voice.synthesize;
+  synth.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaSynthesize, { name: entry.name }));
+  synth.addEventListener('mousedown', (event) => event.preventDefault());
+  const updateSynthState = () => {
+    const base = voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0 || !textArea.value.trim();
+    synth.dataset.voiceDisabled = base ? '1' : '0';
+    synth.disabled = base || voiceSynthBusy || isExportInFlight();
+  };
+  synth.addEventListener('click', () => {
+    const text = textArea.value;
+    applySceneVoiceText(entry.id, text);
+    const statusEl = voiceStatusElement(entry.id) ?? status;
+    void synthesizeSceneVoice(entry.id, text, select.value, statusEl);
+  });
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'voice-remove';
+  remove.textContent = EDITOR_STRINGS.voice.remove;
+  remove.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaRemove, { name: entry.name }));
+  remove.addEventListener('mousedown', (event) => event.preventDefault());
+  remove.addEventListener('click', () => removeSceneVoice(entry.id, entry.name));
+  buttons.append(synth, remove);
+  block.appendChild(buttons);
+  block.appendChild(status);
+
+  if (voice?.file) {
+    const fileRow = document.createElement('div');
+    fileRow.className = 'voice-file';
+    const caption = document.createElement('span');
+    caption.textContent = `${EDITOR_STRINGS.voice.fileLabel}: ${voice.file}`;
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.preload = 'none';
+    audio.src = `/__api/audio/file?path=${encodeURIComponent(voice.file)}`;
+    audio.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaAudio, { file: voice.file }));
+    fileRow.append(caption, audio);
+    block.appendChild(fileRow);
+  }
+
+  textArea.addEventListener('input', updateSynthState);
+  updateSynthState();
+  remove.dataset.voiceDisabled = hasVoice ? '0' : '1';
+  remove.disabled = !hasVoice || voiceSynthBusy || isExportInFlight();
+  return block;
+}
+
+function renderVoicePanel(): void {
+  if (!voicePanel) return;
+  voicePanel.innerHTML = '';
+
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent = EDITOR_STRINGS.voice.canvasNote;
+  voicePanel.appendChild(hint);
+
+  const music = document.createElement('div');
+  music.className = 'voicemusic';
+  const title = document.createElement('h2');
+  title.style.margin = '0';
+  title.textContent = EDITOR_STRINGS.voice.musicTitle;
+  music.appendChild(title);
+
+  const current = project.audio?.music;
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+
+  const fileLabel = document.createElement('label');
+  fileLabel.className = 'f';
+  const fileTitle = document.createElement('span');
+  fileTitle.textContent = EDITOR_STRINGS.voice.musicFile;
+  const select = document.createElement('select');
+  select.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaMusic);
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = EDITOR_STRINGS.voice.musicNone;
+  select.appendChild(none);
+  for (const file of voiceAudioFiles) {
+    const option = document.createElement('option');
+    option.value = file;
+    option.textContent = file;
+    select.appendChild(option);
+  }
+  select.value = current?.file && voiceAudioFiles.includes(current.file) ? current.file : '';
+  select.disabled = voiceAudioState !== 'online';
+  select.title = voiceAudioState === 'online' ? '' : EDITOR_STRINGS.voice.offline;
+  select.addEventListener('change', () => applyProjectMusic(select.value));
+  fileLabel.append(fileTitle, select);
+
+  const gainLabel = document.createElement('label');
+  gainLabel.className = 'f';
+  const gainTitle = document.createElement('span');
+  gainTitle.textContent = EDITOR_STRINGS.voice.musicGain;
+  const gain = document.createElement('input');
+  gain.type = 'number';
+  gain.min = '0';
+  gain.max = '1';
+  gain.step = '0.05';
+  gain.style.width = '72px';
+  gain.value = String(current?.gain ?? 0.25);
+  gain.disabled = !current;
+  gain.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaMusicGain);
+  gain.addEventListener('change', () => applyProjectMusicGain(Number(gain.value)));
+  gainLabel.append(gainTitle, gain);
+
+  const duckLabel = document.createElement('label');
+  duckLabel.className = 'f';
+  duckLabel.style.flexDirection = 'row';
+  duckLabel.style.alignItems = 'center';
+  duckLabel.style.gap = '4px';
+  const duck = document.createElement('input');
+  duck.type = 'checkbox';
+  duck.checked = current?.duck !== false;
+  duck.disabled = !current;
+  const duckText = document.createElement('span');
+  duckText.textContent = EDITOR_STRINGS.voice.musicDuck;
+  duck.addEventListener('change', () => applyProjectMusicDuck(duck.checked));
+  duckLabel.append(duck, duckText);
+
+  bar.append(fileLabel, gainLabel, duckLabel);
+  music.appendChild(bar);
+
+  const note = document.createElement('div');
+  note.className = 'hint';
+  if (voiceAudioState === 'offline') note.textContent = EDITOR_STRINGS.voice.offline;
+  else if (voiceAudioState === 'unknown') note.textContent = EDITOR_STRINGS.voice.loading;
+  else if (voiceAudioFiles.length === 0) note.textContent = EDITOR_STRINGS.voice.musicEmpty;
+  if (note.textContent) music.appendChild(note);
+
+  voicePanel.appendChild(music);
 }
 
 function updateCatalogModelPrompt() {

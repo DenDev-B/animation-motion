@@ -6,12 +6,16 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';
 import { addToCatalog } from '../engine/catalog-add.ts';
 import { validateProject, projectFrameCount } from '../engine/project.ts';
+import { VOICE_TEXT_MAX_CHARS } from '../engine/spec.ts';
 import { planPreview, previewSuffix } from '../engine/preview-plan.ts';
 import { callProvider, generateWithChain, PROVIDER_LABELS, PROVIDER_ORDER, DEFAULT_MODELS, ProviderError, type FetchFn, type CheckResult } from '../engine/ai-chain.ts';
 import { extractJson } from '../engine/ai-io.ts';
 import { splitReply, validateProjectReply } from '../engine/ai-project.ts';
 import { loadProviders } from './env-local.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
+import { audioContentType, isAudioFile, listAudioFiles } from './audio-files.ts';
+import { getTtsAdapter, visibleTtsAdapters } from './tts/index.ts';
+import { synthesizeVoice } from './tts/synthesize.ts';
 
 export const LOCAL_API_PREFIX = '/__api/';
 export const LOCAL_API_VERSION = 1;
@@ -48,6 +52,13 @@ export interface ExportStatusReply extends ApiReply {
   message?: string;
 }
 
+interface TtsAdapterInfo {
+  id: string;
+  label: string;
+  ok: boolean;
+  reason?: string;
+}
+
 export interface LocalApiOptions {
   /** Корень проекта: модели пишутся в <root>/catalog, видео — в <root>/out/export. */
   root: string;
@@ -59,6 +70,8 @@ export interface LocalApiOptions {
   aiFetch?: FetchFn;
   /** Для проверок: подмена переменных окружения (ключи берутся ещё и из <root>/.env.local). */
   env?: NodeJS.ProcessEnv;
+  /** Для проверок: разрешить скрытый адаптер озвучки fake (check:local-api). */
+  allowFake?: boolean;
 }
 
 export interface LocalApi {
@@ -183,7 +196,13 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
   const catalogDir = path.join(root, 'catalog');
   const exportDir = path.join(root, 'out', 'export');
   const exportTmpDir = path.join(exportDir, '.tmp');
+  const audioDir = path.join(root, 'audio');
+  const allowFake = options.allowFake === true;
   const exportScript = options.exportScript ? path.resolve(options.exportScript) : path.join(root, 'tools', 'export.ts');
+  /** Проверка адаптеров запускает внешние команды: кэш на 10 с, чтобы панель не тормозила. */
+  const ADAPTERS_TTL_MS = 10_000;
+  let adaptersCache: { at: number; list: TtsAdapterInfo[] } | null = null;
+  let ttsBusy = false;
 
   interface ExportJob {
     id: string;
@@ -528,6 +547,169 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
     sendJson(res, 200, { ok: true, results });
   }
 
+  async function adapterList(): Promise<TtsAdapterInfo[]> {
+    if (adaptersCache && Date.now() - adaptersCache.at < ADAPTERS_TTL_MS) return adaptersCache.list;
+    const list: TtsAdapterInfo[] = [];
+    for (const adapter of visibleTtsAdapters()) {
+      const result = await adapter.detect();
+      list.push({ id: adapter.id, label: adapter.label, ok: result.ok, ...(result.reason ? { reason: result.reason } : {}) });
+    }
+    adaptersCache = { at: Date.now(), list };
+    return list;
+  }
+
+  async function handleTtsAdapters(res: ServerResponse): Promise<void> {
+    try {
+      sendJson(res, 200, { ok: true, adapters: await adapterList() });
+    } catch (error) {
+      fail(res, 500, `Не удалось проверить адаптеры озвучки: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async function handleTtsSynthesize(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    let body: string;
+    try {
+      body = await readBody(req);
+    } catch {
+      fail(res, 413, `Тело запроса больше ${Math.round(MAX_BODY_BYTES / 1024 / 1024)} МБ.`);
+      return;
+    }
+    let payload: unknown;
+    try {
+      payload = JSON.parse(body);
+    } catch (error) {
+      fail(res, 400, `Не удалось разобрать JSON тела запроса: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+    if (!isRecord(payload)) {
+      fail(res, 400, 'Тело запроса должно быть объектом: {"text": …}.');
+      return;
+    }
+    const text = typeof payload.text === 'string' ? payload.text.trim() : '';
+    if (!text || text.length > VOICE_TEXT_MAX_CHARS) {
+      fail(res, 400, `Текст озвучки должен быть от 1 до ${VOICE_TEXT_MAX_CHARS} символов.`, 'text');
+      return;
+    }
+    const adapterId = typeof payload.adapter === 'string' ? payload.adapter.trim() : '';
+    if (adapterId && !getTtsAdapter(adapterId)) {
+      fail(res, 400, `Неизвестный адаптер «${adapterId}».`, 'adapter');
+      return;
+    }
+    if (adapterId === 'fake' && !allowFake) {
+      fail(res, 400, 'Тестовый адаптер доступен только в проверках.', 'adapter');
+      return;
+    }
+    const lang = typeof payload.lang === 'string' && payload.lang.trim() ? payload.lang.trim() : undefined;
+    const force = payload.force === true;
+    if (ttsBusy) {
+      fail(res, 409, 'Озвучка уже идёт: дождитесь её окончания.');
+      return;
+    }
+    ttsBusy = true;
+    try {
+      const result = await synthesizeVoice({ text, adapterId: adapterId || undefined, lang, audioDir, force, allowFake });
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (error) {
+      sendJson(res, 200, { ok: false, errors: [{ path: '', message: error instanceof Error ? error.message : String(error) }] });
+    } finally {
+      ttsBusy = false;
+    }
+  }
+
+  function handleAudioList(res: ServerResponse): void {
+    sendJson(res, 200, { ok: true, files: listAudioFiles(audioDir) });
+  }
+
+  /** Путь из query: только относительный, внутри audio/, с аудио-расширением. */
+  function resolveAudioPath(raw: string): { file?: string; error?: string } {
+    if (!raw) return { error: 'Параметр path обязателен: путь относительно audio/.' };
+    if (raw.includes('\0')) return { error: 'В пути есть нулевой байт.' };
+    if (raw.includes('\\')) return { error: 'В пути допустимы только прямые слэши.' };
+    if (raw.startsWith('/') || /^[a-zA-Z]:/.test(raw)) return { error: 'Нужен путь относительно audio/: без диска и ведущего слэша.' };
+    const segments = raw.split('/');
+    if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) return { error: 'В пути недопустимы пустые сегменты, «.» и «..».' };
+    const base = path.resolve(audioDir);
+    const file = path.resolve(base, segments.join(path.sep));
+    if (!file.startsWith(base + path.sep)) return { error: 'Путь выходит за папку audio/.' };
+    if (!isAudioFile(file)) return { error: 'Допустимы только wav, mp3, m4a, ogg, flac.' };
+    return { file };
+  }
+
+  function handleAudioFile(req: IncomingMessage, res: ServerResponse): void {
+    const rawUrl = req.url ?? '';
+    const query = new URLSearchParams(rawUrl.includes('?') ? rawUrl.slice(rawUrl.indexOf('?') + 1) : '');
+    const resolved = resolveAudioPath(query.get('path') ?? '');
+    if (!resolved.file) {
+      fail(res, 400, resolved.error ?? 'Некорректный путь.');
+      return;
+    }
+    let file: string;
+    let base: string;
+    let stat: fs.Stats;
+    try {
+      base = fs.realpathSync(audioDir);
+      file = fs.realpathSync(resolved.file);
+      stat = fs.statSync(file);
+    } catch {
+      fail(res, 404, 'Файла нет в папке audio/.');
+      return;
+    }
+    if (!file.startsWith(base + path.sep)) {
+      fail(res, 400, 'Ссылка ведёт за пределы audio/.');
+      return;
+    }
+    if (!stat.isFile()) {
+      fail(res, 404, 'Это не файл.');
+      return;
+    }
+    const size = stat.size;
+    const type = audioContentType(file) ?? 'application/octet-stream';
+    const rejectRange = () => {
+      res.statusCode = 416;
+      res.setHeader('content-range', `bytes */${size}`);
+      res.end();
+    };
+    let start = 0;
+    let end = size - 1;
+    let status = 200;
+    const range = typeof req.headers.range === 'string' ? req.headers.range.trim() : '';
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (!match || (!match[1] && !match[2])) {
+        rejectRange();
+        return;
+      }
+      if (!match[1]) {
+        const suffix = Number(match[2]);
+        if (!Number.isInteger(suffix) || suffix <= 0) {
+          rejectRange();
+          return;
+        }
+        start = Math.max(0, size - suffix);
+        end = size - 1;
+      } else {
+        start = Number(match[1]);
+        end = match[2] ? Number(match[2]) : size - 1;
+      }
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start > end || start >= size) {
+        rejectRange();
+        return;
+      }
+      end = Math.min(end, size - 1);
+      status = 206;
+    }
+    res.statusCode = status;
+    res.setHeader('content-type', type);
+    res.setHeader('accept-ranges', 'bytes');
+    res.setHeader('content-length', status === 206 ? end - start + 1 : size);
+    if (status === 206) res.setHeader('content-range', `bytes ${start}-${end}/${size}`);
+    if (size === 0) {
+      res.end();
+      return;
+    }
+    fs.createReadStream(file, { start, end }).pipe(res);
+  }
+
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
     const raw = req.url ?? '';
     const queryIndex = raw.indexOf('?');
@@ -580,7 +762,23 @@ export function createLocalApi(options: LocalApiOptions): LocalApi {
       handleExportFile(req, res);
       return true;
     }
-    const knownRoutes = ['ping', 'ai/status', 'ai/generate', 'ai/check', 'catalog/add', 'export', 'export/status', 'export/cancel', 'export/file'];
+    if (method === 'GET' && route === 'tts/adapters') {
+      await handleTtsAdapters(res);
+      return true;
+    }
+    if (method === 'POST' && route === 'tts/synthesize') {
+      await handleTtsSynthesize(req, res);
+      return true;
+    }
+    if (method === 'GET' && route === 'audio/list') {
+      handleAudioList(res);
+      return true;
+    }
+    if (method === 'GET' && route === 'audio/file') {
+      handleAudioFile(req, res);
+      return true;
+    }
+    const knownRoutes = ['ping', 'ai/status', 'ai/generate', 'ai/check', 'catalog/add', 'export', 'export/status', 'export/cancel', 'export/file', 'tts/adapters', 'tts/synthesize', 'audio/list', 'audio/file'];
     if (knownRoutes.includes(route)) {
       fail(res, 405, `Метод ${method} для /${LOCAL_API_PREFIX}${route} не поддерживается.`);
       return true;

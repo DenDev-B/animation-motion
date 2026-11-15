@@ -164,8 +164,8 @@ try {
     if (!card.name) fail(`карточка ${index}: нет названия`);
     if (!/с$/.test(card.duration)) fail(`карточка ${index}: нет длительности (${card.duration})`);
   }
-  const transitionSelects = await page.$$eval('#sceneOrder select', (els) => els.length);
-  const durationInputs = await page.$$eval('#sceneOrder input[type="number"]', (els) => els.length);
+  const transitionSelects = await page.$$eval('#sceneOrder .order-transition select', (els) => els.length);
+  const durationInputs = await page.$$eval('#sceneOrder .order-transition input[type="number"]', (els) => els.length);
   if (transitionSelects !== 2 || durationInputs !== 2) fail(`переходы: select ${transitionSelects}, duration ${durationInputs}, ожидалось 2/2`);
   const previewSize = await page.$eval('#projectPreview', (el) => ({ w: el.width, h: el.height }));
   if (!previewSize.w || !previewSize.h) fail('предпросмотр проекта не отрисован');
@@ -175,6 +175,35 @@ try {
   if (!exportState.disabled) fail('кнопка экспорта MP4 включена, хотя браузерный экспорт не реализован');
   if (!/npm run export/.test(exportHint ?? '')) fail('нет подсказки про npm run export');
   ok(`вкладка «Склейка»: ${cards.length} карточек с миниатюрами 240px, ${transitionSelects} перехода, предпросмотр ${previewSize.w}×${previewSize.h}, экспорт — заглушка с командой`);
+
+  // 4b. Панель «Озвучка»: в dist локального сервиса нет — кнопки ждут run.bat
+  await page.waitForFunction(() => {
+    const select = document.querySelector('#voicePanel .voicemusic select');
+    return Boolean(select && select.disabled);
+  }, { timeout: 10000 });
+  const voiceBlocks = await page.$$('#sceneOrder .voice-block');
+  if (voiceBlocks.length !== 3) fail(`блоков озвучки: ${voiceBlocks.length}, ожидалось 3`);
+  const voiceUi = await page.$$eval('#sceneOrder .voice-block', (blocks) => blocks.map((block) => ({
+    textareaMax: block.querySelector('textarea')?.maxLength ?? 0,
+    counter: block.querySelector('.voice-counter')?.textContent ?? '',
+    synth: block.querySelector('.voice-synth')?.disabled ?? false,
+    remove: block.querySelector('.voice-remove')?.disabled ?? false,
+    adapterDisabled: block.querySelector('select')?.disabled ?? false,
+    adapterTitle: block.querySelector('select')?.title ?? '',
+  })));
+  for (const [index, block] of voiceUi.entries()) {
+    if (block.textareaMax !== 2000) fail(`блок озвучки ${index}: maxLength ${block.textareaMax}, ожидалось 2000`);
+    if (!/0 \/ 2000/.test(block.counter)) fail(`блок озвучки ${index}: счётчик «${block.counter}»`);
+    if (!block.synth) fail(`блок озвучки ${index}: «Озвучить» включена без локального сервиса`);
+    if (!block.remove) fail(`блок озвучки ${index}: «Убрать звук» включена, хотя записи нет`);
+    if (!block.adapterDisabled) fail(`блок озвучки ${index}: выбор голоса включён без локального сервиса`);
+    if (!/run\.bat/.test(block.adapterTitle)) fail(`блок озвучки ${index}: подсказка голоса без run.bat: ${block.adapterTitle}`);
+  }
+  const musicSelect = await page.$eval('#voicePanel .voicemusic select', (el) => el.title);
+  if (!/run\.bat/.test(musicSelect ?? '')) fail(`выбор музыки без сервиса не подсказывает про run.bat: ${musicSelect}`);
+  const musicNote = await page.$eval('#voicePanel .voicemusic .hint', (el) => el.textContent);
+  if (!/run\.bat/.test(musicNote ?? '')) fail(`панель музыки без сервиса не подсказывает про run.bat: ${musicNote}`);
+  ok(`панель озвучки: ${voiceUi.length} блока с текстом до 2000, кнопки ждут локальный сервис, музыка — подсказка про run.bat`);
 
   // 5. Каталог: список, миниатюры, подвкладки
   await page.click('#topTabs button[data-tab="catalog"]');

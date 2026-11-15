@@ -5,6 +5,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { createLocalApi, contentDisposition, LOCAL_API_VERSION, MAX_BODY_BYTES } from './local-api.ts';
+import { VOICE_TEXT_MAX_CHARS } from '../engine/spec.ts';
 
 let errors = 0;
 const fail = (msg: string) => { console.error('FAIL:', msg); errors++; };
@@ -17,10 +18,12 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'am-local-api-'));
 const root = tmp;
 fs.cpSync(realCatalog, path.join(tmp, 'catalog'), { recursive: true });
 const catalogDir = path.join(tmp, 'catalog');
+const audioDir = path.join(tmp, 'audio');
+fs.mkdirSync(audioDir, { recursive: true });
 const realExportBefore = fs.existsSync(realExportDir) ? fs.readdirSync(realExportDir).sort().join(',') : '';
 
 let port = 0;
-const api = createLocalApi({ root, getPort: () => port, exportScript: path.resolve('tools', 'export.ts') });
+const api = createLocalApi({ root, getPort: () => port, exportScript: path.resolve('tools', 'export.ts'), allowFake: true });
 const server = http.createServer((req, res) => {
   api.handle(req, res).then((handled) => {
     if (!handled) { res.statusCode = 404; res.end(''); }
@@ -45,17 +48,28 @@ interface Reply {
     file?: string;
     message?: string;
     errors?: Array<{ path: string; message: string }>;
+    adapters?: Array<{ id: string; label: string; ok: boolean; reason?: string }>;
+    files?: string[];
+    durationSec?: number;
+    adapterId?: string;
+    cached?: boolean;
+    words?: Array<{ w: string; t0: number; t1: number }>;
   };
   text: string;
 }
 
-function request(options: { method: string; path: string; host?: string; origin?: string; body?: string }): Promise<Reply> {
+function request(options: { method: string; path: string; host?: string; origin?: string; body?: string; range?: string }): Promise<Reply> {
+  return requestOn(port, options);
+}
+
+function requestOn(targetPort: number, options: { method: string; path: string; host?: string; origin?: string; body?: string; range?: string }): Promise<Reply> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = { accept: 'application/json' };
     if (options.host) headers.host = options.host;
     if (options.origin !== undefined) headers.origin = options.origin;
+    if (options.range !== undefined) headers.range = options.range;
     if (options.body !== undefined) headers['content-type'] = 'application/json';
-    const req = http.request({ host: '127.0.0.1', port, method: options.method, path: options.path, headers }, (res) => {
+    const req = http.request({ host: '127.0.0.1', port: targetPort, method: options.method, path: options.path, headers }, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (c: Buffer) => chunks.push(c));
       res.on('end', () => {
@@ -394,6 +408,125 @@ try {
   else ok('filename* сохраняет кавычку и «\\»');
   if (!contentDisposition('').includes('filename="video.mp4"')) fail('пустое имя не дало запасное video.mp4');
   else ok('пустое имя: запасное video.mp4');
+
+  // 15. озвучка: адаптеры, синтез fake во временную audio/, список и раздача файлов
+  const adaptersReply = await request({ method: 'GET', path: '/__api/tts/adapters', host: localHost });
+  const adapters = adaptersReply.json.adapters ?? [];
+  if (adaptersReply.status !== 200 || adaptersReply.json.ok !== true || !Array.isArray(adapters)) fail(`tts/adapters: ${adaptersReply.status} ${adaptersReply.text.slice(0, 160)}`);
+  else if (!adapters.length) fail('tts/adapters вернул пустой список');
+  else if (adapters.some((a) => a.id === 'fake')) fail('tts/adapters показал тестовый адаптер fake');
+  else if (adapters.some((a) => !a.id || !a.label || typeof a.ok !== 'boolean')) fail(`tts/adapters: неполные поля ${JSON.stringify(adapters)}`);
+  else ok(`tts/adapters: ${adapters.map((a) => `${a.id}${a.ok ? '' : '(нет)'}`).join(', ')}`);
+  if (adapters.some((a) => a.id === 'piper' && !a.ok && !a.reason)) fail('tts/adapters: недоступный адаптер без причины');
+
+  const tts = (body: unknown) => request({ method: 'POST', path: '/__api/tts/synthesize', body: JSON.stringify(body) });
+  const emptyText = await tts({ text: '   ', adapter: 'fake' });
+  if (emptyText.status !== 400 || emptyText.json.ok !== false) fail(`пустой текст озвучки должен давать 400: ${emptyText.status} ${emptyText.text.slice(0, 140)}`);
+  else ok('пустой текст озвучки: 400');
+  const longText = await tts({ text: 'а'.repeat(VOICE_TEXT_MAX_CHARS + 1), adapter: 'fake' });
+  if (longText.status !== 400 || !longText.json.errors?.some((e) => e.path === 'text')) fail(`текст длиннее ${VOICE_TEXT_MAX_CHARS} должен давать 400 с path text: ${longText.status} ${longText.text.slice(0, 140)}`);
+  else ok(`текст длиннее ${VOICE_TEXT_MAX_CHARS}: 400, path text`);
+  const unknownAdapter = await tts({ text: 'раз', adapter: 'nope' });
+  if (unknownAdapter.status !== 400 || !unknownAdapter.json.errors?.some((e) => e.path === 'adapter')) fail(`неизвестный адаптер должен давать 400 с path adapter: ${unknownAdapter.status} ${unknownAdapter.text.slice(0, 140)}`);
+  else ok('неизвестный адаптер: 400, path adapter');
+
+  // 16. сервис без режима проверок не даёт выбрать скрытый fake
+  let strictPort = 0;
+  const strictApi = createLocalApi({ root, getPort: () => strictPort });
+  const strictServer = http.createServer((req, res) => {
+    strictApi.handle(req, res).then((handled) => {
+      if (!handled) { res.statusCode = 404; res.end(''); }
+    }, () => { res.statusCode = 500; res.end(''); });
+  });
+  try {
+    await new Promise<void>((resolve) => strictServer.listen(0, '127.0.0.1', resolve));
+    strictPort = (strictServer.address() as { port: number }).port;
+    const strictFake = await requestOn(strictPort, { method: 'POST', path: '/__api/tts/synthesize', body: JSON.stringify({ text: 'раз', adapter: 'fake' }) });
+    if (strictFake.status !== 400 || strictFake.json.ok !== false || !/проверк/.test(strictFake.text)) fail(`fake без режима проверок должен отклоняться: ${strictFake.status} ${strictFake.text.slice(0, 160)}`);
+    else ok('fake без режима проверок: 400');
+  } finally {
+    strictApi.close();
+    await new Promise<void>((resolve) => { strictServer.close(() => resolve()); });
+  }
+  if (fs.existsSync(path.join(audioDir, 'tts'))) fail('fake без режима проверок создал файл в audio/');
+  else ok('fake без режима проверок: файлов не создал');
+
+  if (!hasTool('ffmpeg')) {
+    ok('пропущено: нет ffmpeg — синтез fake, список и раздача аудио не проверены');
+  } else {
+    const first = await tts({ text: 'раз два три', adapter: 'fake' });
+    if (first.status !== 200 || first.json.ok !== true || !first.json.file) fail(`синтез fake: ${first.status} ${first.text.slice(0, 200)}`);
+    else {
+      const rel = String(first.json.file);
+      const onDisk = path.join(audioDir, rel.split('/').join(path.sep));
+      if (!rel.startsWith('tts/') || !rel.endsWith('.wav')) fail(`синтез fake вернул путь «${rel}»`);
+      else if (!fs.existsSync(onDisk)) fail(`синтез fake не создал файл ${rel}`);
+      else if (!(Number(first.json.durationSec) > 0)) fail(`синтез fake: durationSec ${first.json.durationSec}`);
+      else if (first.json.words?.length !== 3) fail(`синтез fake: слов ${first.json.words?.length}, ожидалось 3`);
+      else if (first.json.adapterId !== 'fake' || first.json.cached !== false) fail(`синтез fake: adapterId/cached ${first.json.adapterId}/${first.json.cached}`);
+      else ok(`синтез fake: ${rel}, ${Number(first.json.durationSec).toFixed(2)} с, ${first.json.words.length} слов, cached ${first.json.cached}`);
+
+      const again = await tts({ text: 'раз два три', adapter: 'fake' });
+      if (again.json.cached !== true || again.json.file !== first.json.file) fail(`повторный синтез не из кэша: ${again.text.slice(0, 160)}`);
+      else ok('повторный синтез: cached true, тот же файл');
+
+      const [left, right] = await Promise.all([
+        tts({ text: 'четыре пять шесть', adapter: 'fake' }),
+        tts({ text: 'семь восемь девять', adapter: 'fake' }),
+      ]);
+      const codes = [left.status, right.status].sort();
+      if (codes[0] !== 200 || codes[1] !== 409) fail(`параллельная озвучка: ${left.status}/${right.status}, ожидалось 200 и 409`);
+      else ok('параллельная озвучка: 200 и 409');
+
+      const list = await request({ method: 'GET', path: '/__api/audio/list', host: localHost });
+      if (list.status !== 200 || !Array.isArray(list.json.files) || !list.json.files.includes(rel)) fail(`audio/list не видит ${rel}: ${list.text.slice(0, 160)}`);
+      else ok(`audio/list: ${list.json.files.length} файл(ов), ${rel} на месте`);
+
+      const fileUrl = `/__api/audio/file?path=${encodeURIComponent(rel)}`;
+      const whole = await request({ method: 'GET', path: fileUrl, host: localHost });
+      if (whole.status !== 200 || whole.body.length === 0) fail(`audio/file: ${whole.status}, ${whole.body.length} байт`);
+      else if (!/audio\/wav/.test(String(whole.headers['content-type']))) fail(`audio/file content-type: ${whole.headers['content-type']}`);
+      else if (whole.body.subarray(8, 12).toString('latin1') !== 'WAVE') fail('audio/file не WAV-сигнатура');
+      else ok(`audio/file: ${whole.body.length} байт, ${whole.headers['content-type']}`);
+
+      const partial = await request({ method: 'GET', path: fileUrl, host: localHost, range: 'bytes=0-3' });
+      if (partial.status !== 206 || partial.body.length !== 4) fail(`Range bytes=0-3: ${partial.status}, ${partial.body.length} байт`);
+      else if (String(partial.headers['content-range'] ?? '') !== `bytes 0-3/${whole.body.length}`) fail(`content-range: ${String(partial.headers['content-range'])}`);
+      else if (!partial.body.equals(whole.body.subarray(0, 4))) fail('Range-байты не совпали с началом файла');
+      else ok(`Range bytes=0-3: 206, content-range bytes 0-3/${whole.body.length}`);
+      const pastEnd = await request({ method: 'GET', path: fileUrl, host: localHost, range: `bytes=${whole.body.length + 10}-` });
+      if (pastEnd.status !== 416) fail(`Range за концом файла: ${pastEnd.status}, ожидалось 416`);
+      else ok('Range за концом файла: 416');
+
+      const hostile: Array<[string, string]> = [
+        ['../x.wav', 'выход через «..»'],
+        ['/etc/x.wav', 'абсолютный путь'],
+        ['C:/x.wav', 'диск Windows'],
+        ['a\\b.wav', 'обратный слэш'],
+        ['%2e%2e/x.wav', 'закодированные «..»'],
+        ['x.txt', 'не аудио-расширение'],
+      ];
+      for (const [raw, label] of hostile) {
+        const bad = await request({ method: 'GET', path: `/__api/audio/file?path=${raw}`, host: localHost });
+        if (bad.status !== 400 && bad.status !== 404) fail(`audio/file «${label}»: ${bad.status}, ожидалось 400/404`);
+        else ok(`audio/file «${label}»: ${bad.status}`);
+      }
+      const nulByte = await request({ method: 'GET', path: '/__api/audio/file?path=a%00b.wav', host: localHost });
+      if (nulByte.status !== 400 && nulByte.status !== 404) fail(`audio/file с нулевым байтом: ${nulByte.status}, ожидалось 400/404`);
+      else ok(`audio/file с нулевым байтом: ${nulByte.status}`);
+
+      const outsideFile = path.join(tmp, 'outside.wav');
+      fs.writeFileSync(outsideFile, Buffer.from('RIFF0000WAVE'));
+      try {
+        fs.symlinkSync(outsideFile, path.join(audioDir, 'escape-link.wav'), 'file');
+        const linked = await request({ method: 'GET', path: '/__api/audio/file?path=escape-link.wav', host: localHost });
+        if (linked.status !== 400 && linked.status !== 404) fail(`симлинк за пределы audio/: ${linked.status}, ожидалось 400/404`);
+        else ok(`симлинк за пределы audio/: ${linked.status}`);
+      } catch {
+        ok('пропущено: симлинки недоступны — выход через ссылку не проверен');
+      }
+    }
+  }
 
   if (fs.existsSync(path.join(realCatalog, 'test-bell.json'))) fail('тест записал модель в настоящий catalog/');
   const realExportAfter = fs.existsSync(realExportDir) ? fs.readdirSync(realExportDir).sort().join(',') : '';

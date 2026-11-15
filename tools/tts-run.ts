@@ -1,13 +1,11 @@
 // Озвучка сцен по тексту: синтез в audio/tts/<хэш>.wav, оценка таймингов слов и правка voice в проекте.
 // Проект без voice.text не трогается; существующие поля и порядок ключей сохраняются — меняется только запись voice.
-import { execFileSync } from 'node:child_process';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { estimateWordTimings, validateProject, type ProjectV1 } from '../engine/index.ts';
-import { diagnoseAdapters, firstAvailableAdapter, getTtsAdapter, TTS_ADAPTERS } from './tts/index.ts';
-import type { TtsAdapter } from './tts/types.ts';
+import { validateProject, type ProjectV1 } from '../engine/index.ts';
+import { diagnoseAdapters, TTS_ADAPTERS } from './tts/index.ts';
+import { synthesizeVoice } from './tts/synthesize.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const USAGE = [
@@ -73,45 +71,9 @@ function catalogIds(): string[] {
   return ids;
 }
 
-// Длительность wav: у части контейнеров stream=duration пустой, тогда берём format=duration (тот же приём, что в export.ts).
-function audioDurationSec(file: string): number {
-  let out: string;
-  try {
-    out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=duration:format=duration', '-of', 'json', file], { encoding: 'utf8' });
-  } catch (e) {
-    fail(`ffprobe не прочитал ${file}: ${e instanceof Error ? e.message : String(e)}`);
-  }
-  const json = JSON.parse(out) as { streams?: Array<{ duration?: string }>; format?: { duration?: string } };
-  const duration = Number(json.streams?.[0]?.duration ?? json.format?.duration);
-  if (!Number.isFinite(duration) || duration <= 0) fail(`ffprobe не дал длительность файла ${file}`);
-  return duration;
-}
-
-/** Имя wav: один и тот же текст тем же голосом даёт тот же файл, смена голоса или текста — новый. */
-function voiceFileName(adapter: TtsAdapter, voice: string, lang: string, text: string): string {
-  const key = [adapter.id, voice, lang, text].join('\n');
-  return `${crypto.createHash('sha1').update(key, 'utf8').digest('hex').slice(0, 12)}.wav`;
-}
-
 function writeErrors(errors: Array<{ path?: string; message: string }>, title: string) {
   log(title);
   for (const error of errors) log(` - ${error.path ?? ''}: ${error.message}`);
-}
-
-async function resolveAdapter(args: Args): Promise<TtsAdapter> {
-  if (args.adapterId) {
-    const adapter = getTtsAdapter(args.adapterId);
-    if (!adapter) fail(`неизвестный адаптер «${args.adapterId}». Доступны: ${TTS_ADAPTERS.map((a) => a.id).join(', ')}`);
-    const result = await adapter.detect();
-    if (!result.ok) fail(`адаптер «${adapter.label}» недоступен: ${result.reason ?? 'причина не указана'}\nПодробности — docs/TTS.md`);
-    return adapter;
-  }
-  const found = await firstAvailableAdapter();
-  if (!found.adapter) {
-    fail(`ни один адаптер озвучки недоступен:\n${found.reasons.map((reason) => ` - ${reason}`).join('\n')}\nУкажите --adapter явно или настройте один из них; подробности — docs/TTS.md`);
-  }
-  log(`адаптер выбран автоматически: ${found.adapter.label}`);
-  return found.adapter;
 }
 
 async function runDoctor(): Promise<void> {
@@ -143,9 +105,7 @@ async function main() {
   }
   const project = raw as ProjectV1;
   const wanted = args.scene ? [args.scene - 1] : project.scenes.map((_entry, index) => index);
-  const adapter = await resolveAdapter(args);
-  const voice = await adapter.voiceId({ lang: args.lang });
-  log(`голос: ${voice || 'не определён'} · язык: ${args.lang} · папка звука: ${args.audioDir}`);
+  log(`язык: ${args.lang} · папка звука: ${args.audioDir}`);
 
   let changed = 0;
   for (const index of wanted) {
@@ -160,24 +120,18 @@ async function main() {
       log(`${label}: voice.text пуст — пропуск (файл озвучки можно положить руками и указать voice.file)`);
       continue;
     }
-    const relFile = `tts/${voiceFileName(adapter, voice, args.lang, text)}`;
-    const outWav = path.join(args.audioDir, relFile);
-    const cached = fs.existsSync(outWav);
-    if (cached && !args.force) log(`${label}: ${relFile} уже есть — без синтеза`);
-    else {
-      await adapter.synthesize(text, outWav, { lang: args.lang });
-      log(`${label}: синтез → ${relFile}`);
-    }
-    const durationSec = audioDurationSec(outWav);
-    entry.voice.file = relFile;
-    entry.voice.words = estimateWordTimings(text, durationSec);
+    const result = await synthesizeVoice({ text, adapterId: args.adapterId, lang: args.lang, audioDir: args.audioDir, force: args.force, allowFake: true });
+    if (result.cached) log(`${label}: ${result.file} уже есть — без синтеза`);
+    else log(`${label}: синтез → ${result.file}`);
+    entry.voice.file = result.file;
+    entry.voice.words = result.words;
     changed++;
     const sceneDuration = entry.scene.duration;
-    const endSec = (entry.voice.offset ?? 0) + durationSec;
+    const endSec = (entry.voice.offset ?? 0) + result.durationSec;
     if (endSec > sceneDuration + 1e-6) {
-      log(`ПРЕДУПРЕЖДЕНИЕ: ${label}: голос длиннее сцены на ${(endSec - sceneDuration).toFixed(2)} с (звук ${durationSec.toFixed(2)} с + offset ${(entry.voice.offset ?? 0).toFixed(2)} с против сцены ${sceneDuration} с): увеличьте длительность сцены — tts её не меняет`);
+      log(`ПРЕДУПРЕЖДЕНИЕ: ${label}: голос длиннее сцены на ${(endSec - sceneDuration).toFixed(2)} с (звук ${result.durationSec.toFixed(2)} с + offset ${(entry.voice.offset ?? 0).toFixed(2)} с против сцены ${sceneDuration} с): увеличьте длительность сцены — tts её не меняет`);
     }
-    log(`${label}: ${durationSec.toFixed(2)} с, слов ${entry.voice.words.length}${cached && !args.force ? ', wav из кэша' : ''}`);
+    log(`${label}: ${result.durationSec.toFixed(2)} с, слов ${result.words.length}${result.cached ? ', wav из кэша' : ''}`);
   }
 
   if (changed === 0) {

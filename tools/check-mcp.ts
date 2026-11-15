@@ -1,5 +1,7 @@
 import assert from 'node:assert';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -27,13 +29,20 @@ const call = async (name: string, args: Record<string, unknown> = {}) => client.
 const body = (r: { content: Array<{ type: string; text?: string }> }) => r.content.find((c) => c.type === 'text')?.text ?? '';
 const tmpName = `zz-mcp-check-${process.pid}`;
 try {
-  const tools = (await client.listTools()).tools.map((t) => t.name).sort();
-  assert.deepEqual(tools, ['export_video', 'get_schema', 'list_catalog', 'list_projects', 'render_frame', 'save_project', 'validate_project'], `набор инструментов: ${tools}`);
+  const tools = await client.listTools();
+  const names = tools.tools.map((t) => t.name).sort();
+  assert.deepEqual(names, ['export_video', 'get_schema', 'list_audio', 'list_catalog', 'list_projects', 'render_frame', 'save_project', 'tts_synthesize', 'validate_project'], `набор инструментов: ${names}`);
+  const ttsTool = tools.tools.find((t) => t.name === 'tts_synthesize');
+  const ttsSchema = ttsTool?.inputSchema as { properties?: Record<string, unknown>; required?: string[] } | undefined;
+  assert.ok(ttsSchema?.properties?.text && ttsSchema.required?.includes('text'), 'tts_synthesize: text обязателен');
+  assert.ok(ttsSchema?.properties?.adapter && ttsSchema?.properties?.lang && ttsSchema?.properties?.force, 'tts_synthesize: adapter, lang и force описаны');
+  assert.equal((await call('tts_synthesize', { text: 'раз два', adapter: 'fake' })).isError, true, 'fake у настоящего сервера отключён');
 
   assert.ok(body(await call('get_schema')).includes('Схема сцены v1'), 'get_schema отдаёт документацию');
   const catalog = JSON.parse(body(await call('list_catalog'))) as Array<{ id: string }>;
   assert.ok(catalog.length > 0 && catalog.every((c) => c.id), 'list_catalog непустой');
   assert.ok((JSON.parse(body(await call('list_projects'))) as string[]).includes('night-city-car'), 'list_projects видит проекты');
+  assert.ok(Array.isArray(JSON.parse(body(await call('list_audio')))), 'list_audio отдаёт массив путей');
 
   const good = JSON.parse(body(await call('validate_project', { file: 'night-city-car' })));
   assert.equal(good.ok, true, 'эталонный проект валиден');
@@ -58,6 +67,23 @@ try {
   assert.ok(!saved.isError && fs.existsSync(path.join(root, 'projects', `${tmpName}.project.json`)), 'save: валидный сохранён');
   assert.equal((await call('save_project', { name: tmpName, json: project })).isError, true, 'save: без overwrite не перезаписывает');
   assert.ok(!(await call('save_project', { name: tmpName, json: project, overwrite: true })).isError, 'save: overwrite работает');
+
+  // Озвучка: у настоящего сервера fake запрещён, в тестовом режиме ядро пишет wav во временную папку.
+  const hasFfmpeg = (() => { try { return spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0; } catch { return false; } })();
+  const tmpAudio = fs.mkdtempSync(path.join(os.tmpdir(), 'am-mcp-tts-'));
+  try {
+    if (!hasFfmpeg) console.log('SKIP tts_synthesize fake: нет ffmpeg');
+    else {
+      const testCore = createCore(root, { audioDir: tmpAudio, allowFake: true });
+      const result = await testCore.ttsSynthesize({ text: 'раз два три', adapter: 'fake' });
+      assert.ok(result.file.startsWith('tts/') && fs.existsSync(path.join(tmpAudio, result.file)), 'fake пишет wav во временную папку');
+      assert.equal(result.words.length, 3, 'tts_synthesize считает слова');
+      assert.ok(result.durationSec > 0, 'tts_synthesize меряет длительность');
+      assert.ok(testCore.listAudio().includes(result.file), 'list_audio видит синтезированный файл');
+    }
+  } finally {
+    fs.rmSync(tmpAudio, { recursive: true, force: true });
+  }
 } finally {
   fs.rmSync(path.join(root, 'projects', `${tmpName}.project.json`), { force: true });
   await client.close();
