@@ -8,8 +8,9 @@ import type { ModelPromptOptions } from '../engine/ai-model.ts';
 import type { CatalogEntry } from '../engine/ai-project.ts';
 import type { MotionPreset } from '../engine/motion.ts';
 import type { ProjectV1 } from '../engine/project.ts';
+import { EDITOR_STRINGS } from './strings.ts';
 
-export const CATALOG_VIEW_ALL = 'все';
+export const CATALOG_VIEW_ALL = EDITOR_STRINGS.catalog.all;
 
 export interface CatalogRow {
   entry: CatalogEntry;
@@ -28,8 +29,8 @@ export function filterCatalog(catalog: Record<string, CatalogAsset>, index: read
 
 export function sizeTextM(entry: CatalogEntry): string {
   const rs = entry.realSize;
-  if (rs?.heightM !== undefined) return `${Math.round(rs.heightM * 100) / 100} м`;
-  if (rs?.widthM !== undefined) return `${Math.round(rs.widthM * 100) / 100} м`;
+  if (rs?.heightM !== undefined) return EDITOR_STRINGS.catalog.sizeMeters(Math.round(rs.heightM * 100) / 100);
+  if (rs?.widthM !== undefined) return EDITOR_STRINGS.catalog.sizeMeters(Math.round(rs.widthM * 100) / 100);
   return '—';
 }
 
@@ -51,7 +52,7 @@ export function uniqueId(base: string, taken: ReadonlySet<string>): string {
     const id = `${base}_${n}`;
     if (!taken.has(id)) return id;
   }
-  throw new Error('Не удалось подобрать уникальный id');
+  throw new Error(EDITOR_STRINGS.errors.uniqueId);
 }
 
 export function buildCatalogAssetObject(asset: CatalogAsset, scene: SceneV1, taken: ReadonlySet<string>): SceneObject {
@@ -104,7 +105,7 @@ export interface CheckModelJsonResult {
 export function checkModelJsonText(text: string): CheckModelJsonResult {
   let candidate: unknown;
   try { candidate = extractJson(text); } catch (error) {
-    return { ok: false, errors: [{ path: '', message: `Не удалось разобрать JSON: ${error instanceof Error ? error.message : String(error)}` }], warnings: [] };
+    return { ok: false, errors: [{ path: '', message: EDITOR_STRINGS.errors.jsonParseWithMessage(error instanceof Error ? error.message : String(error)) }], warnings: [] };
   }
   const validation = validateAsset(candidate);
   return { ok: validation.ok, asset: validation.ok ? (candidate as CatalogAsset) : undefined, errors: validation.errors, warnings: validation.warnings };
@@ -131,7 +132,7 @@ export function buildPreviewScene(asset: CatalogAsset, preset: 'none' | MotionPr
   const sizeM = asset.realSize ? (asset.realSize.heightM ?? asset.realSize.widthM) : undefined;
   return {
     version: 1,
-    title: `Превью: ${asset.name}`,
+    title: EDITOR_STRINGS.catalog.previewTitle(asset.name),
     duration,
     palette: { sky: ['#1a1a2e', '#4a4a6a'] },
     world: { unitsPerMeter: 16 },
@@ -139,7 +140,7 @@ export function buildPreviewScene(asset: CatalogAsset, preset: 'none' | MotionPr
     assets: { [asset.id]: asset },
     layers: [{
       id: 'preview',
-      name: 'Превью',
+      name: EDITOR_STRINGS.catalog.preview,
       depth: 1,
       visible: true,
       objects: [{ id: 'obj', name: asset.name, kind: 'asset', x: 0, y: 0, s: 1, asset: asset.id, params: { ...(sizeM ? { sizeM } : {}), ...(motion ? { motion } : {}) } }],
@@ -171,14 +172,14 @@ export function collectProjectCredits(project: Pick<ProjectV1, 'scenes'>, catalo
     const a = catalog[id];
     if (!a) continue;
     const lic: { name?: string; author?: string; source?: string; url?: string; attribution?: boolean } = a.meta?.license ?? {};
-    credits.push({ id: a.id, name: a.name, author: lic.author ?? (lic.name === 'own' ? 'проект' : ''), license: lic.name ?? 'unknown', source: lic.source ?? '', own: lic.name === 'own' });
+    credits.push({ id: a.id, name: a.name, author: lic.author ?? (lic.name === 'own' ? EDITOR_STRINGS.catalog.projectAuthor : ''), license: lic.name ?? 'unknown', source: lic.source ?? '', own: lic.name === 'own' });
   }
   const seen = new Set<string>();
   return credits.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
 }
 
 export function formatCredits(credits: readonly ModelCredit[]): string {
-  return credits.map((c) => `${c.id} — ${c.name}: ${c.own ? 'собственная модель' : `лицензия ${c.license}`}, автор ${c.author}, источник ${c.source}`).join('\n') || '(нет моделей каталога в проекте)';
+  return credits.map((c) => EDITOR_STRINGS.catalog.creditLine(c.id, c.name, c.own, c.license, c.author, c.source)).join('\n') || EDITOR_STRINGS.catalog.noCredits;
 }
 
 export function modelPromptText(opts: ModelPromptOptions): string {

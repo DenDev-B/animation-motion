@@ -201,7 +201,7 @@ const ideaWarnEl = document.getElementById('ideaWarnings') as HTMLUListElement |
 if (ideaStyle) {
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = 'без стиля';
+  none.textContent = EDITOR_STRINGS.scenes.noStyle;
   ideaStyle.appendChild(none);
   for (const preset of STYLE_PRESETS) {
     const option = document.createElement('option');
@@ -258,7 +258,7 @@ const SCOPE_LABELS: Record<JsonScope, string> = EDITOR_STRINGS.scopeLabels;
 
 // Состояние каталога
 let catalogQuery = '';
-let catalogViewValue = 'все';
+let catalogViewValue: string = EDITOR_STRINGS.catalog.all;
 let catalogSelectedId: string | null = null;
 const thumbCache = new Map<string, string>();
 let previewTs = 0;
@@ -284,7 +284,7 @@ let splicePlaying = true;
 
 function updateSavedLabel() {
   const el = document.getElementById('saveState');
-  if (el) el.textContent = hasUnsavedChanges ? 'Есть несохранённые изменения' : 'Сохранено';
+  if (el) el.textContent = hasUnsavedChanges ? EDITOR_STRINGS.common.unsaved : EDITOR_STRINGS.common.saved;
 }
 function saveAutosave() {
   try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ savedAt: Date.now(), project })); } catch {}
@@ -345,7 +345,7 @@ function showList(element: HTMLUListElement | null, issues: readonly ValidationE
   element.innerHTML = '';
   for (const issue of issues) {
     const item = document.createElement('li');
-    item.textContent = `${issue.path || '(корень)'}: ${issue.message}`;
+    item.textContent = EDITOR_STRINGS.errors.issueLine(issue.path, issue.message);
     element.appendChild(item);
   }
 }
@@ -390,7 +390,7 @@ function reportIdeaErrors(errors: readonly ValidationError[], candidate?: unknow
   if (ideaFix) ideaFix.hidden = candidate === undefined || errors.length === 0;
   showList(ideaErrEl, errors);
   showList(ideaWarnEl, []);
-  if (ideaStatus) { ideaStatus.textContent = errors.length ? `Ошибок: ${errors.length}. Исправьте ответ ИИ.` : ''; ideaStatus.classList.toggle('err', errors.length > 0); }
+  if (ideaStatus) { ideaStatus.textContent = errors.length ? EDITOR_STRINGS.errors.aiReplyErrors(errors.length) : ''; ideaStatus.classList.toggle('err', errors.length > 0); }
 }
 function setIdeaCopyStatus(message: string, isError: boolean) {
   if (!ideaCopyStatus) return;
@@ -407,10 +407,8 @@ function setIdeaBriefStatus(message: string, isError: boolean) {
   ideaBriefStatus.textContent = message;
   ideaBriefStatus.classList.toggle('err', isError);
 }
-const NOT_JSON_MESSAGE = 'Это не JSON проекта. Сначала скопируйте промт, вставьте его в чат ИИ и вставьте сюда ответ ИИ';
-const BRIEF_NOT_JSON_MESSAGE = 'Это ТЗ, а не JSON. Отправьте ИИ промт проекта и вставьте его ответ сюда.';
 /** Вставлен только документ ТЗ: заголовки «## 1.»…«## 7.» без JSON-блока. */
-const ideaReplyMessage = (text: string): string => (/^##\s*[1-7]\./m.test(text) ? BRIEF_NOT_JSON_MESSAGE : NOT_JSON_MESSAGE);
+const ideaReplyMessage = (text: string): string => (/^##\s*[1-7]\./m.test(text) ? EDITOR_STRINGS.project.briefNotJson : EDITOR_STRINGS.project.notJson);
 function selectedStyleId(): string | undefined {
   return ideaStyle?.value || undefined;
 }
@@ -429,8 +427,8 @@ function checkBriefField(): boolean {
   showList(briefWarnEl, result.warnings);
   if (ideaCopyProjectPrompt) ideaCopyProjectPrompt.disabled = !result.ok;
   setIdeaBriefStatus(result.ok
-    ? (result.warnings.length ? `ТЗ принято; предупреждений: ${result.warnings.length}. Можно копировать промт проекта.` : 'ТЗ принято. Можно копировать промт проекта.')
-    : `Ошибок ТЗ: ${result.errors.length}. Исправьте ТЗ или очистите поле.`, !result.ok);
+    ? (result.warnings.length ? EDITOR_STRINGS.project.briefAcceptedWarnings(result.warnings.length) : EDITOR_STRINGS.project.briefAccepted)
+    : EDITOR_STRINGS.project.briefErrors(result.errors.length), !result.ok);
   return result.ok;
 }
 
@@ -489,13 +487,13 @@ function renderLayerList() {
   if (!layerList) return;
   layerList.innerHTML = '';
   const layers = project.scenes[activeSceneIndex]?.scene.layers ?? [];
-  if (layers.length === 0) { layerList.textContent = 'Слоёв нет.'; return; }
+  if (layers.length === 0) { layerList.textContent = EDITOR_STRINGS.scenes.noLayers; return; }
   layers.forEach((layer, layerIndex) => {
     const block = document.createElement('div');
     block.className = 'layer';
     const title = document.createElement('div');
     title.className = 'layer-name';
-    title.textContent = `${layer.name} · depth ${layer.depth}${layer.visible === false ? ' · скрыт' : ''}`;
+    title.textContent = EDITOR_STRINGS.scenes.layerLine(layer.name, layer.depth, layer.visible === false);
     block.appendChild(title);
     layer.objects.forEach((object, objectIndex) => {
       const button = document.createElement('button');
@@ -573,7 +571,7 @@ function transitionControl(index: number, entry: ProjectSceneV1): HTMLElement {
   const limit = transitionLimit(index);
   const typeLabel = document.createElement('label');
   typeLabel.className = 'f';
-  typeLabel.textContent = 'Переход';
+  typeLabel.textContent = EDITOR_STRINGS.scenes.transition;
   const select = document.createElement('select');
   for (const value of TRANSITION_OPTIONS) {
     const option = document.createElement('option');
@@ -584,7 +582,7 @@ function transitionControl(index: number, entry: ProjectSceneV1): HTMLElement {
   select.value = type;
   const durationLabel = document.createElement('label');
   durationLabel.className = 'f';
-  durationLabel.textContent = 'Длительность, с';
+  durationLabel.textContent = EDITOR_STRINGS.scenes.durationLabel;
   const duration = document.createElement('input');
   duration.type = 'number';
   duration.min = '0';
@@ -611,7 +609,7 @@ function renderSceneOrder() {
     row.tabIndex = 0;
     row.draggable = true;
     row.dataset.index = String(index);
-    row.title = 'Перетащите карточку или нажмите Alt+←/→';
+    row.title = EDITOR_STRINGS.scenes.dragHint;
     row.appendChild(sceneThumbnail(entry, index));
     const head = document.createElement('div');
     head.className = 'order-head';
@@ -620,7 +618,7 @@ function renderSceneOrder() {
     name.textContent = `${index + 1}. ${entry.name}`;
     const duration = document.createElement('div');
     duration.className = 'order-duration';
-    duration.textContent = `${entry.scene.duration.toFixed(1)} с`;
+    duration.textContent = EDITOR_STRINGS.scenes.seconds(entry.scene.duration.toFixed(1));
     head.append(name, duration);
     row.appendChild(head);
     row.appendChild(sceneVoiceBlock(entry));
@@ -687,13 +685,13 @@ function renderProjectPreview() {
     if (cue) drawSubtitle(ctx, size.w, size.h, cue, project.subtitles, project.format);
   }
   if (projectScrub) projectScrub.value = seconds > 0 ? (spliceT / seconds).toFixed(2) : '0';
-  if (projectTime) projectTime.textContent = `${spliceT.toFixed(1)} / ${seconds.toFixed(1)} с`;
+  if (projectTime) projectTime.textContent = EDITOR_STRINGS.splice.time(spliceT.toFixed(1), seconds.toFixed(1));
 }
 
 function renderCatalogTabs(active: string) {
   if (!catalogTabBar) return;
   catalogTabBar.innerHTML = '';
-  const tabs: Array<[string, string]> = [['list', 'Список'], ['preview', 'Превью'], ['newjson', 'Новая модель из JSON'], ['svg', 'Импорт SVG'], ['upload', 'Загрузить'], ['modelprompt', 'Промт через ИИ'], ['credits', 'Титры проекта']];
+  const tabs: Array<[string, string]> = [['list', EDITOR_STRINGS.catalog.listTitle], ['preview', EDITOR_STRINGS.catalog.preview], ['newjson', EDITOR_STRINGS.catalog.newModelTitle], ['svg', EDITOR_STRINGS.catalog.svgImportTitle], ['upload', EDITOR_STRINGS.catalog.uploadTitle], ['modelprompt', EDITOR_STRINGS.catalog.modelPromptTab], ['credits', EDITOR_STRINGS.catalog.creditsTitle]];
   for (const [id, label] of tabs) {
     const button = document.createElement('button');
     button.textContent = label;
@@ -770,7 +768,7 @@ function thumbnailUrl(asset: CatalogAsset): string {
   const fillLuminance = averageFillLuminance(asset, thumbnailPalette);
   scene.palette = { ...thumbnailPalette, sky: fillLuminance !== null && fillLuminance > 0.7 ? ['#17141f', '#2c2735'] : ['#f4f1ea', '#dcd6ca'] };
   scene.world = { unitsPerMeter };
-  scene.layers.unshift({ id: 'thumb-bg', name: 'Фон', depth: 0, visible: true, objects: [{ id: 'thumb-bg', name: 'Фон', kind: 'sky', x: 0, y: 0, s: 1 }] });
+  scene.layers.unshift({ id: 'thumb-bg', name: EDITOR_STRINGS.scenes.background, depth: 0, visible: true, objects: [{ id: 'thumb-bg', name: EDITOR_STRINGS.scenes.background, kind: 'sky', x: 0, y: 0, s: 1 }] });
   const object = scene.layers[1]?.objects[0];
   if (object) {
     object.x = -(Number(bounds[0]) + bw / 2) * k;
@@ -789,7 +787,7 @@ function renderCatalogList() {
   if (!catalogList || !catalogCount || !catalogEmpty) return;
   catalogList.innerHTML = '';
   const rows = filterCatalog(catalog, catalogIndex, catalogQuery, catalogViewValue);
-  catalogCount.textContent = `Моделей: ${rows.length}`;
+  catalogCount.textContent = EDITOR_STRINGS.catalog.modelsCount(rows.length);
   catalogEmpty.hidden = rows.length > 0;
   for (const entry of rows) {
     const asset = catalog[entry.id];
@@ -813,20 +811,20 @@ function renderCatalogList() {
     const actions = document.createElement('div');
     actions.className = 'catalog-actions';
     const addBtn = document.createElement('button');
-    addBtn.textContent = 'Добавить в сцену';
+    addBtn.textContent = EDITOR_STRINGS.catalog.addToSceneTitle;
     const copyJsonBtn = document.createElement('button');
-    copyJsonBtn.textContent = 'Копировать JSON модели';
+    copyJsonBtn.textContent = EDITOR_STRINGS.catalog.copyModelJson;
     const copyPromptBtn = document.createElement('button');
-    copyPromptBtn.textContent = 'Копировать промт: изменить модель';
+    copyPromptBtn.textContent = EDITOR_STRINGS.catalog.copyModelPrompt;
     actions.append(addBtn, copyJsonBtn, copyPromptBtn);
     row.append(img, info, actions);
     catalogList.appendChild(row);
     addBtn.onclick = () => addCatalogAssetToScene(entry);
-    copyJsonBtn.onclick = () => void copyText(asset ? JSON.stringify(asset, null, 2) : `{}`, `Модель ${entry.name ?? entry.id}`);
+    copyJsonBtn.onclick = () => void copyText(asset ? JSON.stringify(asset, null, 2) : `{}`, EDITOR_STRINGS.catalog.modelTitle(entry.name ?? entry.id));
     copyPromptBtn.onclick = () => {
       if (!asset) return;
-      const prompt = buildPrompt(asset, { task: 'Внесите изменения в эту модель и верните JSON модели целиком: один объект, без Markdown и пояснений.', scope: 'модель каталога' });
-      void copyText(prompt, `Промт модели ${asset.name}`);
+      const prompt = buildPrompt(asset, { task: EDITOR_STRINGS.catalog.modelEditTask, scope: EDITOR_STRINGS.catalog.modelScope });
+      void copyText(prompt, EDITOR_STRINGS.catalog.modelPromptCopy(asset.name));
     };
   }
 }
@@ -839,7 +837,7 @@ function addCatalogAssetToScene(entry: { id: string; name: string; view?: string
   const object = buildCatalogAssetObject(asset, scene, taken);
   const targetLayer = scene.layers.find((layer) => layer.depth === 1) ?? scene.layers[0];
   if (!targetLayer) return;
-  applyChange(`Добавить в сцену: ${asset.name}`, () => { targetLayer.objects.push(object); });
+  applyChange(EDITOR_STRINGS.catalog.addToScene(asset.name), () => { targetLayer.objects.push(object); });
 }
 
 function checkCatalogNewJson() {
@@ -852,14 +850,14 @@ function checkCatalogNewJson() {
   showList(catalogNewJsonWarnings, result.warnings);
   if (catalogSaveJson) catalogSaveJson.disabled = !result.ok;
   if (catalogCopyFixJson) catalogCopyFixJson.hidden = result.ok || result.errors.length === 0;
-  setCatalogStatus(catalogNewJsonStatus, result.ok ? 'Ошибок нет. Можно сохранить в каталог.' : `Ошибок: ${result.errors.length}. Исправьте JSON модели.`, !result.ok);
+  setCatalogStatus(catalogNewJsonStatus, result.ok ? EDITOR_STRINGS.catalog.saveReady : EDITOR_STRINGS.catalog.modelJsonErrors(result.errors.length), !result.ok);
 }
 
 function saveCatalogModel(asset: CatalogAsset, statusEl: HTMLElement | null = catalogNewJsonStatus) {
   const taken = new Set(Object.keys(catalog));
   let id = asset.id;
   if (taken.has(id)) {
-    const overwrite = confirm(`Модель с id "${id}" уже есть в каталоге.\nНажмите ОК, чтобы перезаписать id, или Отмена — добавить с суффиксом _2.`);
+    const overwrite = confirm(EDITOR_STRINGS.catalog.overwriteIdConfirm(id));
     if (!overwrite) id = uniqueId(id, taken);
   }
   const out = { ...asset, id };
@@ -873,7 +871,7 @@ function saveCatalogModel(asset: CatalogAsset, statusEl: HTMLElement | null = ca
   catalogIndex.push({ id, name: out.name, tags: out.meta?.tags ?? [], view: out.meta?.view, realSize: out.realSize, bounds: out.bounds, license: out.meta?.license?.name });
   thumbCache.clear();
   renderCatalogList();
-  setCatalogStatus(statusEl, `Сохранено в каталог как ${id} — файл ${id}.json скачан.`, false);
+  setCatalogStatus(statusEl, EDITOR_STRINGS.catalog.savedAs(id), false);
   renderPreviewModelSelect();
 }
 
@@ -925,9 +923,9 @@ function checkCatalogSvg() {
     svgCandidate = result.ok ? result : null;
     const warningsEl = catalogSvgWarnings;
     if (warningsEl) { warningsEl.innerHTML = ''; for (const w of result.warnings) { const li = document.createElement('li'); li.textContent = w; warningsEl.appendChild(li); } }
-    if (result.errors.length) setCatalogStatus(catalogSvgStatus, `Ошибки импорта: ${result.errors.map((e) => `${e.path || ''}: ${e.message}`).join('; ')}`, true);
-    else if (result.ok) setCatalogStatus(catalogSvgStatus, `Геометрия готова: ${result.asset!.parts.length} частей. Предупреждений: ${result.warnings.length}. Нажмите «Импортировать».`, false);
-    else setCatalogStatus(catalogSvgStatus, 'Импорт не удался.', true);
+    if (result.errors.length) setCatalogStatus(catalogSvgStatus, EDITOR_STRINGS.catalog.importErrors(result.errors.map((e) => `${e.path || ''}: ${e.message}`).join('; ')), true);
+    else if (result.ok) setCatalogStatus(catalogSvgStatus, EDITOR_STRINGS.catalog.geometryReady(result.asset!.parts.length, result.warnings.length), false);
+    else setCatalogStatus(catalogSvgStatus, EDITOR_STRINGS.catalog.importFailed, true);
     if (catalogImportSvg) catalogImportSvg.disabled = !result.ok;
     if (catalogCopyFixSvg) catalogCopyFixSvg.hidden = !result.ok || result.errors.length === 0;
     if (result.ok) fillSvgFields(result.asset!);
@@ -941,13 +939,10 @@ function importSvgToCatalog() {
   svgCandidate = null;
   if (catalogSvgFile) catalogSvgFile.value = '';
   if (catalogImportSvg) catalogImportSvg.disabled = true;
-  setCatalogStatus(catalogSvgStatus, `Импортировано как ${importedId}: модель в списке «Список», файл скачан. Положите его в папку catalog/ и выполните npm run catalog:add, чтобы она осталась навсегда.`, false);
+  setCatalogStatus(catalogSvgStatus, EDITOR_STRINGS.catalog.imported(importedId), false);
 }
 
 // ---------- локальный сервис: загрузка моделей перетаскиванием ----------
-const LOCAL_API_MISSING_MESSAGE = 'Загрузка работает только при запуске через run.bat: локальный сервис не отвечает. Модель можно сохранить через «Новая модель из JSON» или «Импорт SVG» — файл скачается, положите его в catalog/.';
-const LOCAL_API_MISSING_SHORT = 'Загрузка работает только при запуске через run.bat.';
-const RELOAD_HINT = 'Страница перезагрузится; на вопрос «Восстановить прошлую сессию?» нажмите ОК — проект останется.';
 const VIEWS: readonly string[] = ['side', 'bottom', 'front', 'top', 'three-quarter'];
 /** Размер SVG из пачки: в drag-and-drop нет поля размера, поправимо в JSON модели. */
 const SVG_UPLOAD_SIZE_M = 1.5;
@@ -986,17 +981,17 @@ async function postCatalogAdd(model: unknown, overwrite: boolean): Promise<Catal
     try {
       return JSON.parse(text) as CatalogAddReply;
     } catch {
-      return { ok: false, errors: [{ path: '', message: `Сервер ответил не JSON (код ${response.status}).` }] };
+      return { ok: false, errors: [{ path: '', message: EDITOR_STRINGS.errors.serverNotJson(response.status) }] };
     }
   } catch (error) {
     localApiReady = false;
-    return { ok: false, errors: [{ path: '', message: `Сервер недоступен: ${error instanceof Error ? error.message : String(error)}` }] };
+    return { ok: false, errors: [{ path: '', message: EDITOR_STRINGS.errors.serverUnavailable(error instanceof Error ? error.message : String(error)) }] };
   }
 }
 
 function issueMessage(errors: CatalogAddReply['errors']): string {
   const first = errors?.[0];
-  if (!first) return 'сервер отклонил модель';
+  if (!first) return EDITOR_STRINGS.catalog.serverRejectedModel;
   return `${first.path ? `${first.path}: ` : ''}${first.message}`;
 }
 
@@ -1017,17 +1012,17 @@ async function buildModelForUpload(file: File, license: { name: string; author: 
       id: slug, name: baseName, view: 'side', sizeM: SVG_UPLOAD_SIZE_M, sizeAxis: 'height', tags: [],
       license: { ...license, attribution: false },
     });
-    if (!result.ok || !result.asset) return { error: result.errors.map((e) => `${e.path ? `${e.path}: ` : ''}${e.message}`).join('; ') || 'SVG не распознан' };
+    if (!result.ok || !result.asset) return { error: result.errors.map((e) => `${e.path ? `${e.path}: ` : ''}${e.message}`).join('; ') || EDITOR_STRINGS.catalog.svgNotRecognized };
     return { model: result.asset };
   }
   if (/\.json$/i.test(file.name) || /\.json$/i.test(file.type)) {
     try {
       return { model: extractJson(text) };
     } catch (error) {
-      return { error: `не удалось разобрать JSON: ${error instanceof Error ? error.message : String(error)}` };
+      return { error: EDITOR_STRINGS.errors.jsonParseLower(error instanceof Error ? error.message : String(error)) };
     }
   }
-  return { error: 'поддерживаются только .json и .svg' };
+  return { error: EDITOR_STRINGS.catalog.onlyJsonSvg };
 }
 
 async function uploadCatalogFiles(files: readonly File[]): Promise<void> {
@@ -1036,7 +1031,7 @@ async function uploadCatalogFiles(files: readonly File[]): Promise<void> {
   if (catalogUploadResults) catalogUploadResults.innerHTML = '';
   try {
     if (!(await localApiAvailable())) {
-      setCatalogStatus(catalogUploadStatus, LOCAL_API_MISSING_MESSAGE, true);
+      setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.uploadOfflineLong, true);
       return;
     }
     const license = {
@@ -1048,26 +1043,26 @@ async function uploadCatalogFiles(files: readonly File[]): Promise<void> {
     for (const file of files) {
       const prepared = await buildModelForUpload(file, license);
       if (!prepared.model) {
-        addUploadResult(file.name, prepared.error ?? 'файл не подошёл', false);
+        addUploadResult(file.name, prepared.error ?? EDITOR_STRINGS.catalog.fileRejected, false);
         continue;
       }
       const candidateId = String((prepared.model as CatalogAsset).id ?? '');
       const taken = Object.prototype.hasOwnProperty.call(catalog, candidateId);
-      const overwrite = taken && confirm(`Модель «${candidateId}» уже есть в каталоге.\nОК — заменить её, Отмена — сохранить с суффиксом.`);
+      const overwrite = taken && confirm(EDITOR_STRINGS.catalog.overwriteModelConfirm(candidateId));
       const reply = await postCatalogAdd(prepared.model, overwrite);
       if (reply.ok) {
         added++;
-        addUploadResult(file.name, `добавлено, id ${reply.id}`, true);
+        addUploadResult(file.name, EDITOR_STRINGS.catalog.uploadAdded(reply.id), true);
       } else {
         addUploadResult(file.name, issueMessage(reply.errors), false);
       }
     }
     if (added > 0) {
-      setCatalogStatus(catalogUploadStatus, `Добавлено: ${added}. Обновляю каталог… ${RELOAD_HINT}`, false);
+      setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.addedReload(added, EDITOR_STRINGS.project.reloadHint), false);
       saveAutosave();
       window.setTimeout(() => location.reload(), 800);
     } else {
-      setCatalogStatus(catalogUploadStatus, 'Добавлено: 0. Каталог не менялся.', true);
+      setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.addedNone, true);
     }
   } finally {
     uploadInFlight = false;
@@ -1076,8 +1071,8 @@ async function uploadCatalogFiles(files: readonly File[]): Promise<void> {
 
 async function refreshUploadPanel(): Promise<void> {
   const online = await localApiAvailable();
-  if (online) setCatalogStatus(catalogUploadStatus, 'Сервис на месте: перетащите файлы в зону выше или нажмите «Выбрать файлы».', false);
-  else setCatalogStatus(catalogUploadStatus, LOCAL_API_MISSING_MESSAGE, true);
+  if (online) setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.uploadReady, false);
+  else setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.uploadOfflineLong, true);
 }
 
 /** Первый объект kind shape с таким id или именем, из которого можно собрать модель каталога. */
@@ -1124,7 +1119,6 @@ interface ExportReply {
   errors?: Array<{ path: string; message: string }>;
 }
 
-const EXPORT_OFFLINE_MESSAGE = EDITOR_STRINGS.exportOffline;
 let exportJobId: string | null = null;
 let exportSubmitting = false;
 let exportPollTimer: number | null = null;
@@ -1154,11 +1148,11 @@ async function fetchExportJson(url: string, init?: RequestInit): Promise<ExportR
     try {
       return JSON.parse(text) as ExportReply;
     } catch {
-      return { ok: false, errors: [{ path: '', message: `Сервер ответил не JSON (код ${response.status}).` }] };
+      return { ok: false, errors: [{ path: '', message: EDITOR_STRINGS.errors.serverNotJson(response.status) }] };
     }
   } catch (error) {
     localApiReady = false;
-    return { ok: false, errors: [{ path: '', message: `Сервер недоступен: ${error instanceof Error ? error.message : String(error)}` }] };
+    return { ok: false, errors: [{ path: '', message: EDITOR_STRINGS.errors.serverUnavailable(error instanceof Error ? error.message : String(error)) }] };
   }
 }
 
@@ -1175,14 +1169,14 @@ function exportPreviewPayload(): { ok: true; preview?: { frame?: number; range?:
   const isProbe = mode !== 'all' || scale !== 1;
   if (mode === 'frame') {
     const frame = Number(exportFrameAt?.value ?? '0');
-    if (!Number.isFinite(frame) || frame < 0 || frame >= dur) return { ok: false, message: `t=${frame} вне ролика (0 ≤ t < ${dur.toFixed(3)} с)` };
+    if (!Number.isFinite(frame) || frame < 0 || frame >= dur) return { ok: false, message: EDITOR_STRINGS.preview.frameOutOfRange(frame, dur.toFixed(3)) };
     return { ok: true, preview: { frame, ...(scale !== 1 ? { scale } : {}) }, probe: isProbe, frame: true };
   }
   if (mode === 'range') {
     const from = Number(exportFrom?.value ?? '0');
     const to = Number(exportTo?.value ?? '0');
-    if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to <= from) return { ok: false, message: `некорректный кусок: нужно 0 ≤ от < до` };
-    if (to > dur + 1e-9) return { ok: false, message: `кусок заканчивается на ${to} с, а ролик длится ${dur.toFixed(3)} с` };
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to <= from) return { ok: false, message: EDITOR_STRINGS.preview.badRange };
+    if (to > dur + 1e-9) return { ok: false, message: EDITOR_STRINGS.preview.rangeTooLong(to, dur.toFixed(3)) };
     return { ok: true, preview: { range: { from, to }, ...(scale !== 1 ? { scale } : {}) }, probe: isProbe, frame: false };
   }
   if (scale !== 1) return { ok: true, preview: { scale }, probe: true, frame: false };
@@ -1195,7 +1189,7 @@ function updateExportUi(): void {
   if (exportToLabel) exportToLabel.hidden = mode !== 'range';
   if (exportFrameLabel) exportFrameLabel.hidden = mode !== 'frame';
   const payload = exportPreviewPayload();
-  if (exportMp4Btn) exportMp4Btn.textContent = payload.ok && payload.probe ? EDITOR_STRINGS.exportBtnProbe : EDITOR_STRINGS.exportBtnMp4;
+  if (exportMp4Btn) exportMp4Btn.textContent = payload.ok && payload.probe ? EDITOR_STRINGS.export.btnProbe : EDITOR_STRINGS.export.btnMp4;
 }
 
 let exportUiReady = false;
@@ -1214,15 +1208,15 @@ function syncExportDuration(): void {
 function initExportUi(): void {
   if (exportUiReady) { syncExportDuration(); return; }
   exportUiReady = true;
-  if (exportModeText) exportModeText.textContent = EDITOR_STRINGS.exportMode;
-  if (exportFromText) exportFromText.textContent = EDITOR_STRINGS.exportFrom;
-  if (exportToText) exportToText.textContent = EDITOR_STRINGS.exportTo;
-  if (exportFrameText) exportFrameText.textContent = EDITOR_STRINGS.exportFrameAt;
-  if (exportScaleText) exportScaleText.textContent = EDITOR_STRINGS.exportScale;
-  if (exportHintEl) exportHintEl.textContent = EDITOR_STRINGS.exportHint;
+  if (exportModeText) exportModeText.textContent = EDITOR_STRINGS.export.mode;
+  if (exportFromText) exportFromText.textContent = EDITOR_STRINGS.export.from;
+  if (exportToText) exportToText.textContent = EDITOR_STRINGS.export.to;
+  if (exportFrameText) exportFrameText.textContent = EDITOR_STRINGS.export.frameAt;
+  if (exportScaleText) exportScaleText.textContent = EDITOR_STRINGS.export.scale;
+  if (exportHintEl) exportHintEl.textContent = EDITOR_STRINGS.export.hint;
   if (exportMode) {
     exportMode.textContent = '';
-    for (const [value, label] of [['all', EDITOR_STRINGS.exportModeAll], ['range', EDITOR_STRINGS.exportModeRange], ['frame', EDITOR_STRINGS.exportModeFrame]] as const) {
+    for (const [value, label] of [['all', EDITOR_STRINGS.export.modeAll], ['range', EDITOR_STRINGS.export.modeRange], ['frame', EDITOR_STRINGS.export.modeFrame]] as const) {
       const opt = document.createElement('option'); opt.value = value; opt.textContent = label; exportMode.appendChild(opt);
     }
   }
@@ -1244,14 +1238,14 @@ function showExportResult(reply: ExportReply): void {
     if (exportDownload) {
       exportDownload.href = `/__api/export/file?id=${encodeURIComponent(exportJobId ?? '')}`;
       exportDownload.textContent = exportLastIsProbe
-        ? (exportLastIsFrame ? EDITOR_STRINGS.exportDownloadProbePng : EDITOR_STRINGS.exportDownloadProbeMp4)
-        : EDITOR_STRINGS.exportDownloadMp4;
+        ? (exportLastIsFrame ? EDITOR_STRINGS.export.downloadProbePng : EDITOR_STRINGS.export.downloadProbeMp4)
+        : EDITOR_STRINGS.export.downloadMp4;
       exportDownload.hidden = false;
     }
-    const done = exportLastIsProbe ? `${EDITOR_STRINGS.exportProbeNote}; ${reply.file}` : `Готово: ${reply.file}`;
+    const done = exportLastIsProbe ? `${EDITOR_STRINGS.export.probeNote}; ${reply.file}` : EDITOR_STRINGS.export.done(reply.file);
     setExportStatus(done);
   } else if (reply.state === 'cancelled') {
-    setExportStatus('Экспорт отменён, файл не сохранён.');
+    setExportStatus(EDITOR_STRINGS.export.cancelled);
   } else {
     setExportStatus(reply.message || issueMessage(reply.errors));
   }
@@ -1267,7 +1261,7 @@ async function pollExportStatus(): Promise<void> {
     return;
   }
   if (reply.state === 'running') {
-    setExportStatus(reply.total ? `кадр ${reply.frame} из ${reply.total}` : 'собирается…');
+    setExportStatus(reply.total ? EDITOR_STRINGS.export.frameProgress(reply.frame, reply.total) : EDITOR_STRINGS.export.assembling);
     exportPollTimer = window.setTimeout(() => void pollExportStatus(), 500);
     return;
   }
@@ -1279,14 +1273,14 @@ async function startExport(): Promise<void> {
   if (exportDownload) exportDownload.hidden = true;
   if (!(await localApiAvailable())) {
     if (exportMp4Btn) exportMp4Btn.disabled = true;
-    setExportStatus(EXPORT_OFFLINE_MESSAGE);
+    setExportStatus(EDITOR_STRINGS.export.offline);
     return;
   }
   const payload = exportPreviewPayload();
   if (!payload.ok) { setExportStatus(payload.message); return; }
   exportLastIsProbe = payload.probe;
   exportLastIsFrame = payload.frame;
-  setExportStatus('Отправляю проект…');
+  setExportStatus(EDITOR_STRINGS.export.sending);
   exportSubmitting = true;
   syncVoiceButtons();
   const reply = await fetchExportJson('/__api/export', {
@@ -1296,7 +1290,7 @@ async function startExport(): Promise<void> {
   });
   exportSubmitting = false;
   if (!reply.ok || !reply.jobId) {
-    setExportStatus(reply.ok ? 'Сервер не вернул id задания.' : issueMessage(reply.errors));
+    setExportStatus(reply.ok ? EDITOR_STRINGS.export.noJobId : issueMessage(reply.errors));
     if (exportMp4Btn) exportMp4Btn.disabled = false;
     syncVoiceButtons();
     return;
@@ -1304,7 +1298,7 @@ async function startExport(): Promise<void> {
   exportJobId = reply.jobId;
   if (exportMp4Btn) exportMp4Btn.disabled = true;
   if (exportCancelBtn) exportCancelBtn.hidden = false;
-  setExportStatus(payload.probe ? `${EDITOR_STRINGS.exportProbeNote}; собираю…` : 'Экспорт запущен, жду первый кадр…');
+  setExportStatus(payload.probe ? EDITOR_STRINGS.export.probeStarting(EDITOR_STRINGS.export.probeNote) : EDITOR_STRINGS.export.started);
   await pollExportStatus();
 }
 
@@ -1332,7 +1326,7 @@ async function refreshExportPanel(): Promise<void> {
   // за время ping экспорт мог стартовать (авто-экспорт после «Создать одной кнопкой») — панель не трогаем
   if (isExportInFlight()) return;
   if (exportMp4Btn) exportMp4Btn.disabled = !online;
-  setExportStatus(online ? '' : EXPORT_OFFLINE_MESSAGE);
+  setExportStatus(online ? '' : EDITOR_STRINGS.export.offline);
 }
 
 // ---------- voice panel: scene TTS and project music ----------
@@ -1364,10 +1358,6 @@ const voiceSceneStatus = new Map<string, string>();
 const voiceOpenState = new Map<string, boolean>();
 const voiceAdapterChoice = new Map<string, string>();
 
-function fillTemplate(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
-}
-
 function voiceIssueMessage(errors: Array<{ path?: string; message?: string }> | undefined): string {
   const first = errors?.[0];
   if (!first) return '';
@@ -1388,7 +1378,7 @@ async function voiceFetch<T>(url: string, init?: RequestInit): Promise<VoiceFetc
     try {
       data = JSON.parse(text);
     } catch {
-      return { ok: false, message: fillTemplate(EDITOR_STRINGS.voice.serverNotJson, { code: response.status }) };
+      return { ok: false, message: EDITOR_STRINGS.errors.serverNotJson(response.status) };
     }
     if (!response.ok) {
       const errors = (data as { errors?: Array<{ path?: string; message?: string }> }).errors;
@@ -1411,7 +1401,7 @@ async function loadVoiceAdapters(): Promise<void> {
     voiceAdapters = reply.data.adapters;
     voiceAdaptersState = 'online';
     voiceAdaptersError = availableVoiceAdapters().length === 0
-      ? fillTemplate(EDITOR_STRINGS.voice.noAdapter, { reasons: voiceAdapters.map((adapter) => `${adapter.label}: ${adapter.reason ?? ''}`).join('; ') })
+      ? EDITOR_STRINGS.voice.noAdapter(voiceAdapters.map((adapter) => `${adapter.label}: ${adapter.reason ?? ''}`).join('; '))
       : '';
   } else {
     voiceAdaptersState = 'offline';
@@ -1490,7 +1480,7 @@ function applySceneVoiceNumber(sceneId: string, field: 'offset' | 'gain', value:
 function removeSceneVoice(sceneId: string, name: string): void {
   const entry = findProjectScene(sceneId);
   if (!entry?.voice) return;
-  if (!confirm(fillTemplate(EDITOR_STRINGS.voice.removeConfirm, { name }))) return;
+  if (!confirm(EDITOR_STRINGS.voice.removeConfirm(name))) return;
   voiceSceneStatus.delete(sceneId);
   applyChange('scene-voice-remove', () => {
     delete entry.voice;
@@ -1557,9 +1547,9 @@ async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId:
     if ((entry.voice?.text ?? '').trim() !== text) { status.textContent = EDITOR_STRINGS.voice.textChanged; return; }
     const seconds = Number(data.durationSec ?? 0).toFixed(2);
     const words = Array.isArray(data.words) ? data.words.length : 0;
-    let message = fillTemplate(data.cached ? EDITOR_STRINGS.voice.cached : EDITOR_STRINGS.voice.fresh, { seconds, words });
+    let message = data.cached ? EDITOR_STRINGS.voice.cached(seconds, words) : EDITOR_STRINGS.voice.fresh(seconds, words);
     const end = Number(entry.voice?.offset ?? 0) + Number(data.durationSec ?? 0);
-    if (end > entry.scene.duration + 1e-6) message += `; ${fillTemplate(EDITOR_STRINGS.voice.tooLong, { seconds: (end - entry.scene.duration).toFixed(2) })}`;
+    if (end > entry.scene.duration + 1e-6) message += `; ${EDITOR_STRINGS.voice.tooLong((end - entry.scene.duration).toFixed(2))}`;
     voiceSceneStatus.set(sceneId, message);
     applyChange('scene-voice-synthesize', () => {
       const voice = { ...(entry.voice ?? {}) };
@@ -1603,8 +1593,8 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   textArea.rows = 3;
   textArea.maxLength = VOICE_TEXT_MAX;
   textArea.value = voice?.text ?? '';
-  textArea.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaText, { name: entry.name }));
-  const syncCounter = () => { counter.textContent = fillTemplate(EDITOR_STRINGS.voice.counter, { n: textArea.value.length, max: VOICE_TEXT_MAX }); };
+  textArea.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaText(entry.name));
+  const syncCounter = () => { counter.textContent = EDITOR_STRINGS.voice.counter(textArea.value.length, VOICE_TEXT_MAX); };
   syncCounter();
   textArea.addEventListener('input', syncCounter);
   textArea.addEventListener('change', () => applySceneVoiceText(entry.id, textArea.value));
@@ -1626,7 +1616,7 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   offset.style.width = '72px';
   offset.value = String(voice?.offset ?? 0);
   offset.disabled = !hasVoice;
-  offset.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaOffset, { name: entry.name }));
+  offset.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaOffset(entry.name));
   offset.addEventListener('change', () => applySceneVoiceNumber(entry.id, 'offset', Number(offset.value)));
   offsetLabel.append(offsetTitle, offset);
 
@@ -1642,7 +1632,7 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   gain.style.width = '72px';
   gain.value = String(voice?.gain ?? 1);
   gain.disabled = !hasVoice;
-  gain.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaGain, { name: entry.name }));
+  gain.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaGain(entry.name));
   gain.addEventListener('change', () => applySceneVoiceNumber(entry.id, 'gain', Number(gain.value)));
   gainLabel.append(gainTitle, gain);
 
@@ -1666,7 +1656,7 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   select.value = voiceAdapters.some((adapter) => adapter.id === chosen && adapter.ok) ? chosen : '';
   select.disabled = voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0;
   select.title = voiceAdaptersState === 'online' ? voiceAdaptersError : EDITOR_STRINGS.voice.offline;
-  select.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaAdapter, { name: entry.name }));
+  select.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaAdapter(entry.name));
   select.addEventListener('change', () => voiceAdapterChoice.set(entry.id, select.value));
   adapterLabel.append(adapterTitle, select);
 
@@ -1679,7 +1669,7 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   synth.type = 'button';
   synth.className = 'voice-synth primary';
   synth.textContent = EDITOR_STRINGS.voice.synthesize;
-  synth.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaSynthesize, { name: entry.name }));
+  synth.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaSynthesize(entry.name));
   synth.addEventListener('mousedown', (event) => event.preventDefault());
   const updateSynthState = () => {
     const base = voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0 || !textArea.value.trim();
@@ -1696,7 +1686,7 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   remove.type = 'button';
   remove.className = 'voice-remove';
   remove.textContent = EDITOR_STRINGS.voice.remove;
-  remove.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaRemove, { name: entry.name }));
+  remove.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaRemove(entry.name));
   remove.addEventListener('mousedown', (event) => event.preventDefault());
   remove.addEventListener('click', () => removeSceneVoice(entry.id, entry.name));
   buttons.append(synth, remove);
@@ -1712,7 +1702,7 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
     audio.controls = true;
     audio.preload = 'none';
     audio.src = `/__api/audio/file?path=${encodeURIComponent(voice.file)}`;
-    audio.setAttribute('aria-label', fillTemplate(EDITOR_STRINGS.voice.ariaAudio, { file: voice.file }));
+    audio.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaAudio(voice.file));
     fileRow.append(caption, audio);
     block.appendChild(fileRow);
   }
@@ -1782,7 +1772,7 @@ function subtitlesBlock(): HTMLElement {
   const enable = document.createElement('input');
   enable.type = 'checkbox';
   enable.checked = on;
-  enable.setAttribute('aria-label', EDITOR_STRINGS.subtitles.ariaEnable);
+  enable.setAttribute('aria-label', EDITOR_STRINGS.subtitles.enable);
   enable.addEventListener('change', () => setSubtitlesEnabled(enable.checked));
   const enableText = document.createElement('span');
   enableText.textContent = EDITOR_STRINGS.subtitles.enable;
@@ -1899,7 +1889,7 @@ function subtitlesBlock(): HTMLElement {
   if (built.missingWords.length) {
     const missing = document.createElement('div');
     missing.className = 'hint';
-    missing.textContent = fillTemplate(EDITOR_STRINGS.subtitles.missing, { n: built.missingWords.length });
+    missing.textContent = EDITOR_STRINGS.subtitles.missing(built.missingWords.length);
     block.appendChild(missing);
   }
   return block;
@@ -1930,7 +1920,7 @@ function renderVoicePanel(): void {
   const fileTitle = document.createElement('span');
   fileTitle.textContent = EDITOR_STRINGS.voice.musicFile;
   const select = document.createElement('select');
-  select.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaMusic);
+  select.setAttribute('aria-label', EDITOR_STRINGS.voice.musicTitle);
   const none = document.createElement('option');
   none.value = '';
   none.textContent = EDITOR_STRINGS.voice.musicNone;
@@ -1959,7 +1949,7 @@ function renderVoicePanel(): void {
   gain.style.width = '72px';
   gain.value = String(current?.gain ?? 0.25);
   gain.disabled = !current;
-  gain.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaMusicGain);
+  gain.setAttribute('aria-label', EDITOR_STRINGS.voice.musicGain);
   gain.addEventListener('change', () => applyProjectMusicGain(Number(gain.value)));
   gainLabel.append(gainTitle, gain);
 
@@ -2006,10 +1996,10 @@ function copyCatalogModelPrompt() {
   const desc = (catalogModelDesc?.value ?? '').trim();
   if (!desc) return;
   const prompt = buildModelPrompt({ description: desc, view: (catalogModelView?.value ?? 'side') as 'side' | 'bottom' | 'front' | 'top' | 'three-quarter', sizeM: catalogModelSizeM?.valueAsNumber });
-  void copyText(prompt, 'Промт модели');
+  void copyText(prompt, EDITOR_STRINGS.catalog.modelPrompt);
   if (catalogModelPromptStatus) {
     const bytes = new TextEncoder().encode(prompt).length;
-    catalogModelPromptStatus.textContent = `Скопировано (${(bytes / 1024).toFixed(1)} КБ)`;
+    catalogModelPromptStatus.textContent = EDITOR_STRINGS.status.copiedKb((bytes / 1024).toFixed(1));
     catalogModelPromptStatus.classList.remove('err');
   }
 }
@@ -2022,21 +2012,21 @@ function checkCatalogModelResponse() {
   if (catalogSaveModel) catalogSaveModel.disabled = true;
   modelCandidate = undefined;
   if (!text) { setCatalogStatus(catalogModelStatus, '', false); return; }
-  if (!text.includes('{')) { setCatalogStatus(catalogModelStatus, 'Это не JSON модели. Скопируйте промт, вставьте ответ ИИ и попробуйте снова.', true); return; }
+  if (!text.includes('{')) { setCatalogStatus(catalogModelStatus, EDITOR_STRINGS.catalog.notModelJson, true); return; }
   let candidate: unknown;
-  try { candidate = extractJson(text); } catch { setCatalogStatus(catalogModelStatus, 'Не удалось разобрать ответ ИИ.', true); return; }
+  try { candidate = extractJson(text); } catch { setCatalogStatus(catalogModelStatus, EDITOR_STRINGS.errors.aiReplyParse, true); return; }
   const result = checkModelJsonText(text);
   modelCandidate = result.ok ? candidate : undefined;
   showList(catalogModelErrors, result.errors);
   showList(catalogModelWarnings, result.warnings);
   if (catalogSaveModel) catalogSaveModel.disabled = !result.ok;
-  setCatalogStatus(catalogModelStatus, result.ok ? 'Ответ ИИ прошёл проверку. Можно сохранить в каталог.' : `Ошибок: ${result.errors.length}. Исправьте ответ ИИ.`, !result.ok);
+  setCatalogStatus(catalogModelStatus, result.ok ? EDITOR_STRINGS.catalog.aiReplyOk : EDITOR_STRINGS.errors.aiReplyErrors(result.errors.length), !result.ok);
 }
 
 function copyCatalogModelPromptForSuggestion(description: string, view: string | undefined, sizeM: number | undefined, statusEl: HTMLElement) {
   const prompt = buildModelPrompt({ description, view: view as 'side' | 'bottom' | 'front' | 'top' | 'three-quarter' | undefined, sizeM });
-  void copyText(prompt, `Промт модели ${description}`);
-  statusEl.textContent = `Скопировано (${(new TextEncoder().encode(prompt).length / 1024).toFixed(1)} КБ)`;
+  void copyText(prompt, EDITOR_STRINGS.catalog.modelPromptCopy(description));
+  statusEl.textContent = EDITOR_STRINGS.status.copiedKb((new TextEncoder().encode(prompt).length / 1024).toFixed(1));
   statusEl.classList.remove('err');
 }
 
@@ -2067,7 +2057,7 @@ function renderPreviewFrame() {
   const scene = buildPreviewScene(asset, preset, previewDuration);
   const time = Number(catalogTime?.value ?? 0);
   renderFrame(ctx, scene, time, { w: 280, h: 280 }, { createCanvas: (w: number, h: number) => { const cc = document.createElement('canvas'); cc.width = w; cc.height = h; return cc; }, catalog: catalogWithDraft(catalog, asset), cache });
-  if (catalogTimeText) catalogTimeText.textContent = `${time.toFixed(1)} / ${previewDuration.toFixed(1)} с`;
+  if (catalogTimeText) catalogTimeText.textContent = EDITOR_STRINGS.splice.time(time.toFixed(1), previewDuration.toFixed(1));
 }
 
 function loadCodeEditorFromSelection() {
@@ -2085,13 +2075,13 @@ function onCodeEdited() {
   if (result.ok) codeDraft = result;
   showList(catalogCodeErrors, result.errors);
   if (catalogCodeSave) catalogCodeSave.disabled = !result.ok;
-  setCatalogStatus(catalogCodeStatus, result.ok ? 'Ошибок нет: превью показывает ваш код.' : `Ошибок: ${result.errors.length}. Превью остаётся на последней рабочей версии.`, !result.ok);
+  setCatalogStatus(catalogCodeStatus, result.ok ? EDITOR_STRINGS.catalog.noErrorsPreview : EDITOR_STRINGS.catalog.previewErrorsStale(result.errors.length), !result.ok);
   if (result.ok) renderPreviewFrame();
 }
 
 function setPreviewPlaying(playing: boolean) {
   previewPlaying = playing;
-  if (catalogPlay) catalogPlay.textContent = playing ? 'Пауза' : 'Играть';
+  if (catalogPlay) catalogPlay.textContent = playing ? EDITOR_STRINGS.common.pause : EDITOR_STRINGS.common.play;
   if (playing && previewRaf === null) { lastPreviewTs = performance.now(); previewRaf = requestAnimationFrame(previewTick); }
 }
 
@@ -2107,7 +2097,7 @@ function previewTick(ts: number) {
 /** Пачкой сохраняем только то, что уже найдено в проекте как kind "shape"; остальное — пропущено. */
 async function saveAllSuggestions(): Promise<void> {
   if (ideaSaveAllBtn) ideaSaveAllBtn.disabled = true;
-  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = EDITOR_STRINGS.saveAllRunning;
+  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = EDITOR_STRINGS.common.saving;
   if (ideaSaveAllErrors) ideaSaveAllErrors.innerHTML = '';
   let saved = 0;
   let skipped = 0;
@@ -2120,11 +2110,8 @@ async function saveAllSuggestions(): Promise<void> {
     else failures.push(issueMessage(reply.errors));
   }
   if (ideaSaveAllStatus) {
-    const summary = EDITOR_STRINGS.saveAllResult
-      .replace('{saved}', String(saved))
-      .replace('{skipped}', String(skipped))
-      .replace('{errors}', String(failures.length));
-    ideaSaveAllStatus.textContent = skipped > 0 ? `${summary} · ${EDITOR_STRINGS.saveAllNoShape}` : summary;
+    const summary = EDITOR_STRINGS.project.saveAll.result(saved, skipped, failures.length);
+    ideaSaveAllStatus.textContent = skipped > 0 ? `${summary} · ${EDITOR_STRINGS.project.saveAll.noShape}` : summary;
   }
   for (const message of failures) {
     if (!ideaSaveAllErrors) break;
@@ -2140,7 +2127,7 @@ async function saveAllSuggestions(): Promise<void> {
     window.setTimeout(() => location.reload(), 800);
     return;
   }
-  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = `${ideaSaveAllStatus.textContent} · ${EDITOR_STRINGS.saveAllWaitExport}`;
+  if (ideaSaveAllStatus) ideaSaveAllStatus.textContent = `${ideaSaveAllStatus.textContent} · ${EDITOR_STRINGS.project.saveAll.waitExport}`;
 }
 
 function renderIdeaSuggestions() {
@@ -2156,35 +2143,35 @@ function renderIdeaSuggestions() {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:8px;align-items:center;border:1px solid #ddd5ca;border-radius:6px;padding:6px';
     const text = document.createElement('span');
-    text.textContent = `${s.id}: ${s.description}${s.view ? ` (вид: ${s.view})` : ''}${s.sizeM ? `, ~${s.sizeM} м` : ''}`;
+    text.textContent = EDITOR_STRINGS.catalog.shapeLine(s.id, s.description, s.view, s.sizeM);
     text.style.flex = '1';
     text.style.minWidth = '0';
     const button = document.createElement('button');
-    button.textContent = 'Копировать промт для этой модели';
+    button.textContent = EDITOR_STRINGS.catalog.copyThisModelPrompt;
     const status = document.createElement('span');
     status.className = 'hint';
     status.style.marginLeft = '8px';
     button.onclick = () => copyCatalogModelPromptForSuggestion(s.description, s.view, s.sizeM, status);
     const save = document.createElement('button');
-    save.textContent = 'Сохранить в каталог';
+    save.textContent = EDITOR_STRINGS.catalog.saveToCatalog;
     const hasShape = findShapeModel(s.id) !== null;
     save.disabled = !hasShape;
-    if (!hasShape) save.title = `В проекте нет объекта kind "shape" с id или именем «${s.id}» — сохранить нечего`;
+    if (!hasShape) save.title = EDITOR_STRINGS.catalog.shapeMissing(s.id);
     save.onclick = () => {
       const model = suggestionToModel(s);
       if (!model) {
-        status.textContent = 'Объект kind "shape" с таким id или именем не найден — сохраните модель через промт и вкладку «Новая модель из JSON».';
+        status.textContent = EDITOR_STRINGS.catalog.shapeMissingHint;
         return;
       }
-      status.textContent = 'Сохраняю…';
+      status.textContent = EDITOR_STRINGS.common.saving;
       void localApiAvailable().then(async (online) => {
         if (!online) {
-          status.textContent = LOCAL_API_MISSING_SHORT;
+          status.textContent = EDITOR_STRINGS.catalog.uploadOfflineShort;
           return;
         }
         const reply = await postCatalogAdd(model, false);
         if (reply.ok) {
-          status.textContent = `✔ id ${reply.id}. Обновляю каталог… ${RELOAD_HINT}`;
+          status.textContent = EDITOR_STRINGS.catalog.savedReload(reply.id, EDITOR_STRINGS.project.reloadHint);
           saveAutosave();
           window.setTimeout(() => location.reload(), 800);
         } else {
@@ -2208,7 +2195,7 @@ function applyCandidate(candidate: unknown, target: JsonTarget, label: string) {
   if (aiApplyBtn) aiApplyBtn.disabled = true;
 }
 function applyIdeaProject(candidate: unknown) {
-  if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
+  if (!confirm(EDITOR_STRINGS.project.replaceConfirm)) return;
   applyChange('new-project-from-idea', () => {
     const next = structuredClone(candidate as ProjectV1);
     const styleId = selectedStyleId();
@@ -2236,14 +2223,14 @@ function applyIdeaProject(candidate: unknown) {
   ideaReplyBrief = '';
   if (ideaCreate) ideaCreate.disabled = true;
   if (ideaFix) ideaFix.hidden = true;
-  setStatus('Проект создан из идеи. Отмена — Ctrl+Z.', false);
+  setStatus(EDITOR_STRINGS.project.createdFromIdea, false);
   if (autoExportRequested()) void startFullExport();
 }
 function kindExample(kind: string): Record<string, unknown> {
   const spec = KIND_SPEC[kind as keyof typeof KIND_SPEC];
   const params: Record<string, unknown> = {};
   for (const field of spec.params) if (field.default !== undefined) params[field.name] = structuredClone(field.default);
-  if (kind === 'text') params.text = 'Текст';
+  if (kind === 'text') params.text = EDITOR_STRINGS.common.text;
   if (kind === 'shape') params.model = { bounds: [-50, -50, 100, 100], parts: [{ id: 'body', type: 'path', d: 'M -50 -50 L 50 -50 L 50 50 L -50 50 Z', fill: '#ffffff' }] };
   const object: Record<string, unknown> = { id: `obj-${kind}`, name: kind, kind, x: 0, y: 0, s: 1, rot: 0, alpha: 1 };
   if (kind === 'asset') object.asset = 'whale';
@@ -2259,8 +2246,8 @@ function renderTemplates() {
     const name = document.createElement('code');
     name.textContent = kind;
     const button = document.createElement('button');
-    button.textContent = 'Копировать пример';
-    button.onclick = () => copyText(JSON.stringify(kindExample(kind), null, 2), `Шаблон ${kind}`);
+    button.textContent = EDITOR_STRINGS.catalog.copyExample;
+    button.onclick = () => copyText(JSON.stringify(kindExample(kind), null, 2), EDITOR_STRINGS.catalog.exampleTemplate(kind));
     row.append(name, button);
     templates.appendChild(row);
   }
@@ -2268,9 +2255,9 @@ function renderTemplates() {
 async function copyText(text: string, label: string) {
   try {
     await navigator.clipboard.writeText(text);
-    setStatus(`${label}: скопировано в буфер.`, false);
+    setStatus(EDITOR_STRINGS.status.copiedInBuffer(label), false);
   } catch {
-    setStatus(`${label}: браузер не дал доступ к буферу обмена.`, true);
+    setStatus(EDITOR_STRINGS.status.copyFailed(label), true);
   }
 }
 function applyJsonText() {
@@ -2280,15 +2267,15 @@ function applyJsonText() {
     candidate = JSON.parse(jsonArea.value);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    reportErrors([{ path: '', message: `Не удалось разобрать JSON: ${message}` }]);
-    setStatus('Не удалось разобрать JSON.', true);
+    reportErrors([{ path: '', message: EDITOR_STRINGS.errors.jsonParseWithMessage(message) }]);
+    setStatus(EDITOR_STRINGS.errors.jsonParse, true);
     return;
   }
   const target = currentTarget();
   const result = validateTargetJson(project, target, candidate, Object.keys(catalog));
   if (!result.ok) {
     reportErrors(result.errors, candidate);
-    setStatus(`Ошибок: ${result.errors.length}. Исправьте JSON или скопируйте запрос на исправление.`, true);
+    setStatus(EDITOR_STRINGS.errors.applyJsonErrors(result.errors.length), true);
     return;
   }
   try {
@@ -2298,14 +2285,14 @@ function applyJsonText() {
     return;
   }
   showList(aiWarnings, result.warnings);
-  setStatus('Применено. Отмена — Ctrl+Z.', false);
+  setStatus(EDITOR_STRINGS.common.applyUndo, false);
 }
 function checkAiResponse() {
   if (!aiResponse) return;
   const text = aiResponse.value.trim();
   if (!text) {
-    reportErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
-    setStatus('Ответ ИИ пуст.', true);
+    reportErrors([{ path: '', message: EDITOR_STRINGS.errors.pasteAiReply }]);
+    setStatus(EDITOR_STRINGS.errors.emptyAiReply, true);
     return;
   }
   let candidate: unknown;
@@ -2313,14 +2300,14 @@ function checkAiResponse() {
     candidate = extractJson(text);
   } catch (error) {
     reportErrors([{ path: '', message: error instanceof Error ? error.message : String(error) }]);
-    setStatus('Не удалось разобрать ответ ИИ.', true);
+    setStatus(EDITOR_STRINGS.errors.aiReplyParse, true);
     return;
   }
   const target = currentTarget();
   const result = validateTargetJson(project, target, candidate, Object.keys(catalog));
   if (!result.ok) {
     reportErrors(result.errors, candidate);
-    setStatus(`Ошибок: ${result.errors.length}. Можно скопировать запрос на исправление.`, true);
+    setStatus(EDITOR_STRINGS.errors.fixAvailable(result.errors.length), true);
     return;
   }
   showList(aiErrors, []);
@@ -2330,14 +2317,14 @@ function checkAiResponse() {
   if (aiFixBtn) aiFixBtn.hidden = true;
   pendingApply = { candidate, target, label: 'apply-ai-json' };
   if (aiApplyBtn) aiApplyBtn.disabled = false;
-  setStatus(result.warnings.length ? `ошибок нет; предупреждений: ${result.warnings.length}; можно применить.` : 'ошибок нет; можно применить.', false);
+  setStatus(result.warnings.length ? EDITOR_STRINGS.errors.readyWithWarnings(result.warnings.length) : EDITOR_STRINGS.errors.readyApply, false);
 }
 function checkIdeaResponse(): boolean {
   if (!ideaResponse) return false;
   const text = ideaResponse.value.trim();
   if (!text) {
-    reportIdeaErrors([{ path: '', message: 'Вставьте ответ ИИ в поле выше.' }]);
-    setIdeaStatus('Ответ ИИ пуст.', true);
+    reportIdeaErrors([{ path: '', message: EDITOR_STRINGS.errors.pasteAiReply }]);
+    setIdeaStatus(EDITOR_STRINGS.errors.emptyAiReply, true);
     if (ideaCreate) ideaCreate.disabled = true;
     return false;
   }
@@ -2354,7 +2341,7 @@ function checkIdeaResponse(): boolean {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     reportIdeaErrors([{ path: '', message }]);
-    setIdeaStatus('В ответе ИИ нет JSON проекта.', true);
+    setIdeaStatus(EDITOR_STRINGS.project.briefNoProjectJson, true);
     if (ideaCreate) ideaCreate.disabled = true;
     return false;
   }
@@ -2363,7 +2350,7 @@ function checkIdeaResponse(): boolean {
     candidate = extractJson(split.jsonText);
   } catch (error) {
     reportIdeaErrors([{ path: '', message: error instanceof Error ? error.message : String(error) }]);
-    setIdeaStatus('Не удалось разобрать ответ ИИ.', true);
+    setIdeaStatus(EDITOR_STRINGS.errors.aiReplyParse, true);
     if (ideaCreate) ideaCreate.disabled = true;
     return false;
   }
@@ -2373,7 +2360,7 @@ function checkIdeaResponse(): boolean {
     const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
     const briefCheck = validateBrief(split.brief, { scenes });
     if (briefCheck.ok) ideaReplyBrief = split.brief;
-    else reply.warnings.push({ path: 'meta.brief', message: `ТЗ из ответа не записано в проект: ${briefCheck.errors[0]?.message ?? 'не проходит проверку'}` });
+    else reply.warnings.push({ path: 'meta.brief', message: EDITOR_STRINGS.project.briefNotApplied(briefCheck.errors[0]?.message) });
   }
   ideaCandidate = candidate;
   ideaErrList = [...reply.errors];
@@ -2382,13 +2369,13 @@ function checkIdeaResponse(): boolean {
   if (reply.errors.length === 0) {
     if (ideaCreate) ideaCreate.disabled = false;
     if (ideaFix) ideaFix.hidden = true;
-    setIdeaStatus(reply.warnings.length ? `ошибок нет; предупреждений: ${reply.warnings.length}; можно создать проект.` : 'ошибок нет; можно создать проект.', false);
+    setIdeaStatus(reply.warnings.length ? EDITOR_STRINGS.project.briefReadyWithWarnings(reply.warnings.length) : EDITOR_STRINGS.project.briefReady, false);
     if (reply.suggestions.length) console.log(formatSuggestions(reply.suggestions));
     return true;
   }
   if (ideaCreate) ideaCreate.disabled = true;
   if (ideaFix) ideaFix.hidden = false;
-  setIdeaStatus(`Ошибок: ${reply.errors.length}. Скопируйте запрос на исправление.`, true);
+  setIdeaStatus(EDITOR_STRINGS.project.ideaErrorsFix(reply.errors.length), true);
   return false;
 }
 function makeEmptyScene(name: string): ProjectSceneV1 {
@@ -2469,7 +2456,7 @@ function frame() {
   renderFrame(ctx, scene, t, size, { createCanvas: (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }, catalog, cache });
   if (showSafeZones) drawSafeZones(ctx, size.w, size.h);
   if (scrub) scrub.value = (t / duration).toFixed(2);
-  if (timeText) timeText.textContent = `${t.toFixed(1)} / ${duration.toFixed(1)} с`;
+  if (timeText) timeText.textContent = EDITOR_STRINGS.splice.time(t.toFixed(1), duration.toFixed(1));
 }
 
 function loop(ts: number) {
@@ -2487,7 +2474,7 @@ function loop(ts: number) {
 
 function setPlaying(p: boolean) {
   playing = p;
-  if (playBtn) playBtn.textContent = p ? 'Пауза' : 'Играть';
+  if (playBtn) playBtn.textContent = p ? EDITOR_STRINGS.common.pause : EDITOR_STRINGS.common.play;
   if (playing && rafId === null) { lastTs = performance.now(); rafId = requestAnimationFrame(loop); }
 }
 
@@ -2508,12 +2495,12 @@ if (scrub) scrub.oninput = (e) => {
 if (playBtn) playBtn.onclick = () => setPlaying(!playing);
 if (projectPlay) projectPlay.onclick = () => {
   splicePlaying = !splicePlaying;
-  projectPlay.textContent = splicePlaying ? 'Пауза' : 'Играть';
+  projectPlay.textContent = splicePlaying ? EDITOR_STRINGS.common.pause : EDITOR_STRINGS.common.play;
   if (splicePlaying) renderProjectPreview();
 };
 if (projectScrub) projectScrub.oninput = (e) => {
   splicePlaying = false;
-  if (projectPlay) projectPlay.textContent = 'Играть';
+  if (projectPlay) projectPlay.textContent = EDITOR_STRINGS.common.play;
   const seconds = Math.max(0, projectFrameCount(project) / project.fps);
   spliceT = Number((e.target as HTMLInputElement).value) * seconds;
   renderProjectPreview();
@@ -2522,7 +2509,7 @@ if (exportMp4Btn) exportMp4Btn.onclick = () => void startExport();
 if (exportCancelBtn) exportCancelBtn.onclick = () => void cancelExport();
 if (aspectH) aspectH.onclick = () => setAspect('h');
 if (aspectV) aspectV.onclick = () => setAspect('v');
-if (safeZonesText) safeZonesText.textContent = EDITOR_STRINGS.safeZones;
+if (safeZonesText) safeZonesText.textContent = EDITOR_STRINGS.preview.safeZones;
 if (safeZonesToggle) {
   safeZonesToggle.checked = showSafeZones;
   safeZonesToggle.onchange = () => {
@@ -2549,12 +2536,12 @@ function renderTabs() {
     select.textContent = entry.name;
     select.classList.toggle('on', index === activeSceneIndex);
     select.onclick = () => { activeSceneIndex = index; scene = entry.scene; duration = scene.duration; frame(); renderTabs(); };
-    select.ondblclick = () => { const name = prompt('Название сцены', entry.name); if (name?.trim()) applyChange('rename-scene', () => { entry.name = name.trim(); }); };
+    select.ondblclick = () => { const name = prompt(EDITOR_STRINGS.scenes.namePrompt, entry.name); if (name?.trim()) applyChange('rename-scene', () => { entry.name = name.trim(); }); };
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'scene-close';
     close.textContent = '×';
-    close.title = project.scenes.length > 1 ? 'Удалить сцену' : 'Последнюю сцену удалять нельзя';
+    close.title = project.scenes.length > 1 ? EDITOR_STRINGS.scenes.deleteSceneTitle : EDITOR_STRINGS.scenes.lastScene;
     close.disabled = project.scenes.length <= 1;
     close.onclick = (event) => { event.stopPropagation(); deleteSceneAt(index); };
     tab.append(select, close);
@@ -2564,13 +2551,13 @@ function renderTabs() {
   add.type = 'button';
   add.className = 'scene-add';
   add.textContent = '+';
-  add.title = 'Новая сцена';
+  add.title = EDITOR_STRINGS.scenes.newScene;
   add.onclick = addScene;
   tabs.appendChild(add);
   if (projectTitle) projectTitle.value = project.title;
   if (projectFormat) projectFormat.value = project.format;
   if (projectFps) projectFps.value = String(project.fps);
-  if (projectDuration) projectDuration.textContent = `Проект: ${(projectFrameCount(project) / project.fps).toFixed(1)} с · Сцена: ${scene.duration.toFixed(1)} с`;
+  if (projectDuration) projectDuration.textContent = EDITOR_STRINGS.project.sizes((projectFrameCount(project) / project.fps).toFixed(1), scene.duration.toFixed(1));
   syncObjectOptions();
   refreshJson();
   resetAiResult();
@@ -2579,11 +2566,11 @@ function renderTabs() {
   renderSceneOrder();
   storageSet(SCENE_TAB_KEY, String(activeSceneIndex));
 }
-function addScene() { applyChange('add-scene', () => { project.scenes.push(makeEmptyScene('Новая сцена')); activeSceneIndex = project.scenes.length - 1; scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; }); }
+function addScene() { applyChange('add-scene', () => { project.scenes.push(makeEmptyScene(EDITOR_STRINGS.scenes.newScene)); activeSceneIndex = project.scenes.length - 1; scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; }); }
 function deleteSceneAt(index: number) {
   if (project.scenes.length <= 1) return;
   const entry = project.scenes[index];
-  if (!entry || !confirm(`Удалить сцену «${entry.name}»?`)) return;
+  if (!entry || !confirm(EDITOR_STRINGS.scenes.deleteConfirm(entry.name))) return;
   applyChange('delete-scene', () => { project.scenes.splice(index, 1); activeSceneIndex = Math.min(index, project.scenes.length - 1); scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; });
 }
 function reorderScene(from: number, to: number) {
@@ -2607,25 +2594,25 @@ function updateProjectStory() {
     if (Object.keys(meta).length) project.meta = meta; else delete project.meta;
   });
 }
-document.getElementById('duplicateScene')?.addEventListener('click', () => applyChange('duplicate-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += ' — копия'; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; }));
+document.getElementById('duplicateScene')?.addEventListener('click', () => applyChange('duplicate-scene', () => { const entry = structuredClone(project.scenes[activeSceneIndex]); entry.id = `s-${Date.now()}`; entry.name += EDITOR_STRINGS.scenes.copySuffix; project.scenes.splice(activeSceneIndex + 1, 0, entry); activeSceneIndex++; scene = project.scenes[activeSceneIndex].scene; duration = scene.duration; }));
 projectTitle?.addEventListener('change', updateProjectControls); projectFormat?.addEventListener('change', updateProjectControls); projectFps?.addEventListener('change', updateProjectControls);
 ideaText?.addEventListener('change', updateProjectStory);
-document.getElementById('newProject')?.addEventListener('click', () => { applyChange('new-project', () => { project = { version: 1, title: 'Новый проект', fps: 30, format: '16:9', scenes: [makeEmptyScene('Сцена 1')] }; activeSceneIndex = 0; }); syncStoryField(); });
+document.getElementById('newProject')?.addEventListener('click', () => { applyChange('new-project', () => { project = { version: 1, title: EDITOR_STRINGS.project.newProject, fps: 30, format: '16:9', scenes: [makeEmptyScene(EDITOR_STRINGS.project.firstSceneName)] }; activeSceneIndex = 0; }); syncStoryField(); });
 document.getElementById('saveProject')?.addEventListener('click', () => { const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${project.title.replace(/[\\/:*?"<>|]/g, '_')}.json`; link.click(); URL.revokeObjectURL(link.href); hasUnsavedChanges = false; updateSavedLabel(); });
 document.getElementById('openProjectButton')?.addEventListener('click', () => openInput?.click());
-openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed, { catalogIds: Object.keys(catalog) }); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: `Не удалось открыть проект: ${String(error)}` }]); } finally { openInput.value = ''; } });
+openInput?.addEventListener('change', async () => { const file = openInput.files?.[0]; if (!file) return; try { const parsed: unknown = JSON.parse(await file.text()); const result = validateProject(parsed, { catalogIds: Object.keys(catalog) }); if (!result.ok) { showErrors(result.errors); return; } applyChange('open-project', () => restoreProject(parsed as ProjectV1)); hasUnsavedChanges = false; updateSavedLabel(); showErrors(null); } catch (error) { showErrors([{ path: '', message: EDITOR_STRINGS.errors.projectOpen(String(error)) }]); } finally { openInput.value = ''; } });
 
 if (applyBtn) applyBtn.onclick = applyJsonText;
 if (copyJsonBtn) copyJsonBtn.onclick = () => {
   const value = targetJson(project, currentTarget());
-  if (value === undefined) { setStatus('Объект не выбран.', true); return; }
+  if (value === undefined) { setStatus(EDITOR_STRINGS.common.objectNotSelected, true); return; }
   void copyText(JSON.stringify(value, null, 2), 'JSON');
 };
 if (copyAiBtn) copyAiBtn.onclick = () => {
   const value = targetJson(project, currentTarget());
-  if (value === undefined) { setStatus('Объект не выбран.', true); return; }
+  if (value === undefined) { setStatus(EDITOR_STRINGS.common.objectNotSelected, true); return; }
   const task = aiTaskInput?.value.trim() ?? '';
-  void copyText(buildPrompt(value, { task, scope: SCOPE_LABELS[jsonScope] }), 'Запрос для ИИ');
+  void copyText(buildPrompt(value, { task, scope: SCOPE_LABELS[jsonScope] }), EDITOR_STRINGS.status.aiRequestTitle);
 };
 if (aiCheckBtn) aiCheckBtn.onclick = checkAiResponse;
 if (aiApplyBtn) aiApplyBtn.onclick = () => {
@@ -2633,18 +2620,18 @@ if (aiApplyBtn) aiApplyBtn.onclick = () => {
   const { candidate, target, label } = pendingApply;
   try {
     applyCandidate(candidate, target, label);
-    setStatus('Применено. Отмена — Ctrl+Z.', false);
+    setStatus(EDITOR_STRINGS.common.applyUndo, false);
   } catch (error) {
     setStatus(error instanceof Error ? error.message : String(error), true);
   }
 };
 if (aiFixBtn) aiFixBtn.onclick = () => {
   if (fixCandidate === undefined || fixErrors.length === 0) return;
-  void copyText(buildFixRequest(fixCandidate, fixErrors), 'Запрос на исправление');
+  void copyText(buildFixRequest(fixCandidate, fixErrors), EDITOR_STRINGS.status.fixRequestTitle);
 };
 if (ideaCopyBrief) ideaCopyBrief.onclick = async () => {
   const idea = ideaText?.value.trim() ?? '';
-  if (!idea) { setIdeaBriefStatus('Введите идею.', true); return; }
+  if (!idea) { setIdeaBriefStatus(EDITOR_STRINGS.common.enterIdea, true); return; }
   try {
     const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
     const seconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
@@ -2652,7 +2639,7 @@ if (ideaCopyBrief) ideaCopyBrief.onclick = async () => {
     const prompt = buildBriefPrompt({ idea, scenes, sceneSeconds: seconds, format, styleId: selectedStyleId(), catalogIndex });
     await navigator.clipboard.writeText(prompt);
     const kb = (new TextEncoder().encode(prompt).length / 1024).toFixed(1);
-    setIdeaBriefStatus(`Запрос на ТЗ скопирован (${kb} КБ). Вставьте его в чат ИИ.`, false);
+    setIdeaBriefStatus(EDITOR_STRINGS.status.briefPromptCopied(kb), false);
   } catch (error) {
     setIdeaBriefStatus(error instanceof Error ? error.message : String(error), true);
   }
@@ -2662,7 +2649,7 @@ if (ideaScenes) ideaScenes.addEventListener('change', () => { if (ideaBrief?.val
 /** Общие параметры промта проекта из вкладки «Проект»; null, если рассказ пустой. */
 function ideaPromptBase(): { idea: string; scenes: number; sceneSeconds: number; format: '16:9' | '9:16'; styleId?: string } | null {
   const idea = ideaText?.value.trim() ?? '';
-  if (!idea) { setIdeaCopyStatus('Введите идею.', true); setIdeaStatus('', false); return null; }
+  if (!idea) { setIdeaCopyStatus(EDITOR_STRINGS.common.enterIdea, true); setIdeaStatus('', false); return null; }
   const scenes = ideaScenes ? Number(ideaScenes.value) : 5;
   const sceneSeconds = ideaSeconds ? Number(ideaSeconds.value) : 8;
   const format = (ideaFormat?.value ?? '16:9') as '16:9' | '9:16';
@@ -2674,12 +2661,12 @@ async function copyProjectPrompt(prompt: string) {
     await navigator.clipboard.writeText(prompt);
     if (ideaPromptFallback) ideaPromptFallback.hidden = true;
     const kb = (new TextEncoder().encode(prompt).length / 1024).toFixed(1);
-    setIdeaCopyStatus(`Скопировано (${kb} КБ). Вставьте в чат ИИ`, false);
+    setIdeaCopyStatus(EDITOR_STRINGS.status.copiedIdeaPrompt(kb), false);
     setIdeaStatus('', false);
   } catch {
     if (ideaPromptOut) ideaPromptOut.value = prompt;
     if (ideaPromptFallback) ideaPromptFallback.hidden = false;
-    setIdeaCopyStatus('Буфер недоступен. Покажите промт в поле ниже.', true);
+    setIdeaCopyStatus(EDITOR_STRINGS.common.copyNoBuffer, true);
     setIdeaStatus('', false);
   }
 }
@@ -2697,7 +2684,6 @@ async function postAi(route: string, body?: unknown): Promise<{ ok?: boolean; te
     return null;
   }
 }
-const SERVICE_DOWN = 'Локальный сервис недоступен: откройте редактор через run.bat (dev-режим).';
 if (ideaAuto) ideaAuto.onclick = async () => {
   const base = ideaPromptBase();
   if (!base) return;
@@ -2710,37 +2696,37 @@ if (ideaAuto) ideaAuto.onclick = async () => {
   }
   ideaAuto.disabled = true;
   if (ideaAiCheck) ideaAiCheck.disabled = true;
-  setIdeaAutoStatus('Создаю проект: запрос к Gemini, при неудаче к Groq. Это может занять до пары минут…', false);
+  setIdeaAutoStatus(EDITOR_STRINGS.project.aiCreating, false);
   setIdeaStatus('', false);
   const data = await postAi('ai/generate', { prompt });
   ideaAuto.disabled = false;
   if (ideaAiCheck) ideaAiCheck.disabled = false;
-  if (!data) { setIdeaAutoStatus(`${SERVICE_DOWN} Промт можно скопировать вручную кнопкой ниже.`, true); return; }
+  if (!data) { setIdeaAutoStatus(EDITOR_STRINGS.project.serviceDownManualPrompt(EDITOR_STRINGS.project.serviceDown), true); return; }
   if (data.ok && typeof data.text === 'string' && ideaResponse) {
     ideaResponse.value = data.text;
-    setIdeaAutoStatus(`Готово: ответил ${AI_LABELS[data.provider ?? ''] ?? data.provider}.`, false);
+    setIdeaAutoStatus(EDITOR_STRINGS.project.aiDone(AI_LABELS[data.provider ?? ''] ?? data.provider), false);
     if (checkIdeaResponse() && ideaCreate) ideaCreate.click();
     return;
   }
-  setIdeaAutoStatus(data.message ?? data.errors?.[0]?.message ?? 'Не удалось создать проект.', true);
+  setIdeaAutoStatus(data.message ?? data.errors?.[0]?.message ?? EDITOR_STRINGS.project.aiFailed, true);
   try { await copyProjectPrompt(prompt); } catch { /* буфер недоступен: промт можно скопировать кнопкой ниже */ }
 };
-if (ideaAutoExportText) ideaAutoExportText.textContent = EDITOR_STRINGS.ideaAutoExportLabel;
+if (ideaAutoExportText) ideaAutoExportText.textContent = EDITOR_STRINGS.project.autoExportLabel;
 if (ideaAutoExport) {
   ideaAutoExport.checked = autoExportRequested();
   ideaAutoExport.onchange = () => setAutoExportRequested(ideaAutoExport.checked);
 }
 if (ideaSaveAllBtn) {
-  ideaSaveAllBtn.textContent = EDITOR_STRINGS.saveAllButton;
+  ideaSaveAllBtn.textContent = EDITOR_STRINGS.project.saveAll.button;
   ideaSaveAllBtn.onclick = () => void saveAllSuggestions();
 }
 if (ideaAiCheck) ideaAiCheck.onclick = async () => {
   ideaAiCheck.disabled = true;
-  setIdeaAutoStatus('Проверяю подключение…', false);
+  setIdeaAutoStatus(EDITOR_STRINGS.project.aiChecking, false);
   const data = await postAi('ai/check');
   ideaAiCheck.disabled = false;
-  if (!data) { setIdeaAutoStatus(SERVICE_DOWN, true); return; }
-  if (!data.results || data.results.length === 0) { setIdeaAutoStatus('Ключи не найдены: создайте файл .env.local по образцу .env.example.', true); return; }
+  if (!data) { setIdeaAutoStatus(EDITOR_STRINGS.project.serviceDown, true); return; }
+  if (!data.results || data.results.length === 0) { setIdeaAutoStatus(EDITOR_STRINGS.project.aiNoKeys, true); return; }
   setIdeaAutoStatus(data.results.map((item) => item.message).join(' · '), data.results.every((item) => !item.ok));
 };
 if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
@@ -2755,7 +2741,7 @@ if (ideaCopyPrompt) ideaCopyPrompt.onclick = async () => {
 if (ideaCopyProjectPrompt) ideaCopyProjectPrompt.onclick = async () => {
   const base = ideaPromptBase();
   if (!base) return;
-  if (!checkBriefField()) { setIdeaCopyStatus('В ТЗ есть ошибки: исправьте их или очистите поле.', true); return; }
+  if (!checkBriefField()) { setIdeaCopyStatus(EDITOR_STRINGS.project.briefErrorsShort, true); return; }
   try {
     const briefText = ideaBrief?.value.trim();
     await copyProjectPrompt(buildProjectPrompt({ ...base, catalogIndex, ...(briefText ? { brief: extractBrief(briefText) } : {}) }));
@@ -2807,13 +2793,13 @@ if (ideaCreate) ideaCreate.onclick = () => {
   const candidate = ideaCandidate;
   const ideaReply = validateProjectReply(candidate as ProjectV1, { catalogIds: Object.keys(catalog) });
   ideaSuggestions = ideaReply.suggestions;
-  if (!confirm('Заменить текущий проект новым? Несохранённые изменения будут потеряны.')) return;
+  if (!confirm(EDITOR_STRINGS.project.replaceConfirm)) return;
   applyIdeaProject(candidate!);
   renderIdeaSuggestions();
 };
 if (ideaFix) ideaFix.onclick = () => {
   if (ideaCandidate === undefined || ideaErrList.length === 0) return;
-  void copyText(buildFixRequest(ideaCandidate, ideaErrList), 'Запрос на исправление');
+  void copyText(buildFixRequest(ideaCandidate, ideaErrList), EDITOR_STRINGS.status.fixRequestTitle);
 };
 jsonScopeSelect?.addEventListener('change', () => {
   jsonScope = (jsonScopeSelect.value as JsonScope) || 'scene';
@@ -2838,13 +2824,13 @@ document.getElementById('redo')?.addEventListener('click', redoChange);
 
 // ---------- панель «Образ сцены» ----------
 const lookMoodLabels: Record<StyleMood, string> = {
-  dawn: EDITOR_STRINGS.lookMoodDawn,
-  day: EDITOR_STRINGS.lookMoodDay,
-  dusk: EDITOR_STRINGS.lookMoodDusk,
-  night: EDITOR_STRINGS.lookMoodNight,
+  dawn: EDITOR_STRINGS.scenes.look.moodDawn,
+  day: EDITOR_STRINGS.scenes.look.moodDay,
+  dusk: EDITOR_STRINGS.scenes.look.moodDusk,
+  night: EDITOR_STRINGS.scenes.look.moodNight,
 };
 function lookShotLabel(name: string): string {
-  return EDITOR_STRINGS.cameraShots[name as keyof typeof EDITOR_STRINGS.cameraShots] ?? name;
+  return EDITOR_STRINGS.scenes.cameraShots[name as keyof typeof EDITOR_STRINGS.scenes.cameraShots] ?? name;
 }
 function updateLookStyleDesc() {
   if (!lookStyleDesc) return;
@@ -2852,18 +2838,18 @@ function updateLookStyleDesc() {
   lookStyleDesc.textContent = preset?.description ?? '';
 }
 function initSceneLookPanel() {
-  if (sceneLookTitleText) sceneLookTitleText.textContent = EDITOR_STRINGS.sceneLookTitle;
-  if (lookStyleText) lookStyleText.textContent = EDITOR_STRINGS.lookStyleLabel;
-  if (lookMoodText) lookMoodText.textContent = EDITOR_STRINGS.lookMoodLabel;
-  if (lookShotText) lookShotText.textContent = EDITOR_STRINGS.lookShotLabel;
-  if (lookShotT0Text) lookShotT0Text.textContent = EDITOR_STRINGS.lookShotT0Label;
-  if (lookShotDurText) lookShotDurText.textContent = EDITOR_STRINGS.lookShotDurationLabel;
-  if (lookShotStrengthText) lookShotStrengthText.textContent = EDITOR_STRINGS.lookShotStrengthLabel;
-  if (lookApplyStyleBtn) lookApplyStyleBtn.textContent = EDITOR_STRINGS.lookApplyStyle;
-  if (lookApplyStyleAllBtn) lookApplyStyleAllBtn.textContent = EDITOR_STRINGS.lookApplyStyleAll;
-  if (lookApplyShotBtn) lookApplyShotBtn.textContent = EDITOR_STRINGS.lookApplyShot;
-  if (lookRemoveShotBtn) lookRemoveShotBtn.textContent = EDITOR_STRINGS.lookRemoveShot;
-  if (lookNoteText) lookNoteText.textContent = EDITOR_STRINGS.lookPaletteNote;
+  if (sceneLookTitleText) sceneLookTitleText.textContent = EDITOR_STRINGS.scenes.look.title;
+  if (lookStyleText) lookStyleText.textContent = EDITOR_STRINGS.scenes.look.styleLabel;
+  if (lookMoodText) lookMoodText.textContent = EDITOR_STRINGS.scenes.look.moodLabel;
+  if (lookShotText) lookShotText.textContent = EDITOR_STRINGS.scenes.look.shotLabel;
+  if (lookShotT0Text) lookShotT0Text.textContent = EDITOR_STRINGS.scenes.look.shotT0Label;
+  if (lookShotDurText) lookShotDurText.textContent = EDITOR_STRINGS.scenes.look.shotDurationLabel;
+  if (lookShotStrengthText) lookShotStrengthText.textContent = EDITOR_STRINGS.scenes.look.shotStrengthLabel;
+  if (lookApplyStyleBtn) lookApplyStyleBtn.textContent = EDITOR_STRINGS.scenes.look.applyStyle;
+  if (lookApplyStyleAllBtn) lookApplyStyleAllBtn.textContent = EDITOR_STRINGS.scenes.look.applyStyleAll;
+  if (lookApplyShotBtn) lookApplyShotBtn.textContent = EDITOR_STRINGS.scenes.look.applyShot;
+  if (lookRemoveShotBtn) lookRemoveShotBtn.textContent = EDITOR_STRINGS.scenes.look.removeShot;
+  if (lookNoteText) lookNoteText.textContent = EDITOR_STRINGS.scenes.look.paletteNote;
   if (lookStyleSelect) {
     for (const preset of STYLE_PRESETS) {
       const option = document.createElement('option');
@@ -2902,7 +2888,7 @@ function lookFieldNumber(input: HTMLInputElement | null): number | undefined {
 }
 function applyLookStyleToScene(index: number): { ok: true; scene: SceneV1 } | { ok: false; message: string } {
   const entry = project.scenes[index];
-  if (!entry) return { ok: false, message: EDITOR_STRINGS.lookNoScene.replace('{number}', String(index + 1)) };
+  if (!entry) return { ok: false, message: EDITOR_STRINGS.scenes.look.noScene(index + 1) };
   const { styleId, mood } = lookStyleChoice();
   const result = applySceneStyle(entry.scene, styleId, mood);
   return result.ok ? { ok: true, scene: result.value } : { ok: false, message: result.message };
@@ -2934,7 +2920,7 @@ function onLookApplyShot() {
   const strength = lookFieldNumber(lookShotStrength);
   if (strength !== undefined) shot.strength = strength;
   const keys = entry.scene.camera.keys.length;
-  if (keys > 0 && !confirm(EDITOR_STRINGS.lookKeysConfirm.replace('{count}', String(keys)))) return;
+  if (keys > 0 && !confirm(EDITOR_STRINGS.scenes.look.keysConfirm(keys))) return;
   const result = setSceneShot(entry.scene, shot);
   if (!result.ok) { showErrors([{ path: 'camera.shot', message: result.message }]); return; }
   applyChange('scene-shot', () => { project.scenes[activeSceneIndex].scene = result.value.scene; });
@@ -2969,12 +2955,12 @@ if (catalogSearch) catalogSearch.addEventListener('input', (e) => { catalogQuery
 if (catalogViewEl) catalogViewEl.addEventListener('change', (e) => { catalogViewValue = (e.target as HTMLSelectElement).value; renderCatalogList(); });
 if (catalogCheckJson) catalogCheckJson.onclick = checkCatalogNewJson;
 if (catalogNewJson) catalogNewJson.addEventListener('input', checkCatalogNewJson);
-if (catalogCopyFixJson) catalogCopyFixJson.onclick = () => { if (newJsonCandidate === undefined || newJsonErrors.length === 0) return; void copyText(buildFixRequest(newJsonCandidate, newJsonErrors), 'Запрос на исправление'); };
+if (catalogCopyFixJson) catalogCopyFixJson.onclick = () => { if (newJsonCandidate === undefined || newJsonErrors.length === 0) return; void copyText(buildFixRequest(newJsonCandidate, newJsonErrors), EDITOR_STRINGS.status.fixRequestTitle); };
 if (catalogSaveJson) catalogSaveJson.onclick = () => { const candidate = newJsonCandidate; if (!candidate) return; saveCatalogModel(candidate); };
 if (catalogSvgFile) catalogSvgFile.addEventListener('change', checkCatalogSvg);
 for (const el of document.querySelectorAll('#catalogPanelSvg input, #catalogPanelSvg select')) { if (el !== catalogSvgFile) el.addEventListener('input', checkCatalogSvg); }
 if (catalogImportSvg) catalogImportSvg.onclick = importSvgToCatalog;
-if (catalogCopyFixSvg) catalogCopyFixSvg.onclick = () => { if (!svgCandidate || !svgCandidate.asset) return; void copyText(buildFixRequest(svgCandidate.asset, svgCandidate.errors), 'Запрос на исправление'); };
+if (catalogCopyFixSvg) catalogCopyFixSvg.onclick = () => { if (!svgCandidate || !svgCandidate.asset) return; void copyText(buildFixRequest(svgCandidate.asset, svgCandidate.errors), EDITOR_STRINGS.status.fixRequestTitle); };
 if (catalogUploadPick) catalogUploadPick.onclick = () => catalogUploadFilesInput?.click();
 if (catalogUploadFilesInput) catalogUploadFilesInput.addEventListener('change', () => {
   const picked = Array.from(catalogUploadFilesInput.files ?? []);
@@ -2996,7 +2982,7 @@ if (catalogModelSizeM) catalogModelSizeM.addEventListener('input', updateCatalog
 if (catalogCopyModelPrompt) catalogCopyModelPrompt.onclick = copyCatalogModelPrompt;
 if (catalogModelResponse) catalogModelResponse.addEventListener('input', checkCatalogModelResponse);
 if (catalogSaveModel) catalogSaveModel.onclick = () => { const candidate = modelCandidate; if (!candidate) return; saveCatalogModel(candidate as CatalogAsset); };
-if (catalogShowCredits) catalogShowCredits.onclick = () => { renderCatalogCredits(); if (catalogCreditsOut) { catalogCreditsOut.hidden = false; void copyText(catalogCreditsOut.textContent ?? '', 'Титры проекта'); } };
+if (catalogShowCredits) catalogShowCredits.onclick = () => { renderCatalogCredits(); if (catalogCreditsOut) { catalogCreditsOut.hidden = false; void copyText(catalogCreditsOut.textContent ?? '', EDITOR_STRINGS.catalog.creditsTitle); } };
 if (catalogPlay) catalogPlay.onclick = () => setPreviewPlaying(!previewPlaying);
 if (catalogTime) catalogTime.addEventListener('input', (e) => { setPreviewPlaying(false); previewTs = Number((e.target as HTMLInputElement).value); renderPreviewFrame(); });
 if (catalogPreviewModel) catalogPreviewModel.addEventListener('change', () => { setPreviewPlaying(false); loadCodeEditorFromSelection(); renderPreviewFrame(); });
@@ -3017,7 +3003,7 @@ try {
   if (stored) {
     const saved = JSON.parse(stored) as { savedAt?: number; project?: unknown };
     const valid = validateProject(saved.project, { catalogIds: Object.keys(catalog) });
-    if (saved.savedAt && valid.ok && confirm('Восстановить прошлую сессию?')) restoreProject(saved.project as ProjectV1);
+    if (saved.savedAt && valid.ok && confirm(EDITOR_STRINGS.project.restoreSession)) restoreProject(saved.project as ProjectV1);
   }
 } catch {}
 
@@ -3048,12 +3034,12 @@ if (location.search.includes('selftest') && ctx) {
     const [label, w, h] = item;
     const a1 = renderToCanvas(w, h, scene, 0);
     const a2 = renderToCanvas(w, h, scene, 0);
-    if (!equal(a1, a2)) { fail = `${label} t=0 невоспроизводим`; break; }
+    if (!equal(a1, a2)) { fail = EDITOR_STRINGS.preview.selfTestT0(label); break; }
     const t6 = renderToCanvas(w, h, scene, 6);
     const t6b = renderToCanvas(w, h, scene, 6);
-    if (!equal(t6, t6b)) { fail = `${label} t=6 невоспроизводим`; break; }
+    if (!equal(t6, t6b)) { fail = EDITOR_STRINGS.preview.selfTestT6(label); break; }
     const a0again = renderToCanvas(w, h, scene, 0);
-    if (!equal(a0again, a1)) { fail = `${label} состояние между кадрами`; break; }
+    if (!equal(a0again, a1)) { fail = EDITOR_STRINGS.preview.selfTestBetween(label); break; }
   }
   pre.hidden = false;
   pre.textContent = fail ? `SELFTEST: FAIL: ${fail}` : 'SELFTEST: PASS';

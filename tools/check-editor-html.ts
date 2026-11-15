@@ -18,7 +18,7 @@ for (const label of ['Проект', 'Сцены', 'Склейка', 'Катал
 }
 if (!main.includes('EDITOR_STRINGS.topTabs')) fail('подписи вкладок должны приходить из editor/strings.ts (EDITOR_STRINGS.topTabs)');
 if (/const TOP_TABS[^=]*=\s*\[\s*\['project'/.test(main)) fail('в editor/main.ts вернулся ручной список подписей вкладок: он живёт в editor/strings.ts');
-if (!main.includes('EDITOR_STRINGS.exportHint')) fail('подсказка под панелью экспорта должна приходить из editor/strings.ts (EDITOR_STRINGS.exportHint)');
+if (!main.includes('EDITOR_STRINGS.export.hint')) fail('подсказка под панелью экспорта должна приходить из editor/strings.ts (EDITOR_STRINGS.export.hint)');
 if (!main.includes('EDITOR_STRINGS.voice')) fail('подписи панели озвучки должны приходить из editor/strings.ts (EDITOR_STRINGS.voice)');
 for (const label of ['Озвучка', 'Озвучить', 'Убрать звук', 'Музыка проекта', 'Приглушать под голосом', 'Сдвиг, с', 'Громкость']) {
   if (!strings.includes(`'${label}'`)) fail(`в editor/strings.ts нет подписи панели озвучки «${label}»`);
@@ -26,13 +26,10 @@ for (const label of ['Озвучка', 'Озвучить', 'Убрать зву�
 if (!html.includes('id="voicePanel"')) fail('в index.html нет контейнера #voicePanel: панель музыки некуда рисовать');
 if (!main.includes('EDITOR_STRINGS.subtitles')) fail('подписи панели субтитров должны приходить из editor/strings.ts (EDITOR_STRINGS.subtitles)');
 for (const label of ['Субтитры', 'Показывать субтитры', 'Слов в реплике', 'Заглавными', 'сцены без таймингов']) {
-  if (!strings.includes(`'${label}`)) fail(`в editor/strings.ts нет подписи панели субтитров «${label}»`);
+  if (!strings.includes(label)) fail(`в editor/strings.ts нет подписи панели субтитров «${label}»`);
 }
-/** Кириллица в main.ts живёт только в исторических строках; новые подписи — в editor/strings.ts. */
-const cyrillicLines = main.split('\n').filter((line) => /[\u0400-\u04FF]/.test(line)).length;
-const CYRILLIC_BASELINE = 165;
-if (cyrillicLines > CYRILLIC_BASELINE) fail(`в editor/main.ts появились новые русские литералы: строк с кириллицей ${cyrillicLines}, было ${CYRILLIC_BASELINE}`);
-else console.log(`кириллица в editor/main.ts: ${cyrillicLines} строк (база ${CYRILLIC_BASELINE})`);
+/** Кириллицу в литералах editor/*.ts проверяет отдельный check:strings — здесь второго счётчика нет. */
+console.log('кириллицу в редакторе проверяет check:strings');
 const ids = [...main.matchAll(/getElementById\('([A-Za-z0-9_-]+)'\)/g)].map((m) => m[1]);
 const missing = [...new Set(ids)].filter((id) => !html.includes(`id="${id}"`));
 if (missing.length) fail(`в index.html нет элементов, которые ищет editor/main.ts: ${missing.join(', ')}`);

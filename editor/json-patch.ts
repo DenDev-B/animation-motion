@@ -1,6 +1,7 @@
 import { validateProject, validateScene, type ValidationResult } from '../engine/index.ts';
 import type { ProjectV1 } from '../engine/project.ts';
 import type { SceneObject, SceneV1 } from '../engine/schema.ts';
+import { EDITOR_STRINGS } from './strings.ts';
 
 export type JsonScope = 'scene' | 'project' | 'object';
 
@@ -13,7 +14,7 @@ export interface JsonTarget {
 
 function sceneAt(project: ProjectV1, index: number): SceneV1 {
   const scene = project.scenes[index]?.scene;
-  if (!scene) throw new Error(`Сцена №${index + 1} не найдена`);
+  if (!scene) throw new Error(EDITOR_STRINGS.errors.sceneNotFound(index + 1));
   return scene;
 }
 
@@ -28,11 +29,11 @@ export function targetJson(project: ProjectV1, target: JsonTarget): unknown {
 }
 
 function validateObject(project: ProjectV1, target: JsonTarget, candidate: unknown, catalogIds: string[]): ValidationResult {
-  if (!objectAt(project, target)) return { ok: false, errors: [{ path: '', message: 'Объект не найден; обновите список объектов' }], warnings: [] };
+  if (!objectAt(project, target)) return { ok: false, errors: [{ path: '', message: EDITOR_STRINGS.errors.objectNotFound }], warnings: [] };
   const base = sceneAt(project, target.sceneIndex);
   const synthetic: SceneV1 = {
     ...structuredClone(base),
-    layers: [{ id: '__validation-layer', name: 'Проверка', depth: 0, visible: true, objects: [candidate as SceneObject] }],
+    layers: [{ id: '__validation-layer', name: EDITOR_STRINGS.common.checkLayer, depth: 0, visible: true, objects: [candidate as SceneObject] }],
   };
   const result = validateScene(synthetic, { catalogIds });
   const prefix = 'layers[0].objects[0]';
@@ -54,13 +55,13 @@ export function applyTargetJson(project: ProjectV1, target: JsonTarget, candidat
   if (target.scope === 'project') return structuredClone(candidate as ProjectV1);
   const next = structuredClone(project);
   const scene = next.scenes[target.sceneIndex]?.scene;
-  if (!scene) throw new Error(`Сцена №${target.sceneIndex + 1} не найдена`);
+  if (!scene) throw new Error(EDITOR_STRINGS.errors.sceneNotFound(target.sceneIndex + 1));
   if (target.scope === 'scene') {
     next.scenes[target.sceneIndex].scene = structuredClone(candidate as SceneV1);
     return next;
   }
   const layer = scene.layers[target.layerIndex];
-  if (!layer || layer.objects[target.objectIndex] === undefined) throw new Error('Объект не найден; обновите список объектов');
+  if (!layer || layer.objects[target.objectIndex] === undefined) throw new Error(EDITOR_STRINGS.errors.objectNotFound);
   layer.objects[target.objectIndex] = structuredClone(candidate as SceneObject);
   return next;
 }
