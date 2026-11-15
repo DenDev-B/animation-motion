@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { createCanvas, Path2D } from '@napi-rs/canvas';
-import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, sceneStartFrames, buildAudioPlan, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, sceneStartFrames, buildAudioPlan, buildSubtitleCues, activeCueAt, drawSubtitle, formatSrt, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset, type SubtitleCue } from '../engine/index.ts';
 import { formatFileToken, safeFileName } from './file-names.ts';
 import { planPreview, previewSuffix, scaledSize, type Aspect } from '../engine/preview-plan.ts';
 import { buildAudioFilter, buildFfmpegArgs, isAudioItemAudible, type AudioInputItem, type FfmpegAudioOptions } from './ffmpeg-audio.ts';
@@ -13,6 +13,13 @@ import { measureAudioGain } from './audio-gain.ts';
 
 function log(m: string) { process.stdout.write(m + '\n'); }
 function fail(m: string): never { log(`ОШИБКА: ${m}`); process.exit(1); }
+
+/** Сдвиг реплик в окно куска и обрезка по его длительности. */
+function offsetCues(cues: readonly SubtitleCue[], fromSec: number, durationSec: number): SubtitleCue[] {
+  return cues
+    .map((cue) => ({ t0: Math.max(0, cue.t0 - fromSec), t1: Math.min(durationSec, cue.t1 - fromSec), text: cue.text }))
+    .filter((cue) => cue.t1 > cue.t0);
+}
 
 function parseArgs(): { scene: string; project: string; format?: string; fps?: number; t0: number; t1?: number; hasRange: boolean; frame?: number; scale: number; out: string; crf: number; preset: string; overwrite: boolean; audioDir: string } {
   const args = process.argv.slice(2);
@@ -141,6 +148,7 @@ async function main() {
   const format = args.format ?? projectV1!.format;
   const aspect = format === 'h' || format === '16:9' ? '16:9' : format === 'v' || format === '9:16' ? '9:16' : '';
   if (!aspect) fail('format должен быть h, v, 16:9 или 9:16');
+  const subtitles = projectV1 && projectV1.subtitles && projectV1.subtitles.enabled !== false ? buildSubtitleCues(projectV1) : null;
   const fps = args.fps ?? projectV1?.fps ?? 30;
   const totalFrames = projectV1 ? projectFrameCount({ ...projectV1, fps }) : Math.round(sceneV1!.duration * fps);
   const planned = planPreview(totalFrames, fps, aspect as Aspect, {
@@ -225,6 +233,10 @@ async function main() {
     } else {
       renderFrame(ctxA, sceneV1!, globalIndex / fps, { w, h }, { createCanvas: createCanvasFn, catalog, cache });
     }
+    if (subtitles && projectV1) {
+      const cue = activeCueAt(subtitles.cues, globalIndex / fps);
+      if (cue) drawSubtitle(frameCtx, w, h, cue, projectV1.subtitles, aspect);
+    }
     if (plan.mode === 'frame') {
       const png = (frameCtx === ctxOut ? canvasOut : canvasA).toBuffer('image/png');
       fs.writeFileSync(outFile, png);
@@ -234,7 +246,7 @@ async function main() {
       return;
     }
     const imgData = frameCtx.getImageData(0, 0, w, h);
-    if (projectV1 && location!.frames.length === 1 && location!.frames[0].sceneIndex === 1 && location!.frames[0].t === 0) {
+    if (!subtitles && projectV1 && location!.frames.length === 1 && location!.frames[0].sceneIndex === 1 && location!.frames[0].t === 0) {
       const separateCanvas = createCanvas(w, h);
       const separateCtx = separateCanvas.getContext('2d') as unknown as CanvasRenderingContext2D;
       renderFrame(separateCtx, projectV1.scenes[1].scene, 0, { w, h }, { createCanvas: createCanvasFn, catalog, cache: createRenderCache() });
@@ -270,6 +282,14 @@ async function main() {
     log(`ffmpeg завершился с кодом ${code}`);
     log(ffmpegErr.slice(-2000));
     process.exit(1);
+  }
+
+  if (subtitles) {
+    const fromSec = plan.mode === 'clip' ? plan.startFrame / fps : 0;
+    const srtCues = plan.mode === 'clip' ? offsetCues(subtitles.cues, fromSec, N / fps) : subtitles.cues;
+    const srtFile = outFile.replace(/\.mp4$/, '.srt');
+    fs.writeFileSync(srtFile, formatSrt(srtCues), 'utf8');
+    log(`субтитры: ${srtCues.length} кью, файл ${srtFile}`);
   }
 
   log(`записано ${outFile} (${written} кадров, ${totalMs.toFixed(0)} мс, ${msPerFrame.toFixed(2)} мс/кадр, пик памяти ${(peakMem / 1e6).toFixed(0)} МБ)`);

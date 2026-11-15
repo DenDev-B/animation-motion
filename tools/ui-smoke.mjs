@@ -203,7 +203,17 @@ try {
   if (!/run\.bat/.test(musicSelect ?? '')) fail(`выбор музыки без сервиса не подсказывает про run.bat: ${musicSelect}`);
   const musicNote = await page.$eval('#voicePanel .voicemusic .hint', (el) => el.textContent);
   if (!/run\.bat/.test(musicNote ?? '')) fail(`панель музыки без сервиса не подсказывает про run.bat: ${musicNote}`);
-  ok(`панель озвучки: ${voiceUi.length} блока с текстом до 2000, кнопки ждут локальный сервис, музыка — подсказка про run.bat`);
+  const subs = await page.$eval('#voicePanel .voicesubs', (el) => ({
+    enabled: el.querySelector('input[type="checkbox"]')?.checked ?? null,
+    wordsDisabled: el.querySelector('select')?.disabled ?? false,
+    wordsOptions: Array.from(el.querySelectorAll('select')[0]?.querySelectorAll('option') ?? []).map((option) => option.value),
+    hint: el.querySelector('.hint')?.textContent ?? '',
+  }));
+  if (subs.enabled !== false) fail(`субтитры у проекта без поля subtitles включены: ${subs.enabled}`);
+  if (!subs.wordsDisabled) fail('настройки субтитров доступны, хотя субтитры выключены');
+  if (subs.wordsOptions.join(',') !== '1,2,3,4,5,6') fail(`слова в реплике: ${subs.wordsOptions.join(',')}, ожидалось 1..6`);
+  if (!/тайминг|SRT/.test(subs.hint ?? '')) fail(`подсказка субтитров без таймингов/SRT: ${subs.hint}`);
+  ok(`субтитры: выключены по умолчанию, слова 1..6, подсказка про тайминги и SRT`);
 
   // 5. Каталог: список, миниатюры, подвкладки
   await page.click('#topTabs button[data-tab="catalog"]');

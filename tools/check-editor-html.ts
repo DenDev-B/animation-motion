@@ -24,6 +24,10 @@ for (const label of ['Озвучка', 'Озвучить', 'Убрать зву�
   if (!strings.includes(`'${label}'`)) fail(`в editor/strings.ts нет подписи панели озвучки «${label}»`);
 }
 if (!html.includes('id="voicePanel"')) fail('в index.html нет контейнера #voicePanel: панель музыки некуда рисовать');
+if (!main.includes('EDITOR_STRINGS.subtitles')) fail('подписи панели субтитров должны приходить из editor/strings.ts (EDITOR_STRINGS.subtitles)');
+for (const label of ['Субтитры', 'Показывать субтитры', 'Слов в реплике', 'Заглавными', 'сцены без таймингов']) {
+  if (!strings.includes(`'${label}`)) fail(`в editor/strings.ts нет подписи панели субтитров «${label}»`);
+}
 /** Кириллица в main.ts живёт только в исторических строках; новые подписи — в editor/strings.ts. */
 const cyrillicLines = main.split('\n').filter((line) => /[\u0400-\u04FF]/.test(line)).length;
 const CYRILLIC_BASELINE = 165;

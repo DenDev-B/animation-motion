@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame } from '../engine/index.ts';
+import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type ProjectSubtitlesV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame, buildSubtitleCues, activeCueAt, drawSubtitle, defaultSubtitleSize } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
@@ -680,6 +680,11 @@ function renderProjectPreview() {
     composeFrame(ctx, actx, bctx, location.transition.type, location.transition.progress, size, { dir: second.transition.dir, color: second.transition.color });
   } else {
     ctx.drawImage(a, 0, 0);
+  }
+  if (project.subtitles && project.subtitles.enabled !== false) {
+    const built = buildSubtitleCues(project);
+    const cue = activeCueAt(built.cues, globalIndex / project.fps);
+    if (cue) drawSubtitle(ctx, size.w, size.h, cue, project.subtitles, project.format);
   }
   if (projectScrub) projectScrub.value = seconds > 0 ? (spliceT / seconds).toFixed(2) : '0';
   if (projectTime) projectTime.textContent = `${spliceT.toFixed(1)} / ${seconds.toFixed(1)} с`;
@@ -1719,6 +1724,187 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   return block;
 }
 
+function subtitlesAreDefaults(style: ProjectSubtitlesV1): boolean {
+  return (style.maxWords ?? 3) === 3
+    && (style.upper ?? false) === false
+    && (style.position ?? 'bottom') === 'bottom'
+    && (style.size === undefined || style.size === defaultSubtitleSize(project.format));
+}
+
+function applySubtitlesChange(label: string, mutator: () => void): void {
+  applyChange(label, mutator);
+  renderVoicePanel();
+  renderProjectPreview();
+}
+
+function setSubtitlesEnabled(enabled: boolean): void {
+  const current = project.subtitles;
+  if (enabled) {
+    if (current && current.enabled !== false) return;
+    applySubtitlesChange('project-subtitles', () => {
+      if (!project.subtitles) project.subtitles = {};
+      delete project.subtitles.enabled;
+    });
+    return;
+  }
+  if (!current) return;
+  applySubtitlesChange('project-subtitles', () => {
+    if (subtitlesAreDefaults(current)) delete project.subtitles;
+    else current.enabled = false;
+  });
+}
+
+function updateSubtitles(label: string, mutator: (style: ProjectSubtitlesV1) => void): void {
+  if (!project.subtitles) return;
+  applySubtitlesChange(label, () => {
+    const style = project.subtitles!;
+    mutator(style);
+    if (style.enabled === true) delete style.enabled;
+  });
+}
+
+function subtitlesBlock(): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'voicesubs';
+  const title = document.createElement('h2');
+  title.style.margin = '0';
+  title.textContent = EDITOR_STRINGS.subtitles.title;
+  block.appendChild(title);
+
+  const current = project.subtitles;
+  const on = Boolean(current) && current!.enabled !== false;
+
+  const enableLabel = document.createElement('label');
+  enableLabel.className = 'f';
+  enableLabel.style.flexDirection = 'row';
+  enableLabel.style.alignItems = 'center';
+  enableLabel.style.gap = '4px';
+  const enable = document.createElement('input');
+  enable.type = 'checkbox';
+  enable.checked = on;
+  enable.setAttribute('aria-label', EDITOR_STRINGS.subtitles.ariaEnable);
+  enable.addEventListener('change', () => setSubtitlesEnabled(enable.checked));
+  const enableText = document.createElement('span');
+  enableText.textContent = EDITOR_STRINGS.subtitles.enable;
+  enableLabel.append(enable, enableText);
+  block.appendChild(enableLabel);
+
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+
+  const wordsLabel = document.createElement('label');
+  wordsLabel.className = 'f';
+  const wordsTitle = document.createElement('span');
+  wordsTitle.textContent = EDITOR_STRINGS.subtitles.maxWords;
+  const words = document.createElement('select');
+  words.disabled = !on;
+  words.setAttribute('aria-label', EDITOR_STRINGS.subtitles.ariaMaxWords);
+  for (let value = 1; value <= 6; value++) {
+    const option = document.createElement('option');
+    option.value = String(value);
+    option.textContent = String(value);
+    words.appendChild(option);
+  }
+  words.value = String(current?.maxWords ?? 3);
+  words.addEventListener('change', () => {
+    const value = Number(words.value);
+    updateSubtitles('project-subtitles-words', (style) => {
+      if (value === 3) delete style.maxWords;
+      else style.maxWords = value;
+    });
+  });
+  wordsLabel.append(wordsTitle, words);
+
+  const sizeLabel = document.createElement('label');
+  sizeLabel.className = 'f';
+  const sizeTitle = document.createElement('span');
+  sizeTitle.textContent = EDITOR_STRINGS.subtitles.size;
+  const size = document.createElement('input');
+  size.type = 'number';
+  size.min = '0.03';
+  size.max = '0.12';
+  size.step = '0.005';
+  size.style.width = '76px';
+  size.value = String(current?.size ?? defaultSubtitleSize(project.format));
+  size.disabled = !on;
+  size.setAttribute('aria-label', EDITOR_STRINGS.subtitles.ariaSize);
+  size.addEventListener('change', () => {
+    const raw = Number(size.value);
+    if (!Number.isFinite(raw)) return;
+    const value = Math.min(0.12, Math.max(0.03, raw));
+    updateSubtitles('project-subtitles-size', (style) => {
+      if (Math.abs(value - defaultSubtitleSize(project.format)) < 1e-9) delete style.size;
+      else style.size = value;
+    });
+  });
+  sizeLabel.append(sizeTitle, size);
+
+  const positionLabel = document.createElement('label');
+  positionLabel.className = 'f';
+  const positionTitle = document.createElement('span');
+  positionTitle.textContent = EDITOR_STRINGS.subtitles.position;
+  const position = document.createElement('select');
+  position.disabled = !on;
+  position.setAttribute('aria-label', EDITOR_STRINGS.subtitles.ariaPosition);
+  const positions: Array<['bottom' | 'center' | 'top', string]> = [
+    ['bottom', EDITOR_STRINGS.subtitles.positionBottom],
+    ['center', EDITOR_STRINGS.subtitles.positionCenter],
+    ['top', EDITOR_STRINGS.subtitles.positionTop],
+  ];
+  for (const [value, label] of positions) {
+    const option = document.createElement('option');
+    option.value = value as string;
+    option.textContent = label;
+    position.appendChild(option);
+  }
+  position.value = current?.position ?? 'bottom';
+  position.addEventListener('change', () => {
+    const value = position.value;
+    updateSubtitles('project-subtitles-position', (style) => {
+      if (value === 'bottom') delete style.position;
+      else style.position = value as ProjectSubtitlesV1['position'];
+    });
+  });
+  positionLabel.append(positionTitle, position);
+
+  const upperLabel = document.createElement('label');
+  upperLabel.className = 'f';
+  upperLabel.style.flexDirection = 'row';
+  upperLabel.style.alignItems = 'center';
+  upperLabel.style.gap = '4px';
+  const upper = document.createElement('input');
+  upper.type = 'checkbox';
+  upper.checked = current?.upper === true;
+  upper.disabled = !on;
+  upper.setAttribute('aria-label', EDITOR_STRINGS.subtitles.ariaUpper);
+  upper.addEventListener('change', () => {
+    updateSubtitles('project-subtitles-upper', (style) => {
+      if (upper.checked) style.upper = true;
+      else delete style.upper;
+    });
+  });
+  const upperText = document.createElement('span');
+  upperText.textContent = EDITOR_STRINGS.subtitles.upper;
+  upperLabel.append(upper, upperText);
+
+  bar.append(wordsLabel, sizeLabel, positionLabel, upperLabel);
+  block.appendChild(bar);
+
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.textContent = EDITOR_STRINGS.subtitles.hint;
+  block.appendChild(hint);
+
+  const built = buildSubtitleCues(project);
+  if (built.missingWords.length) {
+    const missing = document.createElement('div');
+    missing.className = 'hint';
+    missing.textContent = fillTemplate(EDITOR_STRINGS.subtitles.missing, { n: built.missingWords.length });
+    block.appendChild(missing);
+  }
+  return block;
+}
+
 function renderVoicePanel(): void {
   if (!voicePanel) return;
   voicePanel.innerHTML = '';
@@ -1802,6 +1988,7 @@ function renderVoicePanel(): void {
   if (note.textContent) music.appendChild(note);
 
   voicePanel.appendChild(music);
+  voicePanel.appendChild(subtitlesBlock());
 }
 
 function updateCatalogModelPrompt() {

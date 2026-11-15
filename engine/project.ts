@@ -1,5 +1,5 @@
 import { validateScene, type ValidateOpts, type ValidationError } from './validate.ts';
-import { AUDIO_EXTENSIONS, TRANSITION_DIRS, TRANSITION_TYPES, VOICE_TEXT_MAX_CHARS } from './spec.ts';
+import { AUDIO_EXTENSIONS, SUBTITLE_POSITIONS, TRANSITION_DIRS, TRANSITION_TYPES, VOICE_TEXT_MAX_CHARS } from './spec.ts';
 import type { SceneV1 } from './schema.ts';
 import { BRIEF_MAX_CHARS } from './ai-brief.ts';
 import { getStyle, STYLE_PRESETS } from './styles.ts';
@@ -135,6 +135,21 @@ function validateAudio(value: unknown, err: (path: string, message: string) => v
   if (music.duck !== undefined && typeof music.duck !== 'boolean') err('audio.music.duck', 'duck должен быть true или false; пример: true');
 }
 
+function validateSubtitles(value: unknown, err: (path: string, message: string) => void): void {
+  if (!isRecord(value)) { err('subtitles', 'subtitles должен быть объектом; пример: {"maxWords":3,"position":"bottom"}'); return; }
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') err('subtitles.enabled', 'enabled должен быть true или false; пример: true');
+  if (value.maxWords !== undefined && (!isFiniteNum(value.maxWords) || !Number.isInteger(value.maxWords) || value.maxWords < 1 || value.maxWords > 6)) {
+    err('subtitles.maxWords', 'maxWords должен быть целым числом от 1 до 6; пример: 3');
+  }
+  if (value.upper !== undefined && typeof value.upper !== 'boolean') err('subtitles.upper', 'upper должен быть true или false; пример: true');
+  if (value.position !== undefined && (typeof value.position !== 'string' || !SUBTITLE_POSITIONS.includes(value.position as SubtitlePosition))) {
+    err('subtitles.position', `position должен быть одним из ${SUBTITLE_POSITIONS.join(', ')}; пример: bottom`);
+  }
+  if (value.size !== undefined && (!isFiniteNum(value.size) || value.size < 0.03 || value.size > 0.12)) {
+    err('subtitles.size', 'size должен быть числом от 0.03 до 0.12 (высота шрифта в долях высоты кадра); пример: 0.055');
+  }
+}
+
 export interface ProjectMetaV1 {
   /** ТЗ режиссёра в Markdown, до BRIEF_MAX_CHARS символов. */
   brief?: string;
@@ -142,6 +157,18 @@ export interface ProjectMetaV1 {
   story?: string;
   /** id пресета из engine/styles.ts. */
   styleId?: string;
+}
+
+export type SubtitlePosition = typeof SUBTITLE_POSITIONS[number];
+
+/** Субтитры из таймингов слов озвучки: включены, если поле есть и enabled не false. */
+export interface ProjectSubtitlesV1 {
+  enabled?: boolean;
+  maxWords?: number;
+  upper?: boolean;
+  position?: SubtitlePosition;
+  /** Высота шрифта как доля высоты кадра; по умолчанию 0.055 для 16:9 и 0.045 для 9:16. */
+  size?: number;
 }
 
 export interface ProjectV1 {
@@ -152,6 +179,7 @@ export interface ProjectV1 {
   scenes: ProjectSceneV1[];
   meta?: ProjectMetaV1;
   audio?: ProjectAudioV1;
+  subtitles?: ProjectSubtitlesV1;
 }
 
 export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: boolean; errors: ValidationError[]; warnings: ValidationError[] } {
@@ -187,6 +215,7 @@ export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: b
     });
   }
   if (project.audio !== undefined) validateAudio(project.audio, err);
+  if (project.subtitles !== undefined) validateSubtitles(project.subtitles, err);
   if (project.meta !== undefined) {
     if (!isRecord(project.meta)) err('meta', 'meta должен быть объектом; пример: {"brief":"# ТЗ режиссёра: ...","styleId":"warm-dusk"}');
     else {

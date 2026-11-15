@@ -298,6 +298,16 @@ export const PROJECT_MUSIC_SPEC: readonly FieldSpec[] = [
   { name: 'duck', type: 'bool', default: true, description: 'Приглушать музыку, когда говорит голос.' },
 ];
 
+export const SUBTITLE_POSITIONS = ['bottom', 'center', 'top'] as const;
+
+export const PROJECT_SUBTITLES_SPEC: readonly FieldSpec[] = [
+  { name: 'enabled', type: 'bool', default: true, description: 'Показывать субтитры; по умолчанию true, если поле subtitles есть.' },
+  { name: 'maxWords', type: 'int', min: 1, max: 6, default: 3, description: 'Максимум слов в одной реплике.' },
+  { name: 'upper', type: 'bool', default: false, description: 'Печатать субтитры заглавными.' },
+  { name: 'position', type: 'enum', values: SUBTITLE_POSITIONS, default: 'bottom', description: 'Вертикальное положение: bottom, center или top.' },
+  { name: 'size', type: 'number', min: 0.03, max: 0.12, description: 'Высота шрифта как доля высоты кадра; по умолчанию 0.055 для 16:9 и 0.045 для 9:16.' },
+];
+
 export const SPEC_KEYS = {
   scene: SCENE_SPEC.fields.map(({ name }) => name),
   layer: SCENE_SPEC.layer.map(({ name }) => name),
