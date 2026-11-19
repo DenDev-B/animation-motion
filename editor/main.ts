@@ -567,7 +567,6 @@ function focusSceneCard(index: number) {
 function transitionControl(index: number, entry: ProjectSceneV1): HTMLElement {
   const transition = document.createElement('div');
   transition.className = 'order-transition';
-  transition.addEventListener('dragstart', (event) => event.preventDefault());
   const type = entry.transition?.type ?? 'cut';
   const limit = transitionLimit(index);
   const typeLabel = document.createElement('label');
@@ -600,6 +599,15 @@ function transitionControl(index: number, entry: ProjectSceneV1): HTMLElement {
   return transition;
 }
 
+/** Можно ли начать перетаскивание карточки сцены с этого целевого узла.
+ * Захват только у миниатюры или заголовка карточки; никогда из полей ввода,
+ * кнопок, переключателей, аудио и блока перехода. */
+function canStartCardDrag(target: Element | null): boolean {
+  if (!target) return false;
+  if (target.closest('input, select, textarea, button, summary, audio, .voice-block, .order-transition')) return false;
+  return Boolean(target.closest('.order-thumb, .order-head'));
+}
+
 function renderSceneOrder() {
   if (!sceneOrder) return;
   sceneOrder.innerHTML = '';
@@ -607,7 +615,7 @@ function renderSceneOrder() {
     const row = document.createElement('div');
     row.className = 'order-row';
     row.tabIndex = 0;
-    row.draggable = true;
+    row.draggable = false;
     row.dataset.index = String(index);
     row.title = EDITOR_STRINGS.scenes.dragHint;
     row.appendChild(sceneThumbnail(entry, index));
@@ -632,12 +640,25 @@ function renderSceneOrder() {
       reorderScene(index, target);
       focusSceneCard(target);
     });
+    row.addEventListener('pointerdown', (event) => {
+      if (canStartCardDrag(event.target as Element | null)) row.draggable = true;
+    });
+    row.addEventListener('mousedown', (event) => {
+      if (canStartCardDrag(event.target as Element | null)) row.draggable = true;
+    });
     row.addEventListener('dragstart', (event) => {
+      if (!row.draggable) { event.preventDefault(); return; }
       event.dataTransfer?.setData('text/plain', String(index));
       if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
       row.classList.add('dragging');
     });
-    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragend', () => {
+      row.draggable = false;
+      row.classList.remove('dragging');
+    });
+    row.addEventListener('pointerup', () => { row.draggable = false; });
+    row.addEventListener('pointercancel', () => { row.draggable = false; });
+    row.addEventListener('blur', () => { row.draggable = false; });
     row.addEventListener('dragover', (event) => { event.preventDefault(); });
     row.addEventListener('drop', (event) => {
       event.preventDefault();
@@ -1061,7 +1082,11 @@ async function uploadCatalogFiles(files: readonly File[]): Promise<void> {
     if (added > 0) {
       setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.addedReload(added, EDITOR_STRINGS.project.reloadHint), false);
       saveAutosave();
-      window.setTimeout(() => location.reload(), 800);
+      if (isExportInFlight()) {
+        setCatalogStatus(catalogUploadStatus, `${EDITOR_STRINGS.catalog.addedReload(added, EDITOR_STRINGS.project.reloadHint)} · ${EDITOR_STRINGS.project.saveAll.waitExport}`, false);
+      } else {
+        window.setTimeout(() => location.reload(), 800);
+      }
     } else {
       setCatalogStatus(catalogUploadStatus, EDITOR_STRINGS.catalog.addedNone, true);
     }
@@ -1355,7 +1380,7 @@ let voiceAdaptersError = '';
 let voiceAudioFiles: string[] = [];
 let voiceAudioState: 'unknown' | 'online' | 'offline' = 'unknown';
 let voiceSynthBusy = false;
-const voiceSceneStatus = new Map<string, string>();
+const voiceSceneStatus = new Map<string, { message: string; kind: 'ok' | 'warn' | 'err' }>();
 const voiceOpenState = new Map<string, boolean>();
 const voiceAdapterChoice = new Map<string, string>();
 
@@ -1406,7 +1431,7 @@ async function loadVoiceAdapters(): Promise<void> {
       : '';
   } else {
     voiceAdaptersState = 'offline';
-    voiceAdaptersError = reply.message;
+    voiceAdaptersError = EDITOR_STRINGS.voice.adaptersFailed(reply.message);
   }
 }
 
@@ -1558,7 +1583,7 @@ async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId:
     const end = Number(entry.voice?.offset ?? 0) + Number(data.durationSec ?? 0);
     const tooLong = end > entry.scene.duration + 1e-6;
     if (tooLong) message += `; ${EDITOR_STRINGS.voice.tooLong((end - entry.scene.duration).toFixed(2))}`;
-    voiceSceneStatus.set(sceneId, message);
+    voiceSceneStatus.set(sceneId, { message, kind: tooLong ? 'warn' : 'ok' });
     setStatus(message, tooLong ? 'warn' : 'ok');
     applyChange('scene-voice-synthesize', () => {
       const voice = { ...(entry.voice ?? {}) };
@@ -1589,7 +1614,12 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   const status = document.createElement('div');
   status.className = 'msg voice-status';
   const savedStatus = voiceSceneStatus.get(entry.id);
-  if (savedStatus) status.textContent = savedStatus;
+  if (savedStatus) {
+    status.textContent = savedStatus.message;
+    status.classList.toggle('ok', savedStatus.kind === 'ok');
+    status.classList.toggle('warn', savedStatus.kind === 'warn');
+    status.classList.toggle('err', savedStatus.kind === 'err');
+  }
 
   const textLabel = document.createElement('label');
   textLabel.className = 'f';
@@ -1681,9 +1711,15 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   synth.setAttribute('aria-label', EDITOR_STRINGS.voice.ariaSynthesize(entry.name));
   synth.addEventListener('mousedown', (event) => event.preventDefault());
   const updateSynthState = () => {
-    const base = voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0 || !textArea.value.trim();
+    const noAdapters = voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0;
+    const base = noAdapters || !textArea.value.trim();
     synth.dataset.voiceDisabled = base ? '1' : '0';
     synth.disabled = base || voiceSynthBusy || isExportInFlight();
+    if (base) {
+      if (voiceAdaptersState !== 'online') synth.title = voiceAdaptersError || EDITOR_STRINGS.voice.offline;
+      else if (availableVoiceAdapters().length === 0) synth.title = EDITOR_STRINGS.voice.noAdapter(voiceAdapters.map((a) => `${a.label}: ${a.reason ?? ''}`).join('; '));
+      else synth.title = EDITOR_STRINGS.voice.emptyText;
+    } else synth.title = '';
   };
   synth.addEventListener('click', () => {
     const text = textArea.value;
@@ -2182,7 +2218,11 @@ function renderIdeaSuggestions() {
         if (reply.ok) {
           status.textContent = EDITOR_STRINGS.catalog.savedReload(reply.id, EDITOR_STRINGS.project.reloadHint);
           saveAutosave();
-          window.setTimeout(() => location.reload(), 800);
+          if (isExportInFlight()) {
+            status.textContent = `${status.textContent} · ${EDITOR_STRINGS.project.saveAll.waitExport}`;
+          } else {
+            window.setTimeout(() => location.reload(), 800);
+          }
         } else {
           status.textContent = `✖ ${issueMessage(reply.errors)}`;
         }

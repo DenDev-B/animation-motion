@@ -71,6 +71,7 @@ try {
     const url = msg.location()?.url ?? '';
     const text = msg.text();
     if (/favicon\.ico/i.test(url) || /favicon\.ico/i.test(text)) return;
+    if (/\/__api\/ping/.test(url) && /404/.test(text)) return; // статичная сборка без сервиса
     consoleErrors.push(url ? `${text} (${url})` : text);
   });
   page.on('pageerror', (err) => consoleErrors.push(String(err)));
@@ -172,8 +173,8 @@ try {
   const exportState = await page.$eval('#exportMp4', (el) => ({ disabled: el.disabled, text: el.textContent }));
   const exportHint = await page.$eval('#exportHint', (el) => el.textContent);
   if (!/MP4/.test(exportState.text ?? '')) fail('нет кнопки экспорта MP4');
-  if (!exportState.disabled) fail('кнопка экспорта MP4 включена, хотя браузерный экспорт не реализован');
-  if (!/npm run export/.test(exportHint ?? '')) fail('нет подсказки про npm run export');
+  if (!exportState.disabled) fail('кнопка экспорта MP4 включена, хотя в статической сборке без сервиса она должна быть выключена');
+  if (!/run\.bat|npm run export/.test(exportHint ?? '')) fail('нет подсказки про run.bat или npm run export');
   ok(`вкладка «Склейка»: ${cards.length} карточек с миниатюрами 240px, ${transitionSelects} перехода, предпросмотр ${previewSize.w}×${previewSize.h}, экспорт — заглушка с командой`);
 
   // 4b. Панель «Озвучка»: в dist локального сервиса нет — кнопки ждут run.bat
@@ -203,6 +204,7 @@ try {
   if (!/run\.bat/.test(musicSelect ?? '')) fail(`выбор музыки без сервиса не подсказывает про run.bat: ${musicSelect}`);
   const musicNote = await page.$eval('#voicePanel .voicemusic .hint', (el) => el.textContent);
   if (!/run\.bat/.test(musicNote ?? '')) fail(`панель музыки без сервиса не подсказывает про run.bat: ${musicNote}`);
+  ok('панель «Озвучка»: без сервиса кнопки и выбор голоса выключены, подсказка про run.bat');
   const subs = await page.$eval('#voicePanel .voicesubs', (el) => ({
     enabled: el.querySelector('input[type="checkbox"]')?.checked ?? null,
     wordsDisabled: el.querySelector('select')?.disabled ?? false,
@@ -236,14 +238,21 @@ try {
       if (v < min) min = v;
       if (v > max) max = v;
     }
-    return { avg: sum / (data.length / 4), spread: max - min };
+    const avg = sum / (data.length / 4);
+    let sqSum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const v = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      sqSum += (v - avg) ** 2;
+    }
+    const std = Math.sqrt(sqSum / (data.length / 4));
+    return { avg, spread: max - min, std, min, max };
   }));
   if (thumbs.length === 0) fail('в каталоге нет миниатюр');
   for (const [index, t] of thumbs.entries()) {
-    if (!(t.avg > 60)) fail(`миниатюра ${index}: средняя яркость ${t.avg.toFixed(1)} <= 60 (чёрная?)`);
-    if (!(t.spread > 20)) fail(`миниатюра ${index}: разброс цветов ${t.spread.toFixed(1)} <= 20`);
+    if (!(t.std > 8)) fail(`миниатюра ${index}: стандартное отклонение яркости ${t.std.toFixed(1)} <= 8 (пустая/однородная?)`);
+    if (t.min === t.max) fail(`миниатюра ${index}: однородный цвет`);
   }
-  ok(`миниатюры: ${thumbs.length} шт., средняя яркость ${thumbs.map((t) => t.avg.toFixed(0)).join('/')}, разброс ${thumbs.map((t) => t.spread.toFixed(0)).join('/')}`);
+  ok(`миниатюры: ${thumbs.length} шт., стандартное отклонение яркости ${thumbs.map((t) => t.std.toFixed(0)).join('/')}, средняя ${thumbs.map((t) => t.avg.toFixed(0)).join('/')}`);
 
   const listRight = await page.$eval('#catalogList', (el) => el.getBoundingClientRect().right);
   const viewportWidth = await page.evaluate(() => window.innerWidth);
