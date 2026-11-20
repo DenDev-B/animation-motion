@@ -158,12 +158,16 @@ try {
     tabIndex: row.tabIndex,
     name: row.querySelector('.order-name')?.textContent ?? '',
     duration: row.querySelector('.order-duration')?.textContent ?? '',
+    hasThumb: Boolean(row.querySelector('canvas.order-thumb')),
+    hasHead: Boolean(row.querySelector('.order-head')),
   })));
   for (const [index, card] of cards.entries()) {
-    if (!card.draggable) fail(`карточка ${index}: нет перетаскивания`);
+    if (card.draggable !== false) fail(`карточка ${index}: draggable не false по умолчанию`);
     if (card.tabIndex !== 0) fail(`карточка ${index}: нет фокуса для Alt+←/→`);
     if (!card.name) fail(`карточка ${index}: нет названия`);
     if (!/с$/.test(card.duration)) fail(`карточка ${index}: нет длительности (${card.duration})`);
+    if (!card.hasThumb) fail(`карточка ${index}: нет миниатюры canvas.order-thumb`);
+    if (!card.hasHead) fail(`карточка ${index}: нет заголовка .order-head`);
   }
   const transitionSelects = await page.$$eval('#sceneOrder .order-transition select', (els) => els.length);
   const durationInputs = await page.$$eval('#sceneOrder .order-transition input[type="number"]', (els) => els.length);
@@ -322,6 +326,57 @@ try {
   const restored = await page.$$eval('#topTabs button.on', (buttons) => buttons.map((b) => b.textContent));
   if (restored.length !== 1 || restored[0] !== 'Склейка') fail(`после перезагрузки вкладка: ${restored.join(',')}`);
   else ok('sessionStorage: вкладка «Склейка» восстановлена после перезагрузки');
+
+  // 7b. Real drag: порядок сцен не меняется за недраggable элементы, меняется за миниатюру
+  await page.evaluate(() => localStorage.removeItem('animation-motion/autosave/v1'));
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#openProject');
+    if (input) input.value = '';
+  });
+  await fileInput.uploadFile(PROJECT_FILE);
+  await page.waitForFunction(() => document.querySelectorAll('#sceneOrder .order-row').length === 3, { timeout: 10000 });
+  const names = () => page.$$eval('#sceneOrder .order-row .order-name', (e) => e.map((x) => x.textContent));
+
+  const before = await names();
+
+  // а) drag за select перехода карточки 2 на миниатюру карточки 1 — порядок не изменился
+  const card2 = await page.$('#sceneOrder .order-row:nth-child(2) .order-transition select');
+  const box2 = await card2.boundingBox();
+  const thumb1 = await page.$('#sceneOrder .order-row:nth-child(1) canvas.order-thumb');
+  const thumb1Box = await thumb1.boundingBox();
+  await page.mouse.move(box2.x + 10, box2.y + box2.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box2.x - 60, box2.y + box2.height / 2 - 60, { steps: 6 });
+  await page.mouse.move(thumb1Box.x + thumb1Box.width / 2, thumb1Box.y, { steps: 10 });
+  await page.mouse.up();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  const afterA = await names();
+  if (JSON.stringify(afterA) !== JSON.stringify(before)) fail(`drag за select перехода карточки 2 не должен менять порядок: ${before.join('|')} → ${afterA.join('|')}`);
+
+  // б) drag за input[type=number] перехода карточки 2 на миниатюру карточки 1 — порядок не изменился
+  const durationInput = await page.$('#sceneOrder .order-row:nth-child(2) .order-transition input[type="number"]');
+  const boxIn = await durationInput.boundingBox();
+  await page.mouse.move(boxIn.x + 10, boxIn.y + boxIn.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(boxIn.x - 60, boxIn.y + boxIn.height / 2 - 60, { steps: 6 });
+  await page.mouse.move(thumb1Box.x + thumb1Box.width / 2, thumb1Box.y, { steps: 10 });
+  await page.mouse.up();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  const afterB = await names();
+  if (JSON.stringify(afterB) !== JSON.stringify(before)) fail(`drag за input длительности карточки 2 не должен менять порядок: ${before.join('|')} → ${afterB.join('|')}`);
+
+  // в) контроль: drag за canvas.order-thumb карточки 3 на миниатюру карточки 1 — порядок изменился
+  const thumb3 = await page.$('#sceneOrder .order-row:nth-child(3) canvas.order-thumb');
+  const thumb3Box = await thumb3.boundingBox();
+  await page.mouse.move(thumb3Box.x + thumb3Box.width / 2, thumb3Box.y + thumb3Box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(thumb3Box.x + 10, thumb3Box.y + 10, { steps: 6 });
+  await page.mouse.move(thumb1Box.x + thumb1Box.width / 2, thumb1Box.y + thumb1Box.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const afterC = await names();
+  if (afterC[0] !== before[2]) fail(`контроль drag миниатюры карточки 3: первая должна стать «${before[2]}», стала «${afterC[0]}»`);
+  else ok('real drag: за select/длительность порядок не меняется, за миниатюру — меняется');
 
   if (consoleErrors.length) fail(`ошибки консоли: ${consoleErrors.join(' || ')}`);
   else ok('ошибок консоли нет');
