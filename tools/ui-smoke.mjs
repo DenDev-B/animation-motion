@@ -330,20 +330,29 @@ try {
   // 7b. Real drag: порядок сцен не меняется за недраggable элементы, меняется за миниатюру
   await page.evaluate(() => localStorage.removeItem('animation-motion/autosave/v1'));
   await page.evaluate(() => {
-    const input = document.querySelector<HTMLInputElement>('#openProject');
+    const input = document.querySelector('#openProject');
     if (input) input.value = '';
   });
-  await fileInput.uploadFile(PROJECT_FILE);
+  const openInput = await page.$('#openProject');
+  if (!openInput) {
+    fail('нет #openProject после перезагрузки');
+  } else {
+    await openInput.uploadFile(PROJECT_FILE);
+  }
   await page.waitForFunction(() => document.querySelectorAll('#sceneOrder .order-row').length === 3, { timeout: 10000 });
   const names = () => page.$$eval('#sceneOrder .order-row .order-name', (e) => e.map((x) => x.textContent));
 
   const before = await names();
 
   // а) drag за select перехода карточки 2 на миниатюру карточки 1 — порядок не изменился
+  await page.click('#topTabs button[data-tab="splice"]');
+  await page.waitForFunction(() => document.querySelectorAll('#sceneOrder .order-row').length === 3, { timeout: 10000 });
   const card2 = await page.$('#sceneOrder .order-row:nth-child(2) .order-transition select');
   const box2 = await card2.boundingBox();
+  if (!box2) fail('нет boundingBox для select перехода карточки 2');
   const thumb1 = await page.$('#sceneOrder .order-row:nth-child(1) canvas.order-thumb');
   const thumb1Box = await thumb1.boundingBox();
+  if (!thumb1Box) fail('нет boundingBox для миниатюры карточки 1');
   await page.mouse.move(box2.x + 10, box2.y + box2.height / 2);
   await page.mouse.down();
   await page.mouse.move(box2.x - 60, box2.y + box2.height / 2 - 60, { steps: 6 });
@@ -356,9 +365,10 @@ try {
   // б) drag за input[type=number] перехода карточки 2 на миниатюру карточки 1 — порядок не изменился
   const durationInput = await page.$('#sceneOrder .order-row:nth-child(2) .order-transition input[type="number"]');
   const boxIn = await durationInput.boundingBox();
+  if (!boxIn) fail('нет boundingBox для input длительности карточки 2');
   await page.mouse.move(boxIn.x + 10, boxIn.y + boxIn.height / 2);
   await page.mouse.down();
-  await page.mouse.move(boxIn.x - 60, boxIn.y + boxIn.height / 2 - 60, { steps: 6 });
+  await page.mouse.move(boxIn.x - 60, boxIn.y + box2.height / 2 - 60, { steps: 6 });
   await page.mouse.move(thumb1Box.x + thumb1Box.width / 2, thumb1Box.y, { steps: 10 });
   await page.mouse.up();
   await new Promise((resolve) => setTimeout(resolve, 400));
@@ -366,12 +376,18 @@ try {
   if (JSON.stringify(afterB) !== JSON.stringify(before)) fail(`drag за input длительности карточки 2 не должен менять порядок: ${before.join('|')} → ${afterB.join('|')}`);
 
   // в) контроль: drag за canvas.order-thumb карточки 3 на миниатюру карточки 1 — порядок изменился
+  await page.click('#topTabs button[data-tab="splice"]');
+  await page.waitForFunction(() => document.querySelectorAll('#sceneOrder .order-row').length === 3, { timeout: 10000 });
   const thumb3 = await page.$('#sceneOrder .order-row:nth-child(3) canvas.order-thumb');
   const thumb3Box = await thumb3.boundingBox();
+  if (!thumb3Box) fail('нет boundingBox для миниатюры карточки 3');
+  const thumb1Box2 = await page.$('#sceneOrder .order-row:nth-child(1) canvas.order-thumb');
+  const thumb1Box2Box = await thumb1Box2.boundingBox();
+  if (!thumb1Box2Box) fail('нет boundingBox для миниатюры карточки 1 (контроль)');
   await page.mouse.move(thumb3Box.x + thumb3Box.width / 2, thumb3Box.y + thumb3Box.height / 2);
   await page.mouse.down();
   await page.mouse.move(thumb3Box.x + 10, thumb3Box.y + 10, { steps: 6 });
-  await page.mouse.move(thumb1Box.x + thumb1Box.width / 2, thumb1Box.y + thumb1Box.height / 2, { steps: 12 });
+  await page.mouse.move(thumb1Box2Box.x + thumb1Box2Box.width / 2, thumb1Box2Box.y + thumb1Box2Box.height / 2, { steps: 12 });
   await page.mouse.up();
   await new Promise((resolve) => setTimeout(resolve, 500));
   const afterC = await names();
