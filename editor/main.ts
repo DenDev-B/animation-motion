@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type ProjectSubtitlesV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame, buildSubtitleCues, activeCueAt, drawSubtitle, defaultSubtitleSize } from '../engine/index.ts';
+import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type ProjectSubtitlesV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame, buildSubtitleCues, activeCueAt, drawSubtitle, defaultSubtitleSize, voiceBatchPlan, runVoiceBatch, type VoiceBatchScene } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
@@ -1377,6 +1377,7 @@ const VOICE_TEXT_MAX = 2000;
 let voiceAdapters: TtsAdapterInfo[] = [];
 let voiceAdaptersState: 'unknown' | 'online' | 'offline' = 'unknown';
 let voiceAdaptersError = '';
+let voiceBatchStatusEl: HTMLElement | null = null;
 let voiceAudioFiles: string[] = [];
 let voiceAudioState: 'unknown' | 'online' | 'offline' = 'unknown';
 let voiceSynthBusy = false;
@@ -1470,7 +1471,7 @@ function voiceStatusElement(sceneId: string): HTMLElement | null {
 
 function syncVoiceButtons(): void {
   const busy = voiceSynthBusy || isExportInFlight();
-  for (const button of document.querySelectorAll<HTMLButtonElement>('.voice-synth, .voice-remove')) {
+  for (const button of document.querySelectorAll<HTMLButtonElement>('.voice-synth, .voice-remove, .voice-synth-all')) {
     button.disabled = busy || button.dataset.voiceDisabled === '1';
   }
 }
@@ -1592,6 +1593,79 @@ async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId:
       voice.words = data.words as VoiceWord[];
       entry.voice = voice;
     });
+  } finally {
+    voiceSynthBusy = false;
+    syncVoiceButtons();
+  }
+}
+
+async function synthesizeAllScenes(): Promise<void> {
+  if (voiceSynthBusy) { setStatus(EDITOR_STRINGS.voice.busy, true); return; }
+  if (isExportInFlight()) { setStatus(EDITOR_STRINGS.voice.busyExport, true); return; }
+  if (voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0) {
+    setStatus(EDITOR_STRINGS.voice.batchNoAdapter, true);
+    if (voiceBatchStatusEl) voiceBatchStatusEl.textContent = EDITOR_STRINGS.voice.batchNoAdapter;
+    return;
+  }
+  const plan = voiceBatchPlan(project);
+  if (plan.todo.length === 0) {
+    setStatus(EDITOR_STRINGS.voice.batchNoText, true);
+    if (voiceBatchStatusEl) voiceBatchStatusEl.textContent = EDITOR_STRINGS.voice.batchNoText;
+    return;
+  }
+  const adapterId = availableVoiceAdapters()[0]?.id ?? '';
+  const projectSnapshot = project;
+  const sceneById = new Map(project.scenes.map((entry) => [entry.id, entry]));
+  voiceSynthBusy = true;
+  syncVoiceButtons();
+  const total = plan.todo.length;
+  try {
+    const result = await runVoiceBatch(plan, async (sceneId, text) => {
+      if (project !== projectSnapshot) throw new Error(EDITOR_STRINGS.voice.batchProjectReloaded);
+      const entry = sceneById.get(sceneId);
+      if (!entry || !project.scenes.includes(entry)) throw new Error(EDITOR_STRINGS.voice.batchSceneMissing);
+      const statusEl = voiceStatusElement(sceneId);
+      const reply = await voiceFetch<VoiceSynthesizeReply>('/__api/tts/synthesize', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text, ...(adapterId ? { adapter: adapterId } : {}) }),
+      });
+      if (!reply.ok || reply.data?.ok !== true || !reply.data.file) {
+        throw new Error(voiceIssueMessage(reply.data?.errors) || reply.message);
+      }
+      const data = reply.data;
+      if (project !== projectSnapshot) throw new Error(EDITOR_STRINGS.voice.batchProjectReloaded);
+      const entry2 = sceneById.get(sceneId);
+      if (!entry2 || !project.scenes.includes(entry2)) throw new Error(EDITOR_STRINGS.voice.batchSceneMissing);
+      if ((entry2.voice?.text ?? '').trim() !== text) throw new Error(EDITOR_STRINGS.voice.textChanged);
+      const seconds = Number(data.durationSec ?? 0).toFixed(2);
+      const words = Array.isArray(data.words) ? data.words.length : 0;
+      let message = data.cached ? EDITOR_STRINGS.voice.cached(seconds, words) : EDITOR_STRINGS.voice.fresh(seconds, words);
+      const end = Number(entry2.voice?.offset ?? 0) + Number(data.durationSec ?? 0);
+      const tooLong = end > entry2.scene.duration + 1e-6;
+      if (tooLong) message += `; ${EDITOR_STRINGS.voice.tooLong((end - entry2.scene.duration).toFixed(2))}`;
+      voiceSceneStatus.set(sceneId, { message, kind: tooLong ? 'warn' : 'ok' });
+      if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle('ok', !tooLong);
+        statusEl.classList.toggle('warn', tooLong);
+        statusEl.classList.toggle('err', false);
+      }
+      applyChange('scene-voice-synthesize', () => {
+        const voice = { ...(entry2.voice ?? {}) };
+        voice.text = text;
+        voice.file = data.file as string;
+        voice.words = data.words as VoiceWord[];
+        entry2.voice = voice;
+      });
+      return { file: data.file as string, words: data.words as VoiceWord[], durationSec: Number(data.durationSec ?? 0), cached: data.cached ?? false };
+    }, {
+      onProgress: (d, t) => { if (voiceBatchStatusEl) voiceBatchStatusEl.textContent = EDITOR_STRINGS.voice.batchProgress(d, t); },
+      shouldAbort: () => project !== projectSnapshot,
+    });
+    const summary = EDITOR_STRINGS.voice.batchResult(result.ok, result.skipped, result.errors, result.seconds);
+    if (voiceBatchStatusEl) voiceBatchStatusEl.textContent = summary;
+    setStatus(summary, result.errors > 0);
   } finally {
     voiceSynthBusy = false;
     syncVoiceButtons();
@@ -1948,6 +2022,22 @@ function renderVoicePanel(): void {
   hint.className = 'hint';
   hint.textContent = EDITOR_STRINGS.voice.canvasNote;
   voicePanel.appendChild(hint);
+
+  const batchBar = document.createElement('div');
+  batchBar.className = 'bar';
+  const batchBtn = document.createElement('button');
+  batchBtn.type = 'button';
+  batchBtn.className = 'voice-synth-all primary';
+  batchBtn.textContent = EDITOR_STRINGS.voice.synthesizeAll;
+  batchBtn.setAttribute('aria-label', EDITOR_STRINGS.voice.synthesizeAll);
+  const plan0 = voiceBatchPlan(project);
+  batchBtn.dataset.voiceDisabled = (plan0.todo.length === 0 || voiceAdaptersState !== 'online' || availableVoiceAdapters().length === 0) ? '1' : '0';
+  const batchStatus = document.createElement('span');
+  batchStatus.className = 'msg voice-batch-status';
+  voiceBatchStatusEl = batchStatus;
+  batchBtn.addEventListener('click', () => void synthesizeAllScenes());
+  batchBar.append(batchBtn, batchStatus);
+  voicePanel.appendChild(batchBar);
 
   const music = document.createElement('div');
   music.className = 'voicemusic';
