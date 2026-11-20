@@ -33,13 +33,13 @@ npm run catalog:import-svg -- файл.svg --id dog --name "Собака" --view
 
 - Геометрия: `path` (все команды M L H V C S Q T A Z, дуги переводятся в кубические кривые), `circle`, `ellipse`, `rect` (в том числе со скруглением), `polygon`, `polyline`, `line`.
 - `transform` (translate, scale, rotate, matrix, skewX, skewY, цепочки) применяется к точкам.
-- Стили: атрибуты и `style="..."`: `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`; цвета `#rgb`, `#rrggbb`, `rgb()`, базовые имена, `none`, `currentColor` (по умолчанию #222222).
+- Стили: атрибуты и `style="..."`: `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`; цвета `#rgb`, `#rrggbb`, `rgb()`, базовые имена, `none`, `currentColor` (по умолчанию #222222). Заливка `fill="url(#id)"` / `style="fill:url(#id)"` подключает `<linearGradient>` / `<radialGradient>` из `<defs>` (или на уровне корня `<svg>`): остановки `stop`, `gradientUnits` (`objectBoundingBox` по умолчанию, `userSpaceOnUse`), href-наследование между градиентами; координаты нормализуются к границам части.
 - Нормализация: центр в (0,0), высота bounds 200 единиц, пропорции сохраняются, ось Y вниз, как в движке.
 - Каждая фигура становится отдельной частью `p1`, `p2` … (или по `id` элемента, если он подходит). Лимит: 200 частей и 200 КБ путей.
 
 ## 4. Что не поддерживается
 
-`text`, `image`, `filter`, `mask`, `clipPath`, `use`/`symbol`, `pattern`, CSS-классы из `<style>`. Такие элементы пропускаются с предупреждением. Градиент заменяется цветом по умолчанию с предупреждением (цвет первой остановки пока не берётся).
+`text`, `image`, `filter`, `mask`, `clipPath`, `use`/`symbol`, `pattern`, CSS-классы из `<style>`. Такие элементы пропускаются с предупреждением. Градиенты поддерживаются (`<linearGradient>`/`<radialGradient>`, остановки `stop`, href-наследование между градиентами); `gradientTransform`, `spreadMethod` отличный от `pad` и `fx`/`fy` игнорируются с предупреждением.
 
 Если SVG сложный: откройте его в Inkscape или Figma, преобразуйте текст и обводки в контуры, упростите пути, сохраните как «простой SVG».
 

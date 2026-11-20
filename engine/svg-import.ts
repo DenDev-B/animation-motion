@@ -1,5 +1,5 @@
 // Импорт SVG в части модели каталога. Чистые функции: без DOM, без Math.random/Date.now.
-import type { AssetPart, CatalogAsset } from './schema.ts';
+import type { AssetPart, CatalogAsset, Gradient } from './schema.ts';
 
 export type ColorMode = 'keep' | 'mono' | 'slots';
 
@@ -28,6 +28,20 @@ type Mat = [number, number, number, number, number, number];
 type Pt = [number, number];
 type Seg = { t: 'M' | 'L' | 'C' | 'Z'; p: Pt[] };
 type Rgba = { r: number; g: number; b: number; a: number };
+
+/** Остановка градиента при парсинге SVG. */
+interface GStop { offset: number; color: Rgba; }
+
+/** Распознанный градиент <linearGradient>/<radialGradient> до привязки к части. */
+interface ParsedGradient {
+  id: string;
+  type: 'linear' | 'radial';
+  gradientUnits: 'objectBoundingBox' | 'userSpaceOnUse';
+  x1: number; y1: number; x2: number; y2: number;
+  cx: number; cy: number; r: number;
+  stops: GStop[];
+  warnings: string[];
+}
 
 const IDENT: Mat = [1, 0, 0, 1, 0, 0];
 const mul = (m: Mat, n: Mat): Mat => [
@@ -248,8 +262,140 @@ function rectSegs(x: number, y: number, w: number, h: number, rx: number, ry: nu
   ];
 }
 
-// ---------- сборка ----------
-interface RawPart { id?: string; segs: Seg[]; fill: Rgba | 'none'; fillAlpha: number; stroke: Rgba | null; strokeAlpha: number; strokeW: number }
+// ---------- градиенты ----------
+
+function parsePctOrNumber(raw: string | undefined, def: number): number {
+  if (raw === undefined || raw === '') return def;
+  const v = raw.trim();
+  if (v.endsWith('%')) return (parseFloat(v) / 100);
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : def;
+}
+
+function parseStopColor(stop: Node, warnings: string[]): Rgba | null {
+  const attr = stop.attrs['stop-color'];
+  let raw = attr !== undefined ? attr : '';
+  const style = stop.attrs.style ?? '';
+  if (!raw && style) {
+    for (const decl of style.split(';')) {
+      const ix = decl.indexOf(':');
+      if (ix > 0 && decl.slice(0, ix).trim().toLowerCase() === 'stop-color') raw = decl.slice(ix + 1).trim();
+    }
+  }
+  if (!raw) return null;
+  const c = parseColor(raw, '#000000', warnings);
+  return c === 'none' ? null : c;
+}
+
+function parseStopOpacity(stop: Node): number {
+  const attr = stop.attrs['stop-opacity'];
+  let raw = attr !== undefined ? attr : '';
+  const style = stop.attrs.style ?? '';
+  if (!raw && style) {
+    for (const decl of style.split(';')) {
+      const ix = decl.indexOf(':');
+      if (ix > 0 && decl.slice(0, ix).trim().toLowerCase() === 'stop-opacity') raw = decl.slice(ix + 1).trim();
+    }
+  }
+  if (!raw) return 1;
+  const n = parseFloat(raw.replace('%', ''));
+  if (!Number.isFinite(n)) return 1;
+  return raw.endsWith('%') ? Math.max(0, Math.min(1, n / 100)) : Math.max(0, Math.min(1, n));
+}
+
+function parseGradientStops(n: Node, warnings: string[]): GStop[] {
+  const stops: GStop[] = [];
+  for (const c of n.children) {
+    if (c.name.toLowerCase() !== 'stop') continue;
+    const offsetRaw = c.attrs.offset ?? '';
+    let offset = parseFloat(offsetRaw.replace('%', ''));
+    if (!Number.isFinite(offset)) offset = 0;
+    if (offsetRaw.endsWith('%')) offset /= 100;
+    offset = Math.max(0, Math.min(1, offset));
+    const color = parseStopColor(c, warnings);
+    if (!color) continue;
+    const a = parseStopOpacity(c);
+    stops.push({ offset, color: { ...color, a: color.a * a } });
+  }
+  stops.sort((a, b) => a.offset - b.offset);
+  return stops;
+}
+
+function mergeStops(parent: GStop[] | null, own: GStop[]): GStop[] {
+  if (!parent || parent.length === 0) return own;
+  if (own.length === 0) return [...parent];
+  const merged = [...parent];
+  for (const s of own) {
+    const i = merged.findIndex((m) => m.offset === s.offset);
+    if (i >= 0) merged[i] = s; else merged.push(s);
+  }
+  merged.sort((a, b) => a.offset - b.offset);
+  return merged;
+}
+
+function resolveGradientId(raw: string): string | null {
+  const m = /^url\(#?([^)]+)\)$/i.exec(raw.trim());
+  if (m) return m[1];
+  const m2 = /^#?([A-Za-z][\w-]*)$/i.exec(raw.trim());
+  return m2 ? m2[1] : null;
+}
+
+interface RawGradient {
+  id: string;
+  type: 'linear' | 'radial';
+  gradientUnits: 'objectBoundingBox' | 'userSpaceOnUse';
+  x1: number; y1: number; x2: number; y2: number;
+  cx: number; cy: number; r: number;
+  href: string | null;
+  stops: GStop[];
+  warnings: string[];
+}
+
+function parseGradientElement(n: Node, warnings: string[]): RawGradient | null {
+  const id = n.attrs.id ?? '';
+  if (!id) { warnings.push('градиент без id пропущен'); return null; }
+  const type = n.name.toLowerCase() === 'radialgradient' ? 'radial' : 'linear';
+  const href = resolveGradientId(n.attrs['xlink:href'] ?? n.attrs.href ?? '');
+  const gu = (n.attrs.gradientUnits ?? 'objectBoundingBox').toLowerCase();
+  const gradientUnits = gu === 'userSpaceOnUse' ? 'userSpaceOnUse' : 'objectBoundingBox';
+  if (gu !== 'objectBoundingBox' && gu !== 'userSpaceOnUse') warnings.push(`градиент «${id}»: некорректный gradientUnits, используется objectBoundingBox`);
+
+  const spread = (n.attrs.spreadMethod ?? 'pad').toLowerCase();
+  if (spread !== 'pad') warnings.push(`градиент «${id}»: spreadMethod "${spread}" не поддерживается, используется pad`);
+  if (n.attrs.gradientTransform) warnings.push(`градиент «${id}»: gradientTransform не поддерживается, игнорируется`);
+  if (type === 'radial' && (n.attrs.fx !== undefined || n.attrs.fy !== undefined)) warnings.push(`градиент «${id}»: fx/fy не поддерживаются, игнорируются`);
+
+  let x1 = parsePctOrNumber(n.attrs.x1, 0), y1 = parsePctOrNumber(n.attrs.y1, 0);
+  let x2 = parsePctOrNumber(n.attrs.x2, type === 'linear' ? 1 : 0), y2 = parsePctOrNumber(n.attrs.y2, 0);
+  let cx = parsePctOrNumber(n.attrs.cx, 0.5), cy = parsePctOrNumber(n.attrs.cy, 0.5);
+  let r = parsePctOrNumber(n.attrs.r, 0.5);
+
+  return { id, type, gradientUnits, x1, y1, x2, y2, cx, cy, r, href, stops: parseGradientStops(n, warnings), warnings: [] };
+}
+
+function resolveGradientHrefs(gradients: Map<string, RawGradient>, warnings: string[]): Map<string, RawGradient> {
+  const resolved = new Map<string, RawGradient>();
+  const visiting = new Set<string>();
+  const resolve = (id: string): RawGradient | null => {
+    const g = gradients.get(id);
+    if (!g) return null;
+    if (resolved.has(id)) return resolved.get(id)!;
+    if (visiting.has(id)) { warnings.push(`градиент «${id}»: циклическая ссылка href, остановки не унаследованы`); return g; }
+    visiting.add(id);
+    let base = g;
+    if (g.href) {
+      const parent = resolve(g.href);
+      if (parent) base = { ...g, stops: mergeStops(parent.stops, g.stops) };
+      else warnings.push(`градиент «${id}»: href на несуществующий градиент «${g.href}»`);
+    }
+    visiting.delete(id);
+    resolved.set(id, base);
+    return base;
+  };
+  for (const id of gradients.keys()) resolve(id);
+  return resolved;
+}
+interface RawPart { id?: string; segs: Seg[]; fill: Rgba | 'none'; gradientRef: string | null; fillAlpha: number; stroke: Rgba | null; strokeAlpha: number; strokeW: number; pBounds: [number, number, number, number] | null }
 interface Style { fill: string; stroke: string; sw: string; op: number; fop: string; sop: string; color: string }
 
 const STYLE_KEYS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'color'];
@@ -275,7 +421,7 @@ const numAttr = (n: Node, k: string, def = 0): number => {
 };
 
 const UNSUPPORTED = new Set(['image', 'text', 'tspan', 'filter', 'mask', 'clippath', 'use', 'symbol', 'pattern', 'foreignobject', 'style', 'script']);
-const SKIP_SILENT = new Set(['defs', 'title', 'desc', 'metadata', 'lineargradient', 'radialgradient', 'stop', 'sodipodi:namedview', 'namedview']);
+const SKIP_SILENT = new Set(['title', 'desc', 'metadata', 'stop', 'sodipodi:namedview', 'namedview']);
 
 const fmt = (x: number) => String(Math.round(x * 100) / 100);
 
@@ -298,36 +444,88 @@ export function importSvg(src: string, opts: SvgImportOptions = {}): SvgImportRe
   } else if (svg.attrs.viewBox) warnOnce('viewBox некорректен и проигнорирован');
 
   const raws: RawPart[] = [];
+  const gradients = new Map<string, RawGradient>();
   const rootStyle: Style = { fill: '#000000', stroke: 'none', sw: '1', op: 1, fop: '1', sop: '1', color: current };
+
+  /** Преобразует распознанный градиент в формат движка в нормализованных координатах части. */
+  const convertGradient = (g: RawGradient, pb: [number, number, number, number], cx: number, cy: number, scale: number): Gradient | null => {
+    const pw = pb[2] - pb[0], ph = pb[3] - pb[1];
+    const toNorm = (x: number, y: number): [number, number] => {
+      if (g.gradientUnits === 'objectBoundingBox') {
+        x = pb[0] + x * pw; y = pb[1] + y * ph;
+      }
+      return [(x - cx) * scale, (y - cy) * scale];
+    };
+    if (g.type === 'linear') {
+      const [fx1, fy1] = toNorm(g.x1, g.y1);
+      const [fx2, fy2] = toNorm(g.x2, g.y2);
+      if (fx1 === fx2 && fy1 === fy2) return null;
+      return { type: 'linear', from: [fx1, fy1], to: [fx2, fy2], stops: engineStops(g.stops) };
+    }
+    const [fcx, fcy] = toNorm(g.cx, g.cy);
+    let fr = g.r;
+    if (g.gradientUnits === 'objectBoundingBox') fr = fr * Math.sqrt(pw * pw + ph * ph) / Math.sqrt(2);
+    return { type: 'radial', c: [fcx, fcy], r: fr * Math.max(scale, 1e-9), stops: engineStops(g.stops) };
+  };
+
+  const engineStops = (stops: GStop[]): [number, string][] => stops.map((s) => [s.offset, toHex(s.color, s.color.a)]);
 
   const addShape = (n: Node, segs: Seg[], st: Style, m: Mat, strokeOnly = false) => {
     const fillRaw = strokeOnly ? 'none' : st.fill;
-    let fill = parseColor(fillRaw, st.color, warnings);
+    let fill: Rgba | 'none' | null = null;
+    let gradientRef: string | null = null;
+    if (fillRaw.startsWith('url(')) {
+      const gid = resolveGradientId(fillRaw);
+      if (gid && gradients.has(gid)) gradientRef = gid;
+      else {
+        warnOnce(`градиент «${fillRaw}» не найден, заменён цветом`);
+        fill = parseColor(rootStyle.fill, st.color, []) as Rgba;
+      }
+    } else {
+      fill = parseColor(fillRaw, st.color, warnings);
+    }
     if (fill === null) fill = parseColor(rootStyle.fill, st.color, []) as Rgba;
     let stroke = parseColor(st.stroke, st.color, warnings);
     if (stroke === null && st.stroke.trim().startsWith('url(')) stroke = parseColor(current, current, []);
     const sw = Math.abs(parseFloat(st.sw)) || 0;
     const sc = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
     const tsegs = segs.map((s) => ({ t: s.t, p: s.p.map((p) => apply(m, p)) }));
+    let pb: [number, number, number, number] | null = null;
+    if (tsegs.length > 0) {
+      let px0 = Infinity, py0 = Infinity, px1 = -Infinity, py1 = -Infinity;
+      const pgrow = (p: Pt) => { px0 = Math.min(px0, p[0]); py0 = Math.min(py0, p[1]); px1 = Math.max(px1, p[0]); py1 = Math.max(py1, p[1]); };
+      for (const s of tsegs) {
+        if (s.t === 'M' || s.t === 'L') { pgrow(s.p[0]); }
+        else if (s.t === 'C') { pgrow(s.p[2]); }
+        // Z: замыкает контур, новой точки не добавляет
+      }
+      if (Number.isFinite(px0)) pb = [px0, py0, px1, py1];
+    }
     const strokeC = stroke && stroke !== 'none' && sw > 0 ? stroke : null;
-    if (fill === 'none' && !strokeC) return;
+    if (fill === 'none' && !gradientRef && !strokeC) return;
     raws.push({
-      id: n.attrs.id, segs: tsegs, fill, fillAlpha: st.op * (Number.isFinite(parseFloat(st.fop)) ? parseFloat(st.fop) : 1),
-      stroke: strokeC, strokeAlpha: st.op * (Number.isFinite(parseFloat(st.sop)) ? parseFloat(st.sop) : 1), strokeW: sw * sc,
+      id: n.attrs.id, segs: tsegs, fill: fill === 'none' ? 'none' : fill!, gradientRef,
+      fillAlpha: st.op * (Number.isFinite(parseFloat(st.fop)) ? parseFloat(st.fop) : 1),
+      stroke: strokeC, strokeAlpha: st.op * (Number.isFinite(parseFloat(st.sop)) ? parseFloat(st.sop) : 1), strokeW: sw * sc, pBounds: pb,
     });
   };
 
   const walk = (n: Node, st: Style, m: Mat) => {
     for (const c of n.children) {
       const name = c.name.toLowerCase();
-      if (SKIP_SILENT.has(name)) { if (name === 'lineargradient' || name === 'radialgradient') warnOnce('градиенты не поддерживаются: заменяются цветом по умолчанию или первой остановкой'); continue; }
+      if (name === 'lineargradient' || name === 'radialgradient') {
+        const g = parseGradientElement(c, warnings);
+        if (g) gradients.set(g.id, g);
+        continue;
+      }
+      if (SKIP_SILENT.has(name)) continue;
       if (UNSUPPORTED.has(name)) { warnOnce(`элемент <${c.name}> не поддерживается и пропущен`); continue; }
       if (c.attrs.display === 'none') continue;
       const cs = readStyle(c, st);
       const cm = mul(m, parseTransform(c.attrs.transform, warnings));
       try {
         switch (name) {
-          case 'g': case 'a': case 'svg': case 'switch': walk(c, cs, cm); break;
+          case 'g': case 'a': case 'svg': case 'switch': case 'defs': walk(c, cs, cm); break;
           case 'path': addShape(c, parsePathData(c.attrs.d ?? ''), cs, cm); break;
           case 'circle': { const r = numAttr(c, 'r'); if (r > 0) addShape(c, circleSegs(numAttr(c, 'cx'), numAttr(c, 'cy'), r, r), cs, cm); break; }
           case 'ellipse': { const rx = numAttr(c, 'rx'), ry = numAttr(c, 'ry'); if (rx > 0 && ry > 0) addShape(c, circleSegs(numAttr(c, 'cx'), numAttr(c, 'cy'), rx, ry), cs, cm); break; }
@@ -356,6 +554,7 @@ export function importSvg(src: string, opts: SvgImportOptions = {}): SvgImportRe
   };
   walk(svg, readStyle(svg, rootStyle), base);
 
+  const resolvedGradients = resolveGradientHrefs(gradients, warnings);
   if (raws.length === 0) throw new Error('В SVG не найдено поддерживаемой геометрии (path, circle, rect и т.п.).');
   if (raws.length > maxParts) throw new Error(`Слишком много частей: ${raws.length} (лимит ${maxParts}). Упростите SVG (объедините пути) или повысьте лимит.`);
 
@@ -419,7 +618,18 @@ export function importSvg(src: string, opts: SvgImportOptions = {}): SvgImportRe
     usedIds.add(id);
     const d = r.segs.map((s) => (s.t === 'Z' ? 'Z' : `${s.t} ${s.p.map(nrm).join(' ')}`)).join(' ');
     totalBytes += d.length;
-    const part: AssetPart = { id, name: `Часть ${i + 1}`, fill: r.fill === 'none' ? 'none' : colorOut(r.fill, r.fillAlpha), d };
+    let fill: string | Gradient;
+    if (r.gradientRef) {
+      const g = resolvedGradients.get(r.gradientRef);
+      const grad = g && r.pBounds ? convertGradient(g, r.pBounds, cx, cy, scale) : null;
+      if (grad) fill = grad;
+      else {
+        warnOnce(`градиент «${r.gradientRef}»: не удалось скомпилировать, заменён цветом`);
+        const first = g?.stops[0];
+        fill = first ? toHex(first.color, first.color.a) : (r.fill === 'none' ? 'none' : colorOut(r.fill, r.fillAlpha));
+      }
+    } else fill = r.fill === 'none' ? 'none' : colorOut(r.fill, r.fillAlpha);
+    const part: AssetPart = { id, name: `Часть ${i + 1}`, fill, d };
     if (r.stroke) part.stroke = { color: colorOut(r.stroke, r.strokeAlpha), w: Math.max(0.1, Math.round(r.strokeW * scale * 100) / 100) };
     return part;
   });
