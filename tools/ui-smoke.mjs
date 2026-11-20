@@ -390,8 +390,9 @@ try {
   await page.mouse.move(thumb1Box2Box.x + thumb1Box2Box.width / 2, thumb1Box2Box.y + thumb1Box2Box.height / 2, { steps: 12 });
   await page.mouse.up();
   await new Promise((resolve) => setTimeout(resolve, 500));
+  const strip = (s) => String(s).replace(/^\d+\.\s*/, '');
   const afterC = await names();
-  if (afterC[0] !== before[2]) fail(`контроль drag миниатюры карточки 3: первая должна стать «${before[2]}», стала «${afterC[0]}»`);
+  if (strip(afterC[0]) !== strip(before[2])) fail(`контроль drag миниатюры карточки 3: первая должна стать «${before[2]}», стала «${afterC[0]}»`);
   else ok('real drag: за select/длительность порядок не меняется, за миниатюру — меняется');
 
   if (consoleErrors.length) fail(`ошибки консоли: ${consoleErrors.join(' || ')}`);
