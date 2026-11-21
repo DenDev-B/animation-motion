@@ -31,7 +31,7 @@ const tmpName = `zz-mcp-check-${process.pid}`;
 try {
   const tools = await client.listTools();
   const names = tools.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ['export_video', 'get_schema', 'list_audio', 'list_catalog', 'list_projects', 'render_frame', 'save_project', 'tts_synthesize', 'validate_project'], `набор инструментов: ${names}`);
+  assert.deepEqual(names, ['export_video', 'get_schema', 'lint_project', 'list_audio', 'list_catalog', 'list_projects', 'render_frame', 'save_project', 'tts_synthesize', 'validate_project'], `набор инструментов: ${names}`);
   const ttsTool = tools.tools.find((t) => t.name === 'tts_synthesize');
   const ttsSchema = ttsTool?.inputSchema as { properties?: Record<string, unknown>; required?: string[] } | undefined;
   assert.ok(ttsSchema?.properties?.text && ttsSchema.required?.includes('text'), 'tts_synthesize: text обязателен');
@@ -50,6 +50,12 @@ try {
   assert.equal(bad.ok, false, 'пустой проект невалиден');
   assert.ok(bad.errors.length > 0 && bad.errors[0].message, 'ошибки с текстом');
   assert.equal((await call('validate_project', { file: 'nope' })).isError, true, 'нет такого проекта — isError');
+
+  const linted = JSON.parse(body(await call('lint_project', { file: 'night-city-car' })));
+  assert.equal(linted.ok, true, 'lint_project: эталонный проект без warn');
+  assert.ok(Array.isArray(linted.issues), 'lint_project: issues — массив');
+
+  assert.equal((await call('lint_project', { json: { version: 1, scenes: [] } })).isError, true, 'lint_project: невалидный — isError');
 
   const r0 = await call('render_frame', { file: 'night-city-car', t: 0, scale: 0.25 });
   const img0 = r0.content.find((c) => c.type === 'image');

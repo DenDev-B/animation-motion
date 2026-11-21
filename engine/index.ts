@@ -89,6 +89,7 @@ export type {
   Palette,
 };
 export * from './svg-import.ts';
+export { lintProject, type LintIssue, type LintCtx } from './lint.ts';
 export { buildProjectPrompt, validateProjectReply, uniqueProjectSlug, formatSuggestions, modelHeightM, splitReply, PROJECT_PROMPT_MAX_BYTES } from './ai-project.ts';
 export type { CatalogEntry, ProjectPromptOptions, ProjectReplyResult, Suggestion, SplitReply } from './ai-project.ts';
 export { generateWithChain, callProvider, classifyHttpError, failureMessage, describeKind, ProviderError, PROVIDER_ORDER, PROVIDER_LABELS, DEFAULT_MODELS, MANUAL_HINT } from './ai-chain.ts';

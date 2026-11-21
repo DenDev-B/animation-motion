@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createCanvas, Path2D } from '@napi-rs/canvas';
-import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset } from '../engine/index.ts';
+import { renderFrame, createRenderCache, validateAsset, validateScene, validateProject, projectFrameCount, locateFrame, composeFrame, type SceneV1, type ProjectV1, type CatalogAsset, lintProject, type LintIssue } from '../engine/index.ts';
 import { listAudioFiles } from './audio-files.ts';
 import { synthesizeVoice, type SynthesizeVoiceResult } from './tts/synthesize.ts';
 (globalThis as any).Path2D = Path2D;
@@ -142,6 +142,18 @@ export function createCore(root: string, options: CoreOptions = {}) {
     return listAudioFiles(audioDir);
   }
 
+  /** Проверка качества проекта сверх схемы: только сообщает, не правит. audioFiles берутся из audio/. */
+  function lint(source: Source): { ok: boolean; issues: LintIssue[] } {
+    const raw = read(source);
+    const catalogIds = Object.keys(loadCatalog());
+    const isProject = raw !== null && typeof raw === 'object' && Array.isArray((raw as { scenes?: unknown }).scenes);
+    if (!isProject) throw new Error('lint_project принимает проект (объект со списком scenes)');
+    const validation = validateProject(raw, { catalogIds });
+    if (!validation.ok) throw new Error(`не прошло проверку: ${validation.errors.slice(0, 5).map((e) => `${e.path}: ${e.message}`).join('; ')}`);
+    const project = raw as ProjectV1;
+    return lintProject(project, { audioFiles: listAudio() });
+  }
+
   /** Синтез в audio/tts: в проект ничего не пишет, вызывающий сам кладёт file и words через save_project. */
   async function ttsSynthesize(input: { text: string; adapter?: string; lang?: string; force?: boolean }): Promise<SynthesizeVoiceResult> {
     return synthesizeVoice({
@@ -154,5 +166,5 @@ export function createCore(root: string, options: CoreOptions = {}) {
     });
   }
 
-  return { loadCatalog, validate, render, save, listProjects, listCatalog, getSchema, exportArgs, projectFile, listAudio, ttsSynthesize };
+  return { loadCatalog, validate, render, save, listProjects, listCatalog, getSchema, exportArgs, projectFile, listAudio, lint, ttsSynthesize };
 }

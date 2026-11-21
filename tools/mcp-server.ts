@@ -41,6 +41,7 @@ server.registerTool('export_video', { description: 'Вывести проект 
   } catch (e) { return fail(e); }
 });
 server.registerTool('list_audio', { description: 'Аудиофайлы в audio/ (wav, mp3, m4a, ogg, flac), пути через «/». Готовые пути годятся для scenes[].voice.file и audio.music.file.', inputSchema: {} }, async () => { try { return text(core.listAudio()); } catch (e) { return fail(e); } });
+server.registerTool('lint_project', { description: 'Проверка качества проекта сверх схемы: только сообщает, не правит. Возвращает ok и issues (уровень warn/info, код, путь, сообщение с подсказкой). audioFiles берутся из audio/.', inputSchema: source }, async (a) => { try { return text(core.lint(a)); } catch (e) { return fail(e); } });
 server.registerTool('tts_synthesize', { description: 'Озвучить текст через локальный TTS в audio/tts/ и вернуть file, durationSec и words. В проект ничего не пишет: file и words сохраняет вызывающий через save_project. Адаптер по умолчанию — первый доступный (Piper → SAPI); fake — тестовый тон только для проверок.', inputSchema: { text: z.string().min(1).max(2000).describe('текст озвучки, до 2000 символов'), adapter: z.enum(['piper', 'sapi', 'fake']).optional().describe('piper, sapi; fake — тестовый адаптер для проверок'), lang: z.string().optional().describe('язык голоса, по умолчанию ru'), force: z.boolean().optional().describe('перезаписать уже готовый wav') } }, async (a) => { try { return text(await core.ttsSynthesize(a)); } catch (e) { return fail(e); } });
 
 await server.connect(new StdioServerTransport());

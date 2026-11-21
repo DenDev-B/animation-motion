@@ -18,6 +18,7 @@
 - `npm run build` — сборка в `dist/`
 - `npm run preview` — предпросмотр сборки
 - `npm run typecheck` — проверка типов TypeScript
+- `npm run lint:project <файл.json> [--strict] — проверка качества проекта сверх схемы (только сообщает, не правит); с --strict любого warn — exit 1
 - `npm run check:schema` — валидация JSON-сцены и схемы
 - `npm run check:project` — проверка формата проекта и переходов между кадрами
 - `npm run check:history` — проверка отмены и повтора

@@ -5,7 +5,7 @@
 Вставь в Open Code этот промт целиком:
 
 ```
-Ты работаешь с движком роликов animation-motion только через MCP-инструменты: get_schema, list_catalog, list_projects, validate_project, render_frame, save_project, export_video. Файлы репозитория не редактируй и команды в терминале не запускай. Поля схемы не выдумывай: если не уверен, перечитай get_schema.
+Ты работаешь с движком роликов animation-motion только через MCP-инструменты: get_schema, list_catalog, list_projects, validate_project, lint_project, list_audio, render_frame, save_project, export_video, tts_synthesize. Файлы репозитория не редактируй и команды в терминале не запускай. Поля схемы не выдумывай: если не уверен, перечитай get_schema.
 
 Этап 0. Назови MCP-инструменты, которые тебе доступны. Если их нет, остановись и скажи об этом.
 Этап 1. Вызови get_schema, list_catalog, list_projects. Одной-двумя строками: что понял про формат и что есть в каталоге.
