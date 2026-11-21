@@ -58,12 +58,15 @@ try {
   // г) ошибка одной сцены не мешает остальным
   synthCalls = [];
   synthShouldThrow = 's1';
+  let sceneResults: Array<{ sceneId: string; error?: string }> = [];
   const p4 = makeProject([scene('s1', 'А', { text: 'а' }), scene('s2', 'Б', { text: 'б' }), scene('s3', 'В', { text: 'в' })]);
   const plan4 = voiceBatchPlan(p4);
-  const r4 = await runVoiceBatch(plan4, synth);
+  const r4 = await runVoiceBatch(plan4, synth, { onSceneResult: (sceneId, result) => { sceneResults.push({ sceneId, error: 'error' in result ? result.error : undefined }); } });
   ok(r4.ok === 2, `ошибка сцены: ok=2, получено ${r4.ok}`);
   ok(r4.errors === 1, `ошибка сцены: errors=1`);
   ok(synthCalls.length === 3, `синтез вызван для всех 3 сцен Despite ошибку`);
+  ok(sceneResults.length === 3, `onSceneResult: 3 вызова, получено ${sceneResults.length}`);
+  ok(sceneResults.find((r) => r.sceneId === 's1')?.error === 'босик', `onSceneResult: s1 получил ошибку`);
   synthShouldThrow = null;
 
   // д) shouldAbort прерывает пачку

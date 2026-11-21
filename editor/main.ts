@@ -1661,6 +1661,19 @@ async function synthesizeAllScenes(): Promise<void> {
       return { file: data.file as string, words: data.words as VoiceWord[], durationSec: Number(data.durationSec ?? 0), cached: data.cached ?? false };
     }, {
       onProgress: (d, t) => { if (voiceBatchStatusEl) voiceBatchStatusEl.textContent = EDITOR_STRINGS.voice.batchProgress(d, t); },
+      onSceneResult: (sceneId, result) => {
+        if ('error' in result) {
+          const message = result.error;
+          voiceSceneStatus.set(sceneId, { message, kind: 'err' });
+          const statusEl = voiceStatusElement(sceneId);
+          if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.classList.toggle('err', true);
+            statusEl.classList.toggle('ok', false);
+            statusEl.classList.toggle('warn', false);
+          }
+        }
+      },
       shouldAbort: () => project !== projectSnapshot,
     });
     const summary = EDITOR_STRINGS.voice.batchResult(result.ok, result.skipped, result.errors, result.seconds);
