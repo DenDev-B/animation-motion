@@ -19,6 +19,32 @@ function pauseWeight(word: string): number {
   return 0;
 }
 
+/** Оценочная скорость речи: слова в секунду по языку. */
+const WORDS_PER_SECOND: Record<string, number> = { ru: 2.6 };
+const DEFAULT_WORDS_PER_SECOND = 2.8;
+
+/** Пауза (сек) на знак конца предложения и на разделитель. */
+const SENTENCE_PAUSE_SEC = 0.25;
+const CLAUSE_PAUSE_SEC = 0.12;
+
+/**
+ * Оценочная длительность речи текста в секундах.
+ * Детерминировано: без Math.random и Date.now. Для русского ~2.6 слова/с, остальные ~2.8;
+ * плюс пауза ~0.25 с на знак .!?… и ~0.12 с на , ; : — .
+ */
+export function estimateSpeechSec(text: string, lang?: string): number {
+  const words = text.split(/\s+/).filter((word) => word.length > 0);
+  const rate = lang && typeof WORDS_PER_SECOND[lang] === 'number' ? WORDS_PER_SECOND[lang] : DEFAULT_WORDS_PER_SECOND;
+  const speech = words.length / rate;
+  let pauses = 0;
+  for (const word of words) {
+    const last = word[word.length - 1];
+    if (last === '.' || last === '!' || last === '?' || last === '…') pauses += SENTENCE_PAUSE_SEC;
+    else if (last === ',' || last === ';' || last === ':') pauses += CLAUSE_PAUSE_SEC;
+  }
+  return speech + pauses;
+}
+
 /**
  * Тайминг слов в секундах от начала файла озвучки.
  * Оценочный: длина слова по числу букв и цифр, а не выравнивание по звуку конкретной записи.

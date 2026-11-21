@@ -5,7 +5,7 @@ export { buildAudioPlan } from './audio-plan.ts';
 export type { AudioPlan, AudioPlanItem, AudioWindow } from './audio-plan.ts';
 export { buildSubtitleCues, activeCueAt, formatSrt, drawSubtitle, defaultSubtitleSize } from './subtitles.ts';
 export type { SubtitleCue, SubtitleBuildResult } from './subtitles.ts';
-export { estimateWordTimings } from './tts-timing.ts';
+export { estimateWordTimings, estimateSpeechSec } from './tts-timing.ts';
 export { voiceBatchPlan, runVoiceBatch, type VoiceBatchPlan, type VoiceBatchResult, type VoiceBatchScene, type VoiceBatchHooks } from './voice-batch.ts';
 export { composeFrame } from './compose.ts';
 export { planPreview, previewSuffix, scaledSize, baseSize, PREVIEW_SCALES } from './preview-plan.ts';

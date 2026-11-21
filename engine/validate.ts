@@ -3,7 +3,7 @@ import { validateGradient } from './fill.ts';
 import { ANIM_SPEC, EASES, KIND_SPEC, PALETTE_SLOTS, SPEC_KEYS } from './spec.ts';
 import { CAMERA_SHOT_NAMES } from './camera-presets.ts';
 
-export interface ValidateOpts { catalogIds?: string[]; }
+export interface ValidateOpts { catalogIds?: string[]; audioFiles?: string[]; }
 export interface ValidationError { path: string; message: string; }
 export interface ValidationResult { ok: boolean; errors: ValidationError[]; warnings: ValidationError[]; }
 

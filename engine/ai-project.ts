@@ -5,6 +5,7 @@ import { validateProject, type ProjectV1 } from './project.ts';
 import type { ValidateOpts, ValidationError } from './validate.ts';
 import { BRIEF_MAX_CHARS, BRIEF_SECTIONS, extractBrief } from './ai-brief.ts';
 import { getStyle, STYLE_PRESETS, styleBlock } from './styles.ts';
+import { estimateSpeechSec } from './tts-timing.ts';
 
 export interface CatalogEntry {
   id: string;
@@ -32,6 +33,8 @@ export interface ProjectPromptOptions {
   styleId?: string;
   /** Один ответ ИИ: сначала ТЗ в ```markdown, затем JSON проекта. */
   withBrief?: boolean;
+  /** Добавить ли в промт блок про voice.text и подгонку длительности сцены. По умолчанию true. */
+  voice?: boolean;
   catalogIndex: readonly CatalogEntry[];
 }
 
@@ -177,6 +180,7 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     'Нарисуй её сам через kind "shape": params.model = {"bounds":[x,y,w,h],"parts":[{"id":"body","name":"Тело","fill":"#hex","d":"M 0 0 C ... Z"}]}. bounds в формате [x, y, ширина, высота] с центром модели в (0,0), модель высотой около 200 единиц; d это SVG-путь (команды M L C Q Z), до 15 частей, простые узнаваемые силуэты; цвета только hex. Типы частей: path (по умолчанию), circle (cx, cy, r), line. Для shape sizeM не используется: размер задай полем s.',
     'Каждую такую модель добавь в meta проекта: "meta": {"suggestions": [{"id": "dog", "description": "что это за модель", "view": "side", "sizeM": 0.6}]} (id латиницей через дефис). Если всё есть в каталоге, meta не нужен.',
     ...QUALITY_SECTION,
+    ...(opts.voice !== false ? voiceSection() : []),
     '## Жёсткие правила',
     responseRule,
     '- В каждой сцене: kind "sky" (фон), фон по смыслу (mountains, hills, skyline, cloud, stars, rain, snow), 1..3 смысловых объекта, лёгкое движение камеры. Не перегружай: до 25 объектов в сцене.',
@@ -195,6 +199,14 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
 function tone(t: string | undefined): string {
   const v = (t ?? '').trim().slice(0, 200);
   return v ? `Тон и настроение: ${v}.` : '';
+}
+
+/** Блок про голосовой текст сцены: voice.text опционален, длительность сцены под него подгоняется. */
+function voiceSection(): string[] {
+  return [
+    '## Озвучка сцены (voice.text)',
+    'voice.text — дикторский текст сцены (по желанию, одно-два предложения). Длительность сцены scene.duration должна быть не меньше времени чтения текста плюс 0.4 с запаса. Не придумывай voice.file: файл озвучки ставит команда npm run tts после создания проекта.',
+  ];
 }
 
 // ---------- проверка ответа ----------
@@ -307,6 +319,34 @@ export function validateProjectReply(json: unknown, opts: ValidateOpts = {}): Pr
   const warnings = [...base.warnings];
   const suggestions: Suggestion[] = [];
   checkSceneSanity(json, errors);
+  const audioFiles = new Set(opts.audioFiles ?? []);
+  const project = json && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : undefined;
+  const rawScenes = project && Array.isArray(project.scenes) ? project.scenes : [];
+  rawScenes.forEach((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return;
+    const e = entry as Record<string, unknown>;
+    const scene = e.scene && typeof e.scene === 'object' && !Array.isArray(e.scene) ? (e.scene as Record<string, unknown>) : undefined;
+    const voice = e.voice && typeof e.voice === 'object' && !Array.isArray(e.voice) ? (e.voice as Record<string, unknown>) : undefined;
+    if (!scene || !voice) return;
+    const base = `scenes[${index}]`;
+    if (typeof voice.text === 'string' && voice.text.trim().length > 0) {
+      const speech = estimateSpeechSec(voice.text, undefined);
+      const need = speech + 0.4;
+      const duration = typeof scene.duration === 'number' && Number.isFinite(scene.duration) ? scene.duration : undefined;
+      if (duration !== undefined && duration < need) {
+        const fixed = Math.ceil(need * 10) / 10;
+        scene.duration = fixed;
+        warnings.push({ path: `${base}.scene.duration`, message: `voice.text не укладывается в ${duration} с (нужно ~${need.toFixed(2)} с): duration увеличен до ${fixed} с` });
+      }
+    }
+    if (typeof voice.file === 'string' && voice.file) {
+      if (!audioFiles.has(voice.file)) {
+        const fileName = voice.file;
+        (voice as Record<string, unknown>).file = undefined;
+        warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts)` });
+      }
+    }
+  });
   const meta = json && typeof json === 'object' ? (json as Record<string, unknown>).meta : undefined;
   if (meta !== undefined) {
     if (!meta || typeof meta !== 'object' || Array.isArray(meta)) errors.push({ path: 'meta', message: 'meta должен быть объектом; пример: {"suggestions":[{"id":"dog","description":"собака сбоку"}]}' });
