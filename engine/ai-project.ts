@@ -5,7 +5,7 @@ import { validateProject, type ProjectV1 } from './project.ts';
 import type { ValidateOpts, ValidationError } from './validate.ts';
 import { BRIEF_MAX_CHARS, BRIEF_SECTIONS, extractBrief } from './ai-brief.ts';
 import { getStyle, STYLE_PRESETS, styleBlock } from './styles.ts';
-import { estimateSpeechSec } from './tts-timing.ts';
+import { estimateSpeechSec, speechLangOf } from './tts-timing.ts';
 
 export interface CatalogEntry {
   id: string;
@@ -330,7 +330,7 @@ export function validateProjectReply(json: unknown, opts: ValidateOpts = {}): Pr
     if (!scene || !voice) return;
     const base = `scenes[${index}]`;
     if (typeof voice.text === 'string' && voice.text.trim().length > 0) {
-      const speech = estimateSpeechSec(voice.text, undefined);
+      const speech = estimateSpeechSec(voice.text, speechLangOf(voice.text));
       const need = speech + 0.4;
       const duration = typeof scene.duration === 'number' && Number.isFinite(scene.duration) ? scene.duration : undefined;
       if (duration !== undefined && duration < need) {
@@ -342,8 +342,13 @@ export function validateProjectReply(json: unknown, opts: ValidateOpts = {}): Pr
     if (typeof voice.file === 'string' && voice.file) {
       if (!audioFiles.has(voice.file)) {
         const fileName = voice.file;
-        (voice as Record<string, unknown>).file = undefined;
-        warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts)` });
+        delete (voice as Record<string, unknown>).file;
+        if (!voice.text || typeof voice.text !== 'string' || !voice.text.trim()) {
+          delete e.voice;
+          warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts); поле voice убрано, текста нет` });
+        } else {
+          warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts)` });
+        }
       }
     }
   });

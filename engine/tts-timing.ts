@@ -11,6 +11,11 @@ const round3 = (value: number) => Math.round(value * 1000) / 1000;
 
 const isSoundChar = (char: string) => /[\p{L}\p{N}]/u.test(char);
 
+/** Язык для оценки речи: 'ru' если в тексте есть кириллица, иначе undefined. */
+export function speechLangOf(text: string): 'ru' | undefined {
+  return /[\u0400-\u04FF]/.test(text) ? 'ru' : undefined;
+}
+
 // Пауза читается по последнему знаку токена: «, ; :» — внутрифразовая, «. ! ? …» — концевая.
 function pauseWeight(word: string): number {
   const last = word[word.length - 1];
