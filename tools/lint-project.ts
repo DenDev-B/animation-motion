@@ -3,9 +3,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateProject, migrateProject, type ProjectV1 } from '../engine/project.ts';
+import { validateProject, type ProjectV1 } from '../engine/project.ts';
 import { lintProject } from '../engine/lint.ts';
 import { listAudioFiles } from './audio-files.ts';
+import { readCatalogIds } from './catalog-ids.ts';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const audioDir = path.join(root, 'audio');
@@ -34,20 +35,20 @@ async function main(): Promise<void> {
     return;
   }
 
-  const catalogIds: string[] = [];
+  const catalogIds = readCatalogIds(path.join(root, 'catalog'));
   const validation = validateProject(raw, { catalogIds });
   if (!validation.ok) {
     if (jsonFlag) {
       console.log(JSON.stringify({ ok: false, issues: validation.errors.map((e) => ({ level: 'error' as const, code: 'schema', path: e.path, message: e.message })) }, null, 2));
     } else {
       for (const e of validation.errors) console.log(`[error] schema ${e.path}: ${e.message}`);
-      console.log(`lint: ${validation.errors.length} warn, 0 info`);
+      console.log(`lint: проект не прошёл проверку схемы: ${validation.errors.length} ошибок`);
     }
     process.exitCode = 1;
     return;
   }
 
-  const project = migrateProject(raw);
+  const project = raw as ProjectV1;
   const audioFiles = listAudioFiles(audioDir);
   const lint = lintProject(project, { audioFiles });
   const issues = lint.issues;

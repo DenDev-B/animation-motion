@@ -1,5 +1,11 @@
 // Тесты lintProject: clean ok, по одному кейсу на правило, audioFiles не передан -> voice-file-missing не срабатывает, детерминированность.
+// Тест CLI: запуск lint-project через child_process.
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { lintProject } from '../engine/lint.ts';
 
 function scene(duration = 8, objects: { kind: string }[] = []): any {
@@ -144,6 +150,28 @@ try {
   const a1 = JSON.stringify(lintProject(det, { audioFiles: ['a.wav'] }));
   const a2 = JSON.stringify(lintProject(det, { audioFiles: ['a.wav'] }));
   assert.equal(a1, a2, 'детерминированность: два вызова дают одинаковый результат');
+
+  // --- CLI через child_process ---
+  const rootCli = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+  function runCli(file: string): { code: number | null; stdout: string } {
+    const res = spawnSync(process.execPath, [path.join(rootCli, 'tools', 'lint-project.ts'), file], { encoding: 'utf8' });
+    return { code: res.status, stdout: res.stdout ?? '' };
+  }
+
+  const ncc = runCli('projects/night-city-car.project.json');
+  assert.equal(ncc.code, 0, `night-city-car exit 0 (stdout: ${ncc.stdout.slice(0, 200)})`);
+  assert.ok(ncc.stdout.includes('lint:'), `night-city-car есть итог lint: (${ncc.stdout})`);
+  assert.ok(!ncc.stdout.includes('[error]'), `night-city-car нет [error] (${ncc.stdout})`);
+
+  const wd = runCli('projects/whale-demo.project.json');
+  assert.equal(wd.code, 0, `whale-demo exit 0 (stdout: ${wd.stdout.slice(0, 200)})`);
+
+  const tmp = path.join(os.tmpdir(), `lint-bad-${process.pid}.json`);
+  fs.writeFileSync(tmp, JSON.stringify({ version: 1, scenes: [] }));
+  const bad = runCli(tmp);
+  fs.rmSync(tmp, { force: true });
+  assert.equal(bad.code, 1, `невалидный exit 1`);
+  assert.ok(bad.stdout.includes('не прошёл проверку схемы'), `невалидный: итог схемы (${bad.stdout})`);
 
   console.log('check:lint PASS');
 } catch (e) {
