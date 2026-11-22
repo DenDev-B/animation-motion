@@ -19,6 +19,7 @@ const ok = (cond: boolean, label: string) => {
   if (cond) console.log(`OK   ${label}`);
   else { failures.push(label); console.error(`FAIL ${label}`); }
 };
+const f2 = (v: number) => v.toFixed(2);
 
 function sha1(file: string): string {
   return crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
@@ -49,6 +50,19 @@ function peakDb(file: string): number {
 
 function runSfxGen(args: string[]): { status: number | null; stderr: string } {
   return spawnSync(process.execPath, [path.join(root, 'tools', 'sfx-gen.ts'), ...args], { encoding: 'utf8' });
+}
+
+function runTool(script: string, args: string[]): { status: number | null; stdout: string; stderr: string } {
+  return spawnSync(process.execPath, [path.join(root, 'tools', script), ...args], { cwd: root, encoding: 'utf8' });
+}
+
+function ffprobeJson(file: string, entries: string, select?: string): any {
+  const args = ['-v', 'error'];
+  if (select) args.push('-select_streams', select);
+  args.push('-show_entries', entries, '-of', 'json', file);
+  const r = spawnSync('ffprobe', args, { encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`ffprobe ${file}: ${(r.stderr ?? '').slice(-300)}`);
+  return JSON.parse(r.stdout);
 }
 
 try {
@@ -136,6 +150,30 @@ try {
     manySfx2.scenes[0].sfx = Array.from({ length: 21 }, (_, i) => ({ file: 'sfx/click.wav', at: i * 0.05 }));
     const lintMany = lintProject(manySfx2, { audioFiles: ['sfx/click.wav'] });
     ok(lintMany.issues.some((i) => i.code === 'sfx-many'), `lint sfx-many: ${JSON.stringify(lintMany.issues)}`);
+
+    // и) e2e: экспорт проекта только с sfx (без голоса и музыки) — звуковая дорожка есть
+    const e2eProject = {
+      version: 1, title: 'SFX только', fps: 30, format: '16:9',
+      scenes: [
+        {
+          id: 's1', name: 'А',
+          scene: { version: 1, title: 'А', duration: 3, palette: { sky: ['#123', '#456'] }, camera: { keys: [] }, assets: {}, layers: [{ id: 'l', name: 'Слой', depth: 1, visible: true, objects: [] }] },
+          transition: { type: 'cut' },
+          sfx: [{ file: 'click.wav', at: 0.5 }, { file: 'ding.wav', at: 1.5 }],
+        },
+      ],
+    } as any;
+    const e2eFile = path.join(tmp, 'e2e.project.json');
+    fs.writeFileSync(e2eFile, JSON.stringify(e2eProject, null, 2), 'utf8');
+    const e2eOut = path.join(tmp, 'e2e.mp4');
+    const e2eRun = runTool('export.ts', ['--project', e2eFile, '--audio-dir', dir1, '--scale', '0.25', '--out', e2eOut, '--overwrite']);
+    ok(e2eRun.status === 0, `экспорт только sfx${e2eRun.status === 0 ? '' : `: ${(e2eRun.stdout ?? '').slice(-400)}${e2eRun.stderr.slice(-300)}`}`);
+    const probe = ffprobeJson(e2eOut, 'stream=codec_type,codec_name', 'a:0');
+    const audioStream = probe.streams?.[0];
+    ok(audioStream && audioStream.codec_type === 'audio', `аудиопоток есть: ${audioStream?.codec_type ?? 'нет'}`);
+    const vDur = Number(ffprobeJson(e2eOut, 'stream=duration', 'v:0').streams?.[0]?.duration);
+    const aDur = Number(ffprobeJson(e2eOut, 'format=duration').format?.duration);
+    ok(Number.isFinite(vDur) && Number.isFinite(aDur) && Math.abs(vDur - aDur) <= 0.1, `длительность аудио ${f2(aDur)} с ≈ видео ${f2(vDur)} с`);
 
     // з) старый проект без sfx не получает новых предупреждений
     const oldProject: ProjectV1 = {

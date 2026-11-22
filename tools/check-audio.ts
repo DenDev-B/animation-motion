@@ -201,6 +201,40 @@ try {
     ok(!graphVoiceSfx.includes('sidechaincompress'), 'фильтр голос+sfx не содержит sidechaincompress (sfx не приглушает музыку)');
     ok(graphVoiceSfx.includes('sfx0') || graphVoiceSfx.includes('sfx1'), 'фильтр содержит ветки sfx');
 
+    console.log('--- б2) сцена без озвучки, но с sfx ---');
+    const noVoiceProject = {
+      ...structuredClone(mix),
+      scenes: [
+        { ...mix.scenes[0], sfx: undefined },
+        { ...mix.scenes[1], voice: undefined, sfx: [{ file: 'sfx/click.wav', at: 1.0, gain: 1 }] },
+      ],
+    } as any;
+    const noVoicePlan = buildAudioPlan(noVoiceProject);
+    const noVoiceLaid = noVoicePlan.items.map((i) => `${i.kind}:${f2(i.startSec)}`).join(' ');
+    ok(noVoiceLaid === 'voice:0.00 sfx:3.20 music:0.00', `план без голоса во второй сцене: ${noVoiceLaid}, ожидалось voice:0.00 sfx:3.20 music:0.00`);
+
+    // проект только с sfx, без голоса и без музыки
+    const sfxOnlyProject = {
+      version: 1, title: 'SFX только', fps: FPS, format: '16:9',
+      scenes: [
+        {
+          id: 's1', name: 'А',
+          scene: scene('А', 3),
+          transition: { type: 'cut' },
+          sfx: [{ file: 'sfx/click.wav', at: 0.5 }, { file: 'sfx/click.wav', at: 2.0 }],
+        },
+      ],
+    } as any;
+    const sfxOnlyPlan = buildAudioPlan(sfxOnlyProject);
+    const sfxOnlyLaid = sfxOnlyPlan.items.map((i) => `${i.kind}:${f2(i.startSec)}`).join(' ');
+    ok(sfxOnlyLaid === 'sfx:0.50 sfx:2.00', `план только sfx: ${sfxOnlyLaid}, ожидалось sfx:0.50 sfx:2.00`);
+    ok(Math.abs(sfxOnlyPlan.totalSec - 3) < 1e-9, `только sfx: длительность дорожки ${f2(sfxOnlyPlan.totalSec)} с, ожидалось 3.00`);
+
+    // окно пробы для только sfx: окно 1..2, эффект на 0.5 -> отрицательный старт (оставляется), на 2.0 -> за концом (отброшен)
+    const sfxOnlyClip = buildAudioPlan(sfxOnlyProject, { startSec: 1, endSec: 2 });
+    const sfxOnlyClipLaid = sfxOnlyClip.items.map((i) => `${i.kind}:${f2(i.startSec)}`).join(' ');
+    ok(sfxOnlyClipLaid === 'sfx:-0.50', `окно 1..2 только sfx: ${sfxOnlyClipLaid}, ожидалось sfx:-0.50`);
+
     console.log('--- в) валидатор звука ---');
     const badPath: Array<[string, string]> = [['../секрет.wav', 'родительский каталог'], ['/tmp/x.wav', 'абсолютный путь'], ['C:/audio/x.wav', 'буква диска'], ['voice\\s1.wav', 'обратный слэш'], ['s1.txt', 'чужое расширение']];
     for (const [file, why] of badPath) {
