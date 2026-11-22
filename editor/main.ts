@@ -1,4 +1,4 @@
-import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type ProjectSubtitlesV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame, buildSubtitleCues, activeCueAt, drawSubtitle, defaultSubtitleSize, voiceBatchPlan, runVoiceBatch, type VoiceBatchScene } from '../engine/index.ts';
+import { renderFrame, createRenderCache, applySceneStyle, setSceneShot, CAMERA_SHOT_NAMES, type SceneV1, type ProjectV1, type ProjectSceneV1, type ProjectSubtitlesV1, type VoiceWord, validateProject, projectFrameCount, validateScene, buildPrompt, extractJson, buildFixRequest, KIND_SPEC, type ValidationError, buildProjectPrompt, validateProjectReply, formatSuggestions, splitReply, type SplitReply, locateFrame, composeFrame, buildSubtitleCues, activeCueAt, drawSubtitle, defaultSubtitleSize, voiceBatchPlan, runVoiceBatch, applyVoiceResult, type VoiceBatchScene } from '../engine/index.ts';
 import { buildModelPrompt } from '../engine/ai-model.ts';
 import { col } from '../engine/color.ts';
 import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brief.ts';
@@ -1506,11 +1506,17 @@ function applySceneVoiceNumber(sceneId: string, field: 'offset' | 'gain', value:
 
 function removeSceneVoice(sceneId: string, name: string): void {
   const entry = findProjectScene(sceneId);
-  if (!entry?.voice) return;
+  const voice = entry?.voice;
+  if (!voice) return;
   if (!confirm(EDITOR_STRINGS.voice.removeConfirm(name))) return;
   voiceSceneStatus.delete(sceneId);
   applyChange('scene-voice-remove', () => {
-    delete entry.voice;
+    delete voice.file;
+    delete voice.words;
+    delete voice.offset;
+    delete voice.gain;
+    delete voice.spokenText;
+    if (Object.keys(voice).length === 0) delete entry.voice;
   });
 }
 
@@ -1587,11 +1593,7 @@ async function synthesizeSceneVoice(sceneId: string, rawText: string, adapterId:
     voiceSceneStatus.set(sceneId, { message, kind: tooLong ? 'warn' : 'ok' });
     setStatus(message, tooLong ? 'warn' : 'ok');
     applyChange('scene-voice-synthesize', () => {
-      const voice = { ...(entry.voice ?? {}) };
-      voice.text = text;
-      voice.file = data.file as string;
-      voice.words = data.words as VoiceWord[];
-      entry.voice = voice;
+      applyVoiceResult(entry, text, { file: data.file as string, words: data.words as VoiceWord[], durationSec: Number(data.durationSec ?? 0), cached: data.cached ?? false });
     });
   } finally {
     voiceSynthBusy = false;
@@ -1652,11 +1654,7 @@ async function synthesizeAllScenes(): Promise<void> {
         statusEl.classList.toggle('err', false);
       }
       applyChange('scene-voice-synthesize', () => {
-        const voice = { ...(entry2.voice ?? {}) };
-        voice.text = text;
-        voice.file = data.file as string;
-        voice.words = data.words as VoiceWord[];
-        entry2.voice = voice;
+        applyVoiceResult(entry2, text, { file: data.file as string, words: data.words as VoiceWord[], durationSec: Number(data.durationSec ?? 0), cached: data.cached ?? false });
       });
       return { file: data.file as string, words: data.words as VoiceWord[], durationSec: Number(data.durationSec ?? 0), cached: data.cached ?? false };
     }, {
@@ -1676,7 +1674,7 @@ async function synthesizeAllScenes(): Promise<void> {
       },
       shouldAbort: () => project !== projectSnapshot,
     });
-    const summary = EDITOR_STRINGS.voice.batchResult(result.ok, result.skipped, result.errors, result.seconds);
+    const summary = EDITOR_STRINGS.voice.batchResult(result.ok, result.skipped, result.errors, result.seconds, plan.stale);
     if (voiceBatchStatusEl) voiceBatchStatusEl.textContent = summary;
     setStatus(summary, result.errors > 0);
   } finally {

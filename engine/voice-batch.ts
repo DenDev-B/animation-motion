@@ -24,25 +24,58 @@ export interface VoiceBatchHooks {
 export interface VoiceBatchPlan {
   todo: VoiceBatchScene[];
   skipped: number;
+  stale: number;
 }
 
-/** Какие сцены нужно озвучить: есть voice.text и ещё нет voice.file. */
+/** Результат успешного синтеза, который записывается в voice сцены. */
+export interface VoiceResult {
+  file: string;
+  words?: VoiceWord[];
+  durationSec?: number;
+  cached?: boolean;
+}
+
+/** Применить результат озвучки к voice сцены: file, words, spokenText = текст (после trim). */
+export function applyVoiceResult(entry: ProjectSceneV1, text: string, result: VoiceResult): void {
+  const voice = { ...(entry.voice ?? {}) };
+  voice.text = text.trim();
+  voice.spokenText = text.trim();
+  voice.file = result.file;
+  if (result.words !== undefined) voice.words = result.words;
+  entry.voice = voice;
+}
+
+/** Какие сцены нужно озвучить: есть voice.text и (нет voice.file ИЛИ текст изменился после озвучки). */
 export function voiceBatchPlan(project: ProjectV1): VoiceBatchPlan {
   const todo: VoiceBatchScene[] = [];
   let skipped = 0;
+  let stale = 0;
   for (const entry of project.scenes) {
-    const text = (entry.voice?.text ?? '').trim();
+    const voice = entry.voice;
+    const text = (voice?.text ?? '').trim();
     if (!text) { skipped++; continue; }
-    if (entry.voice?.file) { skipped++; continue; }
-    todo.push({ sceneId: entry.id, text });
+    const file = voice?.file;
+    const spokenText = voice?.spokenText;
+    if (!file) {
+      todo.push({ sceneId: entry.id, text });
+      continue;
+    }
+    // файл есть, но spokenText не задан — старый проект, считается актуальным
+    if (spokenText === undefined) { skipped++; continue; }
+    if (spokenText.trim() !== text) {
+      todo.push({ sceneId: entry.id, text });
+      stale++;
+      continue;
+    }
+    skipped++;
   }
-  return { todo, skipped };
+  return { todo, skipped, stale };
 }
 
 /** Последовательно озвучить все сцены из плана. Ошибка одной сцены не останавливает остальные. */
 export async function runVoiceBatch(
   plan: VoiceBatchPlan,
-  synthesize: (sceneId: string, text: string) => Promise<{ file: string; words?: VoiceWord[]; durationSec: number; cached?: boolean }>,
+  synthesize: (sceneId: string, text: string) => Promise<VoiceResult>,
   hooks: VoiceBatchHooks = {},
 ): Promise<VoiceBatchResult> {
   const { todo } = plan;
@@ -60,7 +93,7 @@ export async function runVoiceBatch(
       ok++;
       seconds += result.durationSec ?? 0;
       perScene.push({ sceneId: scene.sceneId, file: result.file, words: result.words, cached: result.cached });
-      hooks.onSceneResult?.(scene.sceneId, { file: result.file, words: result.words, durationSec: result.durationSec, cached: result.cached });
+      hooks.onSceneResult?.(scene.sceneId, { file: result.file, words: result.words, durationSec: result.durationSec ?? 0, cached: result.cached });
     } catch (error) {
       errors++;
       const message = error instanceof Error ? error.message : String(error);

@@ -30,6 +30,8 @@ export interface ProjectVoiceV1 {
   /** 0..2, по умолчанию 1. */
   gain?: number;
   text?: string;
+  /** Текст, который был реально озвучен при создании voice.file (после trim). */
+  spokenText?: string;
   words?: VoiceWord[];
 }
 
@@ -121,6 +123,10 @@ function validateVoice(value: unknown, path: string, err: (path: string, message
   if (value.text !== undefined) {
     if (typeof value.text !== 'string') err(`${path}.text`, 'text должен быть строкой (текст озвучки)');
     else if (value.text.length > VOICE_TEXT_MAX_CHARS) err(`${path}.text`, `text длиннее ${VOICE_TEXT_MAX_CHARS} символов (${value.text.length}); сократите текст озвучки`);
+  }
+  if (value.spokenText !== undefined) {
+    if (typeof value.spokenText !== 'string') err(`${path}.spokenText`, 'spokenText должен быть строкой (текст, который был реально озвучен)');
+    else if (value.spokenText.length > VOICE_TEXT_MAX_CHARS) err(`${path}.spokenText`, `spokenText длиннее ${VOICE_TEXT_MAX_CHARS} символов (${value.spokenText.length}); сократите текст`);
   }
   if (value.words !== undefined) validateWords(value.words, path, err);
 }

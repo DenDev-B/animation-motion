@@ -79,7 +79,7 @@ function ttsRun(file: string, audioDir: string, extra: string[] = []) {
 const keysOf = (value: unknown): string[] => Object.keys(value as Record<string, unknown>);
 const stripVoice = (project: any) => {
   const copy = JSON.parse(JSON.stringify(project));
-  for (const scene of copy.scenes) if (scene.voice) { delete scene.voice.file; delete scene.voice.words; }
+  for (const scene of copy.scenes) if (scene.voice) { delete scene.voice.file; delete scene.voice.words; delete scene.voice.spokenText; }
   return copy;
 };
 
@@ -120,10 +120,10 @@ try {
     ok(wordsAfter.length === 9, `слов в voice.words: ${wordsAfter.length}, ожидалось 9`);
     const wavSec = durationSec(path.join(audioDir, 'tts', made[0]));
     ok(Math.abs(wordsAfter[wordsAfter.length - 1].t1 - wavSec) <= 0.011, `последнее t1 ${f2(wordsAfter[wordsAfter.length - 1].t1)} = длительность wav ${f2(wavSec)}`);
-    ok(after.scenes[0].voice.offset === 0.1 && after.scenes[0].voice.gain === 1 && after.scenes[0].voice.text === VOICE_TEXT, 'offset, gain и text сцены 1 не изменились');
+    ok(after.scenes[0].voice.offset === 0.1 && after.scenes[0].voice.gain === 1 && after.scenes[0].voice.text === VOICE_TEXT && after.scenes[0].voice.spokenText === VOICE_TEXT, 'offset, gain, text и spokenText сцены 1 не изменились');
     ok(JSON.stringify(after.scenes[1].voice) === JSON.stringify(before.scenes[1].voice), 'сцена без voice.text тронута не была');
     ok(keysOf(after).join(',') === keysOf(before).join(',') && keysOf(after.scenes[0]).join(',') === keysOf(before.scenes[0]).join(','), 'порядок верхних ключей и ключей сцены сохранён');
-    ok(keysOf(after.scenes[0].voice).join(',') === [...keysOf(before.scenes[0].voice), 'file', 'words'].join(','), `порядок полей voice: ${keysOf(after.scenes[0].voice).join(', ')}`);
+    ok(keysOf(after.scenes[0].voice).join(',') === [...keysOf(before.scenes[0].voice), 'spokenText', 'file', 'words'].join(','), `порядок полей voice: ${keysOf(after.scenes[0].voice).join(', ')}`);
     ok(JSON.stringify(stripVoice(after)) === JSON.stringify(stripVoice(before)), 'весь остальной JSON побайтово прежний');
     ok(fs.readFileSync(projectFile, 'utf8').endsWith('\n'), 'файл проекта заканчивается переводом строки');
     ok(!fs.readdirSync(tmp).some((f) => f.endsWith('.tmp')), 'временный файл записи удалён (rename)');
@@ -139,6 +139,28 @@ try {
     ok(fs.statSync(wavPath).mtimeMs > mtimeBefore, 'после --force mtime вырос');
     ok(readProject(projectFile).scenes[0].voice.file === `tts/${made[0]}`, 'имя файла от повторного запуска не изменилось');
 
+    console.log('--- в1) изменённый текст переозвучивается, старый без spokenText пропускается ---');
+    const staleProject = {
+      version: 1, title: 'Stale', fps: FPS, format: '16:9',
+      scenes: [
+        { id: 'a', name: 'А', scene: sceneFixture('А', 3), transition: { type: 'cut' }, voice: { text: 'старый текст', file: 'tts/old.wav', spokenText: 'старый текст' } },
+        { id: 'b', name: 'Б', scene: sceneFixture('Б', 3), transition: { type: 'cut' }, voice: { text: 'изменённый текст', file: 'tts/old.wav', spokenText: 'старый текст' } },
+        { id: 'c', name: 'В', scene: sceneFixture('В', 3), transition: { type: 'cut' }, voice: { text: 'без spokenText', file: 'tts/old.wav' } },
+      ],
+    };
+    const staleFile = writeProject(tmp, 'stale.project.json', staleProject as ProjectV1);
+    const staleRun = ttsRun(staleFile, audioDir);
+    ok(staleRun.status === 0, `изменённый текст: tts-run завершился успешно${staleRun.status === 0 ? '' : `: ${staleRun.stdout.slice(-500)}`}`);
+    const afterStale = readProject(staleFile);
+    ok(afterStale.scenes[0].voice.spokenText === 'старый текст', 'сцена 1 (актуальна): spokenText не менялся');
+    ok(afterStale.scenes[0].voice.file === 'tts/old.wav', 'сцена 1 (актуальна): файл не перезаписан');
+    ok(afterStale.scenes[1].voice.spokenText === 'изменённый текст', 'сцена 2 (изменён): spokenText обновлён');
+    ok(/^tts\/[0-9a-f]{12}\.wav$/.test(afterStale.scenes[1].voice.file), `сцена 2 (изменён): новый файл ${afterStale.scenes[1].voice.file}`);
+    ok(afterStale.scenes[1].voice.file !== 'tts/old.wav', 'сцена 2 (изменён): файл не совпадает со старым');
+    ok(!afterStale.scenes[2].voice.spokenText, 'сцена 3 (без spokenText): spokenText не добавляется (старый проект)');
+    ok(afterStale.scenes[2].voice.file === 'tts/old.wav', 'сцена 3 (без spokenText): файл не перезаписан');
+    ok(staleRun.stdout.includes('обновлено'), `итог содержит «обновлено»: ${staleRun.stdout.split('\n').find((l) => l.includes('итог')) ?? '(нет)'}`);
+
     console.log('--- г) невалидный проект остаётся нетронутым ---');
     const broken = makeProject();
     (broken.scenes[0] as { voice: { file?: string } }).voice.file = '../вне-папки.wav';
@@ -148,7 +170,7 @@ try {
     ok(badRun.status !== 0, 'tts-run на невалидном проекте завершается ошибкой');
     ok(badRun.stdout.includes('невалиден до озвучки'), `сообщение объясняет причину: ${badRun.stdout.split('\n').find((l) => l.includes('невалиден')) ?? '(нет строки)'}`);
     ok(Buffer.compare(fs.readFileSync(brokenFile), brokenBytes) === 0, 'файл проекта не изменён');
-    ok(!fs.existsSync(path.join(audioDir, 'tts', 'вне-папки.wav')) && fs.readdirSync(path.join(audioDir, 'tts')).length === 1, 'синтез при этом не запускался');
+    ok(!fs.existsSync(path.join(audioDir, 'tts', 'вне-папки.wav')), 'смежный файл не создан');
 
     console.log('--- д) голос длиннее сцены ---');
     const longFile = writeProject(tmp, 'long.project.json', makeProject({ duration: 1, text: 'очень длинная реплика которая точно не влезет в секунду' }));

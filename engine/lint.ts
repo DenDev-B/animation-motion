@@ -79,6 +79,7 @@ export function lintProject(project: ProjectV1, ctx: LintCtx = {}): { ok: boolea
       const subtitlesOn = project.subtitles === undefined || project.subtitles.enabled !== false;
       const file = voice.file;
       const text = voice.text;
+      const spokenText = voice.spokenText;
       const words = voice.words;
       const offset = isFiniteNum(voice.offset) && voice.offset >= 0 ? voice.offset : 0;
 
@@ -101,6 +102,10 @@ export function lintProject(project: ProjectV1, ctx: LintCtx = {}): { ok: boolea
         if (offset + speech > duration) {
           issues.push(issue('warn', 'voice-too-long', `${vPath}.text`, `озвучка не укладывается в сцену (окончание ~${(offset + speech).toFixed(2)} с > duration ${duration.toFixed(2)} с): увеличьте duration сцены или сократите текст`));
         }
+      }
+      // voice-stale: файл есть, spokenText задан и отличается от текста
+      if (hasFile && spokenText !== undefined && spokenText.trim() !== text) {
+        issues.push(issue('warn', 'voice-stale', `${vPath}.text`, `текст изменён после озвучки, переозвучьте сцену`));
       }
     }
 

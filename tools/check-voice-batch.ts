@@ -1,5 +1,5 @@
 // Пакетная озвучка: чистая логика voiceBatchPlan / runVoiceBatch без DOM и без fetch.
-import { voiceBatchPlan, runVoiceBatch } from '../engine/voice-batch.ts';
+import { voiceBatchPlan, runVoiceBatch, applyVoiceResult } from '../engine/voice-batch.ts';
 import type { ProjectV1, ProjectSceneV1 } from '../engine/project.ts';
 
 const failures: string[] = [];
@@ -8,7 +8,7 @@ const ok = (cond: boolean, label: string) => {
   else { failures.push(label); console.error(`FAIL ${label}`); }
 };
 
-function scene(id: string, name: string, voice?: { text?: string; file?: string }): ProjectSceneV1 {
+function scene(id: string, name: string, voice?: { text?: string; file?: string; spokenText?: string }): ProjectSceneV1 {
   return {
     id, name,
     scene: { duration: 5, palette: { sky: ['#123'] }, camera: { keys: [] }, assets: {}, layers: [] },
@@ -82,6 +82,35 @@ try {
   const plan6 = voiceBatchPlan(p6);
   ok(plan6.todo.length === 0, `повтор: 0 в работе`);
   ok(plan6.skipped === 1, `повтор: 1 пропущено`);
+
+  // ё) старый проект с voice.file, но без spokenText — считается актуальным, пропуск
+  const p7 = makeProject([scene('s1', 'А', { text: 'привет', file: 'tts/old.wav' })]);
+  const plan7 = voiceBatchPlan(p7);
+  ok(plan7.todo.length === 0, `старый проект без spokenText: 0 в работе`);
+  ok(plan7.skipped === 1, `старый проект без spokenText: 1 пропущено`);
+
+  // ж) изменённый текст (spokenText !== text) попадает в todo, stale считается
+  const p8 = makeProject([scene('s1', 'А', { text: 'привет мир', file: 'tts/old.wav', spokenText: 'привет' }), scene('s2', 'Б', { text: 'мир', file: 'tts/b.wav', spokenText: 'мир' })]);
+  const plan8 = voiceBatchPlan(p8);
+  ok(plan8.todo.length === 1, `изменённый текст: 1 в работе, получено ${plan8.todo.length}`);
+  ok(plan8.todo[0]?.sceneId === 's1', `изменённый текст: вtodo s1, получено ${plan8.todo[0]?.sceneId}`);
+  ok(plan8.stale === 1, `stale: 1, получено ${plan8.stale}`);
+  ok(plan8.skipped === 1, `изменённый текст: 1 пропущено (s2 актуален)`);
+
+  // и) одинаковый текст после trim — пропуск
+  const p9 = makeProject([scene('s1', 'А', { text: '  привет  ', file: 'tts/a.wav', spokenText: 'привет' })]);
+  const plan9 = voiceBatchPlan(p9);
+  ok(plan9.todo.length === 0, `одинаковый после trim: 0 в работе`);
+  ok(plan9.skipped === 1, `одинаковый после trim: 1 пропущено`);
+  ok(plan9.stale === 0, `stale: 0 при совпадении после trim`);
+
+  // к) applyVoiceResult записывает spokenText = текст после trim
+  const entry9 = scene('s1', 'А', { text: 'старое', file: 'old.wav', spokenText: 'старое' });
+  applyVoiceResult(entry9, '  новое  ', { file: 'new.wav', words: [{ w: 'н', t0: 0, t1: 1 }], durationSec: 1 });
+  ok(entry9.voice?.text === 'новое', `applyVoiceResult: text = 'новое'`);
+  ok(entry9.voice?.spokenText === 'новое', `applyVoiceResult: spokenText = 'новое'`);
+  ok(entry9.voice?.file === 'new.wav', `applyVoiceResult: file = 'new.wav'`);
+  ok(entry9.voice?.words?.[0]?.w === 'н', `applyVoiceResult: words записаны`);
 
   if (failures.length) { console.error(`check:voice-batch FAIL (${failures.length}): ${failures.join(' | ')}`); process.exitCode = 1; }
   else console.log('check:voice-batch PASS');

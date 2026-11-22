@@ -289,6 +289,7 @@ export const PROJECT_VOICE_SPEC: readonly FieldSpec[] = [
   { name: 'offset', type: 'number', min: 0, default: 0, description: 'Задержка от начала сцены в секундах.' },
   { name: 'gain', type: 'number', min: 0, max: 2, default: 1, description: 'Громкость голоса.' },
   { name: 'text', type: 'string', description: `Текст озвучки, до ${VOICE_TEXT_MAX_CHARS} символов; в ролике ничего не рисует.` },
+  { name: 'spokenText', type: 'string', description: `Текст, который был реально озвучен при создании voice.file (после trim). Отличие от voice.text означает, что текст изменился после озвучки — сцена стоит в пакетном плане и лайнт показывает voice-stale.` },
   { name: 'words', type: 'array', description: 'Тайминг слов [{w, t0, t1}] в секундах от начала файла; t0 < t1, порядок по возрастанию.' },
 ];
 

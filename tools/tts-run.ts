@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateProject, type ProjectV1 } from '../engine/index.ts';
+import { applyVoiceResult, type VoiceResult } from '../engine/voice-batch.ts';
 import { diagnoseAdapters, TTS_ADAPTERS } from './tts/index.ts';
 import { synthesizeVoice } from './tts/synthesize.ts';
 
@@ -108,24 +109,41 @@ async function main() {
   log(`язык: ${args.lang} · папка звука: ${args.audioDir}`);
 
   let changed = 0;
+  let skipped = 0;
+  let updated = 0;
   for (const index of wanted) {
     const entry = project.scenes[index];
     const label = `сцена ${index + 1} («${entry.name}»)`;
     if (!entry.voice) {
       log(`${label}: озвучки нет — пропуск`);
+      skipped++;
       continue;
     }
     const text = (entry.voice.text ?? '').trim();
     if (!text) {
       log(`${label}: voice.text пуст — пропуск (файл озвучки можно положить руками и указать voice.file)`);
+      skipped++;
+      continue;
+    }
+    const file = entry.voice.file;
+    const spokenText = entry.voice.spokenText;
+    // голос уже готов и актуален: spokenText совпадает с текстом
+    if (file && spokenText === undefined) {
+      log(`${label}: ${file} уже есть — без синтеза (старый проект без spokenText)`);
+      skipped++;
+      continue;
+    }
+    if (file && spokenText !== undefined && spokenText.trim() === text && !args.force) {
+      log(`${label}: ${file} уже есть (уже актуален) — без синтеза`);
+      skipped++;
       continue;
     }
     const result = await synthesizeVoice({ text, adapterId: args.adapterId, lang: args.lang, audioDir: args.audioDir, force: args.force, allowFake: true });
     if (result.cached) log(`${label}: ${result.file} уже есть — без синтеза`);
     else log(`${label}: синтез → ${result.file}`);
-    entry.voice.file = result.file;
-    entry.voice.words = result.words;
+    applyVoiceResult(entry, text, result);
     changed++;
+    if (file && args.force) updated++;
     const sceneDuration = entry.scene.duration;
     const endSec = (entry.voice.offset ?? 0) + result.durationSec;
     if (endSec > sceneDuration + 1e-6) {
@@ -134,6 +152,8 @@ async function main() {
     log(`${label}: ${result.durationSec.toFixed(2)} с, слов ${result.words.length}${result.cached ? ', wav из кэша' : ''}`);
   }
 
+  const voiced = changed;
+  log(`итог: озвучено ${voiced}, пропущено ${skipped}, обновлено ${updated}`);
   if (changed === 0) {
     log('нет сцен с voice.text — проект не изменён');
     return;

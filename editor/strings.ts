@@ -241,7 +241,7 @@ export const EDITOR_STRINGS = {
     synthesizeAll: 'Озвучить все сцены',
     remove: 'Убрать звук',
     batchProgress: (done: number, total: number) => `Озвучено ${done} из ${total}…`,
-    batchResult: (ok: number, skipped: number, errors: number, seconds: number) => `готово ${ok}, пропущено ${skipped}, ошибок ${errors}, ${seconds.toFixed(2)} с`,
+    batchResult: (ok: number, skipped: number, errors: number, seconds: number, stale?: number) => `готово ${ok}, пропущено ${skipped}, обновлено ${stale ?? 0}, ошибок ${errors}, ${seconds.toFixed(2)} с`,
     batchNoText: 'Нет сцен с текстом озвучки',
     batchNoAdapter: 'Нет доступного адаптера озвучки',
     batchProjectReloaded: 'проект перезагружен во время пачки',

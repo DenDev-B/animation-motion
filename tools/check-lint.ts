@@ -62,6 +62,36 @@ try {
   const r2 = lintProject(textOnly);
   assert.ok(code(r2.issues, 'voice-text-only'), `voice-text-only: ${JSON.stringify(r2.issues)}`);
 
+  // voice-stale (warn): voice.file есть, spokenText задан и отличается от text
+  const stale = project([{
+    ...scene(10),
+    voice: { file: 'a.wav', text: 'новый текст', spokenText: 'старый текст' },
+  }]);
+  const rStale = lintProject(stale, { audioFiles: ['a.wav'] });
+  assert.ok(code(rStale.issues, 'voice-stale'), `voice-stale: ${JSON.stringify(rStale.issues)}`);
+  assert.equal(rStale.ok, false, 'voice-stale: ok=false');
+
+  // voice-stale не срабатывает если spokenText совпадает с text
+  const fresh = project([{
+    ...scene(10),
+    voice: { file: 'a.wav', text: 'один и тот же', spokenText: 'один и тот же' },
+  }]);
+  assert.ok(!code(lintProject(fresh, { audioFiles: ['a.wav'] }).issues, 'voice-stale'), 'voice-stale не срабатывает при совпадении spokenText и text');
+
+  // voice-stale не срабатывает если spokenText не задан (старые проекты)
+  const old = project([{
+    ...scene(10),
+    voice: { file: 'a.wav', text: 'любой текст' },
+  }]);
+  assert.ok(!code(lintProject(old, { audioFiles: ['a.wav'] }).issues, 'voice-stale'), 'voice-stale не срабатывает без spokenText');
+
+  // voice-stale не срабатывает если нет voice.file
+  const noFile = project([{
+    ...scene(10),
+    voice: { text: 'текст', spokenText: 'текст' },
+  }]);
+  assert.ok(!code(lintProject(noFile).issues, 'voice-stale'), 'voice-stale не срабатывает без voice.file');
+
   // voice-file-missing (warn, только с audioFiles): voice.file не в списке
   const missing = project([{
     ...scene(10),
