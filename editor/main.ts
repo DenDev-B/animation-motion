@@ -631,6 +631,7 @@ function renderSceneOrder() {
     head.append(name, duration);
     row.appendChild(head);
     row.appendChild(sceneVoiceBlock(entry));
+    row.appendChild(sceneSfxBlock(entry));
     row.addEventListener('keydown', (event) => {
       if ((event.target as HTMLElement).closest('.voice-block, .order-transition')) return;
       if (!event.altKey || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
@@ -1384,6 +1385,9 @@ let voiceSynthBusy = false;
 const voiceSceneStatus = new Map<string, { message: string; kind: 'ok' | 'warn' | 'err' }>();
 const voiceOpenState = new Map<string, boolean>();
 const voiceAdapterChoice = new Map<string, string>();
+const sfxOpenState = new Map<string, boolean>();
+const sfxAudioFiles: string[] = [];
+let sfxAudioState: 'unknown' | 'online' | 'offline' = 'unknown';
 
 function voiceIssueMessage(errors: Array<{ path?: string; message?: string }> | undefined): string {
   const first = errors?.[0];
@@ -1439,10 +1443,15 @@ async function loadVoiceAdapters(): Promise<void> {
 async function loadVoiceAudio(): Promise<void> {
   const reply = await voiceFetch<{ ok?: boolean; files?: string[] }>('/__api/audio/list', { headers: { accept: 'application/json' } });
   if (reply.ok && reply.data?.ok === true && Array.isArray(reply.data.files)) {
-    voiceAudioFiles = reply.data.files;
+    const files = reply.data.files;
+    voiceAudioFiles = files;
     voiceAudioState = 'online';
+    sfxAudioFiles.length = 0;
+    sfxAudioFiles.push(...files.filter((file) => file.startsWith('sfx/')));
+    sfxAudioState = 'online';
   } else {
     voiceAudioState = 'offline';
+    sfxAudioState = 'offline';
   }
 }
 
@@ -1841,6 +1850,196 @@ function sceneVoiceBlock(entry: ProjectSceneV1): HTMLElement {
   updateSynthState();
   remove.dataset.voiceDisabled = hasVoice ? '0' : '1';
   remove.disabled = !hasVoice || voiceSynthBusy || isExportInFlight();
+  return block;
+}
+
+function sceneSfxBlock(entry: ProjectSceneV1): HTMLElement {
+  const block = document.createElement('details');
+  block.className = 'sfx-block';
+  block.dataset.sceneId = entry.id;
+  block.open = sfxOpenState.get(entry.id) ?? Boolean(entry.sfx?.length);
+  block.addEventListener('toggle', () => sfxOpenState.set(entry.id, block.open));
+  block.addEventListener('dragstart', (event) => event.preventDefault());
+
+  const summary = document.createElement('summary');
+  const sfx = entry.sfx ?? [];
+  summary.textContent = `${EDITOR_STRINGS.sfx.title} (${sfx.length})`;
+  block.appendChild(summary);
+
+  const sfxSorted = [...sfx].sort((a, b) => a.at - b.at);
+
+  const note = document.createElement('div');
+  note.className = 'hint';
+  if (sfxAudioState === 'offline') note.textContent = EDITOR_STRINGS.sfx.serviceUnavailable;
+  else if (sfxAudioState === 'unknown') note.textContent = EDITOR_STRINGS.voice.loading;
+  if (note.textContent) block.appendChild(note);
+
+  for (let index = 0; index < sfxSorted.length; index++) {
+    const effect = sfxSorted[index];
+    const realIndex = sfx.indexOf(effect);
+    if (realIndex === -1) continue;
+
+    const row = document.createElement('div');
+    row.className = 'sfx-row';
+    row.style.display = 'flex';
+    row.style.gap = 'var(--space-2)';
+    row.style.alignItems = 'center';
+    row.style.flexWrap = 'wrap';
+
+    const fileLabelEl = document.createElement('label');
+    fileLabelEl.className = 'f';
+    const fileTitle = document.createElement('span');
+    fileTitle.textContent = EDITOR_STRINGS.sfx.fileLabel;
+    const fileSelect = document.createElement('select');
+    fileSelect.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaFile(entry.name));
+    const sfxFirst = sfxAudioFiles.filter((file) => file.startsWith('sfx/'));
+    const otherFiles = sfxAudioFiles.filter((file) => !file.startsWith('sfx/'));
+    const ordered = [...sfxFirst, ...otherFiles];
+    for (const file of ordered) {
+      const option = document.createElement('option');
+      option.value = file;
+      option.textContent = file;
+      fileSelect.appendChild(option);
+    }
+    const hasFile = ordered.includes(effect.file);
+    fileSelect.value = hasFile ? effect.file : '';
+    if (!hasFile) {
+      const missing = document.createElement('option');
+      missing.value = '';
+      missing.textContent = `${effect.file} (${EDITOR_STRINGS.sfx.notInFolder})`;
+      missing.disabled = true;
+      fileSelect.insertBefore(missing, fileSelect.firstChild);
+      fileSelect.value = '';
+    }
+    fileSelect.disabled = sfxAudioState !== 'online';
+    fileSelect.title = sfxAudioState === 'online' ? '' : EDITOR_STRINGS.sfx.serviceUnavailable;
+    fileSelect.addEventListener('change', () => {
+      const value = fileSelect.value;
+      if (!value) return;
+      applyChange('scene-sfx-change', () => {
+        const cur = entry.sfx?.[realIndex];
+        if (cur) cur.file = value;
+      });
+    });
+    fileLabelEl.append(fileTitle, fileSelect);
+
+    const atLabel = document.createElement('label');
+    atLabel.className = 'f';
+    const atTitle = document.createElement('span');
+    atTitle.textContent = EDITOR_STRINGS.sfx.atLabel;
+    const at = document.createElement('input');
+    at.type = 'number';
+    at.min = '0';
+    at.step = '0.1';
+    at.style.width = '72px';
+    at.value = String(effect.at ?? 0);
+    at.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaAt(entry.name));
+    at.title = EDITOR_STRINGS.sfx.atHint;
+    const atWarn = document.createElement('div');
+    atWarn.className = 'msg';
+    const refreshAtWarn = () => {
+      const raw = Number(at.value);
+      const tooLong = Number.isFinite(raw) && raw > entry.scene.duration + 1e-6;
+      atWarn.textContent = tooLong ? EDITOR_STRINGS.sfx.afterScene(entry.scene.duration.toFixed(1)) : '';
+      atWarn.classList.toggle('warn', tooLong);
+      atWarn.classList.toggle('ok', false);
+      atWarn.classList.toggle('err', false);
+    };
+    refreshAtWarn();
+    at.addEventListener('input', refreshAtWarn);
+    at.addEventListener('change', () => {
+      const raw = Number(at.value);
+      if (!Number.isFinite(raw) || raw < 0) { at.value = String(effect.at ?? 0); return; }
+      const value = raw;
+      if (Math.abs(value - (effect.at ?? 0)) < 1e-9) return;
+      applyChange('scene-sfx-change', () => {
+        const cur = entry.sfx?.[realIndex];
+        if (cur) cur.at = value;
+      });
+    });
+    atLabel.append(atTitle, at);
+
+    const gainLabel = document.createElement('label');
+    gainLabel.className = 'f';
+    const gainTitle = document.createElement('span');
+    gainTitle.textContent = EDITOR_STRINGS.sfx.gainLabel;
+    const gain = document.createElement('input');
+    gain.type = 'number';
+    gain.min = '0';
+    gain.max = '2';
+    gain.step = '0.1';
+    gain.style.width = '72px';
+    gain.value = String(effect.gain ?? 1);
+    gain.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaGain(entry.name));
+    gain.addEventListener('change', () => {
+      const raw = Number(gain.value);
+      if (!Number.isFinite(raw) || raw < 0 || raw > 2) { gain.value = String(effect.gain ?? 1); return; }
+      const value = raw;
+      if (Math.abs(value - (effect.gain ?? 1)) < 1e-9) return;
+      applyChange('scene-sfx-change', () => {
+        const cur = entry.sfx?.[realIndex];
+        if (cur) cur.gain = value;
+      });
+    });
+    gainLabel.append(gainTitle, gain);
+
+    const listen = document.createElement('button');
+    listen.type = 'button';
+    listen.className = 'sfx-listen';
+    listen.textContent = EDITOR_STRINGS.sfx.listen;
+    listen.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaListen(effect.file));
+    listen.addEventListener('mousedown', (event) => event.preventDefault());
+    listen.addEventListener('click', () => {
+      const audio = new Audio(`/__api/audio/file?path=${encodeURIComponent(effect.file)}`);
+      audio.play().catch(() => {});
+    });
+    listen.disabled = sfxAudioState !== 'online';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'sfx-remove';
+    removeBtn.textContent = EDITOR_STRINGS.sfx.remove;
+    removeBtn.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaRemove(realIndex));
+    removeBtn.addEventListener('mousedown', (event) => event.preventDefault());
+    removeBtn.addEventListener('click', () => {
+      applyChange('scene-sfx-remove', () => {
+        if (!entry.sfx) return;
+        entry.sfx.splice(realIndex, 1);
+        if (entry.sfx.length === 0) delete entry.sfx;
+      });
+    });
+
+    row.append(fileLabelEl, atLabel, gainLabel, listen, removeBtn);
+    block.appendChild(row);
+    block.appendChild(atWarn);
+  }
+
+  const addBar = document.createElement('div');
+  addBar.style.display = 'flex';
+  addBar.style.gap = 'var(--space-2)';
+  addBar.style.alignItems = 'center';
+  addBar.style.flexWrap = 'wrap';
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'sfx-add primary';
+  add.textContent = EDITOR_STRINGS.sfx.add;
+  add.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaAdd(entry.name));
+  add.addEventListener('mousedown', (event) => event.preventDefault());
+  const firstFile = sfxAudioFiles.length > 0 ? sfxAudioFiles[0] : '';
+  const atLimit = sfx.length >= 64;
+  add.disabled = sfxAudioState !== 'online' || atLimit || !firstFile;
+  add.title = atLimit ? EDITOR_STRINGS.sfx.limit : (sfxAudioState !== 'online' ? EDITOR_STRINGS.sfx.serviceUnavailable : '');
+  add.setAttribute('aria-disabled', String(add.disabled));
+  add.addEventListener('click', () => {
+    if (atLimit || !firstFile || sfxAudioState !== 'online') return;
+    applyChange('scene-sfx-add', () => {
+      if (!entry.sfx) entry.sfx = [];
+      entry.sfx.push({ file: firstFile, at: 0 });
+    });
+  });
+  addBar.append(add);
+  block.appendChild(addBar);
+
   return block;
 }
 

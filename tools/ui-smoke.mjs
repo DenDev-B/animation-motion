@@ -221,6 +221,24 @@ try {
   if (!/тайминг|SRT/.test(subs.hint ?? '')) fail(`подсказка субтитров без таймингов/SRT: ${subs.hint}`);
   ok(`субтитры: выключены по умолчанию, слова 1..6, подсказка про тайминги и SRT`);
 
+  // 4c. Панель «Эффекты» (SFX): без сервиса блок есть, кнопка добавления выключена, нет горизонтального скролла
+  const sfxBlocks = await page.$$eval('#sceneOrder .sfx-block', (blocks) => blocks.map((block) => ({
+    summary: block.querySelector('summary')?.textContent ?? '',
+    open: block.open,
+    addDisabled: block.querySelector('.sfx-add')?.disabled ?? true,
+    addExists: Boolean(block.querySelector('.sfx-add')),
+  })));
+  if (sfxBlocks.length !== 3) fail(`блоков эффектов: ${sfxBlocks.length}, ожидалось 3`);
+  for (const [index, block] of sfxBlocks.entries()) {
+    if (!/^Эффекты \(\d\)$/.test(block.summary)) fail(`SFX блок ${index}: заголовок «${block.summary}»`);
+    if (!block.addExists) fail(`SFX блок ${index}: нет кнопки «Добавить эффект»`);
+    if (!block.addDisabled) fail(`SFX блок ${index}: «Добавить эффект» включён без локального сервиса`);
+  }
+  const vp = page.viewport();
+  const orderRight = await page.$eval('#sceneOrder', (el) => el.getBoundingClientRect().right);
+  if (orderRight > vp.width + 2) fail(`горизонтальный скролл карточек: ${orderRight.toFixed(0)} > ${vp.width}`);
+  ok(`панель «Эффекты»: ${sfxBlocks.length} блока, заголовки, кнопка добавления выключена без сервиса, нет горизонтального скролла`);
+
   // 5. Каталог: список, миниатюры, подвкладки
   await page.click('#topTabs button[data-tab="catalog"]');
   await page.waitForFunction(() => document.querySelectorAll('#catalogList img').length > 0, { timeout: 10000 });

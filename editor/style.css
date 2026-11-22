@@ -73,6 +73,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: va
 .voice-file { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--font-xs); color: var(--muted); overflow-wrap: anywhere; }
 .voice-block audio { width: 100%; max-width: 100%; }
 .voice-block > .bar { margin-top: var(--space-2); }
+.sfx-block { display: flex; flex-direction: column; gap: var(--space-2); cursor: default; border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2); }
+.sfx-block summary, .advanced summary { cursor: pointer; font-size: var(--font-sm); color: var(--muted); }
+.sfx-block summary:hover, .advanced summary:hover { color: var(--text); }
+.sfx-block summary::marker, .advanced summary::marker { color: var(--accent); }
+.sfx-row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.sfx-row .msg { margin: 0 0 var(--space-2) 0; }
+.sfx-block audio { width: 100%; max-width: 100%; }
 .voicemusic, .voicesubs { display: flex; flex-direction: column; gap: var(--space-2); }
 .splicepreview { background: var(--stage); border-radius: var(--radius); padding: var(--space-2); display: flex; justify-content: center; }
 .splicepreview canvas, #catalogPreview { max-width: 100%; height: auto; }
