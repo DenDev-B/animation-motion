@@ -301,6 +301,12 @@ export const PROJECT_MUSIC_SPEC: readonly FieldSpec[] = [
 
 export const SUBTITLE_POSITIONS = ['bottom', 'center', 'top'] as const;
 
+export const PROJECT_SFX_SPEC: readonly FieldSpec[] = [
+  { name: 'file', type: 'string', description: `Путь к файлу эффекта относительно папки audio/ в корне репозитория; те же расширения и правила, что у voice.file (${AUDIO_EXTENSIONS.join(', ')}).` },
+  { name: 'at', type: 'number', min: 0, description: `Секунды от начала сцены, когда звучит эффект; >= 0.` },
+  { name: 'gain', type: 'number', min: 0, max: 2, default: 1, description: `Громкость эффекта, 0..2.` },
+];
+
 export const PROJECT_SUBTITLES_SPEC: readonly FieldSpec[] = [
   { name: 'enabled', type: 'bool', default: true, description: 'Показывать субтитры; по умолчанию true, если поле subtitles есть.' },
   { name: 'maxWords', type: 'int', min: 1, max: 6, default: 3, description: 'Максимум слов в одной реплике.' },

@@ -20,6 +20,8 @@ export interface AudioInputItem extends AudioPlanItem {
   durationSec: number;
   /** Только для музыки: приглушать под голосом. */
   duck?: boolean;
+  /** Только для sfx: не приглушается и не приглушает музыку. */
+  sfx?: boolean;
 }
 
 export interface FfmpegAudioOptions {
@@ -46,6 +48,7 @@ const num = (value: number) => String(Math.round(value * 1000) / 1000);
 export function isAudioItemAudible(item: AudioInputItem, totalSec: number): boolean {
   // музыка повторяется до конца дорожки, поэтому её слышно при любом смещении окна
   if (item.kind === 'music') return Math.max(0, item.startSec) < totalSec;
+  // sfx и голос: отрывок файла должен пересекаться с окном
   const skip = Math.max(0, -item.startSec);
   return item.durationSec - skip > 0 && Math.max(0, item.startSec) < totalSec;
 }
@@ -61,6 +64,11 @@ function voiceChain(item: AudioInputItem, totalSec: number): string[] {
   chain.push(`afade=t=in:st=0:d=${FADE_SEC}`, `afade=t=out:st=${num(Math.max(0, length - FADE_SEC))}:d=${FADE_SEC}`);
   chain.push(`volume=${num(item.gain)}`, `adelay=delays=${Math.round(playStart * 1000)}:all=1`);
   return chain;
+}
+
+// Звуковой эффект: как голос, но без sidechain-приглушения и без приглушения музыки — просто в общую шину.
+function sfxChain(item: AudioInputItem, totalSec: number): string[] {
+  return voiceChain(item, totalSec);
 }
 
 // Музыка идёт от нуля ролика и повторяется, если короче; в окне куска сдвигается на его старт,
@@ -96,6 +104,7 @@ export function buildAudioFilter(items: AudioInputItem[], totalSec: number, gain
 function audioGraph(items: AudioInputItem[], totalSec: number, master: string, firstInputStream: number): string {
   const graph: string[] = [];
   const voiceLabels: string[] = [];
+  const sfxLabels: string[] = [];
   const musicLabels: { label: string; duck: boolean }[] = [];
   items.forEach((item, index) => {
     const source = `${index + firstInputStream}:a`;
@@ -103,6 +112,12 @@ function audioGraph(items: AudioInputItem[], totalSec: number, master: string, f
       const label = `mu${index}`;
       graph.push(`[${source}]${musicChain(item, totalSec).join(',')}[${label}]`);
       musicLabels.push({ label, duck: item.duck !== false });
+      return;
+    }
+    if (item.kind === 'sfx') {
+      const label = `sfx${index}`;
+      graph.push(`[${source}]${sfxChain(item, totalSec).join(',')}[${label}]`);
+      sfxLabels.push(label);
       return;
     }
     const label = `vo${index}`;
@@ -131,6 +146,8 @@ function audioGraph(items: AudioInputItem[], totalSec: number, master: string, f
     if (music) mixLabels.push(music.label);
     if (voiceBus) mixLabels.push(voiceBus);
   }
+  // sfx в общую шину вместе с голосом и музыкой, не участвует в приглушении
+  for (const label of sfxLabels) mixLabels.push(label);
   if (mixLabels.length > 1) {
     graph.push(`${mixLabels.map((label) => `[${label}]`).join('')}amix=inputs=${mixLabels.length}:normalize=0:duration=longest,${master}[aout]`);
   } else if (mixLabels.length === 1) {

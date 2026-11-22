@@ -71,7 +71,8 @@ JSON-сцена (`scenes/*.json`) + каталог (`catalog/*.json`) → `rende
 - Путь B (основной): `tools/export.ts` — `engine.renderFrame` + `@napi-rs/canvas`, сырые RGBA в stdin ffmpeg (`-f rawvideo -pix_fmt rgba`), кодирование `libx264 -pix_fmt yuv420p -preset veryfast -crf 18 -movflags +faststart`, один холст и один буфер на весь экспорт, бэкпрешер через `stdin.drain`. CLI: `npm run export -- --project project.json --format h|v` (также принимает сцену; `--size`, `--fps`, `--range`, `--out`). После записи ffprobe проверяет кодек, pix_fmt, размер, fps, число кадров и длительность.
 - Путь A (запасной): `tools/export-a.ts` — puppeteer-core + vite preview, `image2pipe(PNG)` в ffmpeg._MEDЛЕННЫЙ_ (~70–93 мс/кадр на этом железе).
 - Путь C (WebCodecs): не исследован (идея #1 в docs/IDEAS.md).
-- Звук (только MP4): `tools/ffmpeg-audio.ts` собирает `filter_complex` — голоса в шину, музыка под неё (sidechain ducking), файлы берёт из `project.audio`; `tools/audio-gain.ts` меряет громкость.
+- Звук (только MP4): `tools/ffmpeg-audio.ts` собирает `filter_complex` — голоса в шину, музыка под неё (sidechain ducking), sfx в общую шину без приглушения, файлы берёт из `project.audio` и `scenes[].sfx`; `tools/audio-gain.ts` меряет громкость.
+- **SFX.** `engine/audio-plan.ts` — `AudioItemKind` включает `'sfx'`: startSec = начало сцены + at − окно. `tools/sfx-gen.ts` (`npm run sfx:gen`) генерирует детерминированные WAV в `audio/sfx/` (click, whoosh, hit, ding, pop, rise) без новых зависимостей.
 - Громкость мастер-шины выравнивается по измерению, а не однопроходным `loudnorm`: проход 1 (только звук, без рендера кадров) печатает интегральную громкость «живой» части дорожки, основной проход доводит её до −14 LUFS усилением `volume` в пределах ±20 дБ и ставит ограничитель пиков `alimiter` (≈ −1.5 dBTP). Пустую дорожку нормализация пропускается.
 
 ## Что реально есть в коде (факты, без выдумок)

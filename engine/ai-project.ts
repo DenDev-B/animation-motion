@@ -181,6 +181,7 @@ export function buildProjectPrompt(opts: ProjectPromptOptions): string {
     'Каждую такую модель добавь в meta проекта: "meta": {"suggestions": [{"id": "dog", "description": "что это за модель", "view": "side", "sizeM": 0.6}]} (id латиницей через дефис). Если всё есть в каталоге, meta не нужен.',
     ...QUALITY_SECTION,
     ...(opts.voice !== false ? voiceSection() : []),
+    ...sfxSection(),
     '## Жёсткие правила',
     responseRule,
     '- В каждой сцене: kind "sky" (фон), фон по смыслу (mountains, hills, skyline, cloud, stars, rain, snow), 1..3 смысловых объекта, лёгкое движение камеры. Не перегружай: до 25 объектов в сцене.',
@@ -206,6 +207,14 @@ function voiceSection(): string[] {
   return [
     '## Озвучка сцены (voice.text)',
     'voice.text — дикторский текст сцены (по желанию, одно-два предложения). Длительность сцены scene.duration должна быть не меньше времени чтения текста плюс 0.4 с запаса. Не придумывай voice.file: файл озвучки ставит команда npm run tts после создания проекта.',
+  ];
+}
+
+/** Блок про звуковые эффекты (sfx): короткие звуки на таймлайне сцены. */
+function sfxSection(): string[] {
+  return [
+    '## Звуковые эффекты (sfx)',
+    'sfx — массив коротких звуков на таймлайне сцены: {"file": "sfx/click.wav", "at": 0.5, "gain": 1}. file — путь к файлу в audio/sfx/ (доступно: sfx/click.wav, sfx/whoosh.wav, sfx/hit.wav, sfx/ding.wav, sfx/pop.wav, sfx/rise.wav). at — секунды от начала сцены, >= 0. gain — громкость 0..2 (по умолчанию 1). Эффекты ставьте на переходах и акцентах, не чаще одного на 1–2 секунды. Не выдумывайте несуществующие файлы: если файла нет в списке выше, эффекта не должно быть.',
   ];
 }
 
@@ -339,19 +348,44 @@ export function validateProjectReply(json: unknown, opts: ValidateOpts = {}): Pr
         warnings.push({ path: `${base}.scene.duration`, message: `voice.text не укладывается в ${duration} с (нужно ~${need.toFixed(2)} с): duration увеличен до ${fixed} с` });
       }
     }
-    if (typeof voice.file === 'string' && voice.file) {
-      if (!audioFiles.has(voice.file)) {
-        const fileName = voice.file;
-        delete (voice as Record<string, unknown>).file;
-        if (!voice.text || typeof voice.text !== 'string' || !voice.text.trim()) {
-          delete e.voice;
-          warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts); поле voice убрано, текста нет` });
-        } else {
-          warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts)` });
+      if (typeof voice.file === 'string' && voice.file) {
+        if (!audioFiles.has(voice.file)) {
+          const fileName = voice.file;
+          delete (voice as Record<string, unknown>).file;
+          if (!voice.text || typeof voice.text !== 'string' || !voice.text.trim()) {
+            delete e.voice;
+            warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts); поле voice убрано, текста нет` });
+          } else {
+            warnings.push({ path: `${base}.voice.file`, message: `голосовой файл "${fileName}" не найден в audio/ — убрано (озвучку ставит npm run tts)` });
+          }
         }
       }
-    }
-  });
+      // sfx: только известные файлы из audio/sfx/, at не за гранью сцены
+      const rawSfx = e.sfx;
+      if (Array.isArray(rawSfx) && rawSfx.length > 0) {
+        const knownSfx = new Set(['click', 'whoosh', 'hit', 'ding', 'pop', 'rise'].map((name) => `sfx/${name}.wav`));
+        const sceneDuration = typeof scene.duration === 'number' && Number.isFinite(scene.duration) ? scene.duration : undefined;
+        const kept: unknown[] = [];
+        let effIndex = 0;
+        for (const eff of rawSfx) {
+          if (!eff || typeof eff !== 'object' || Array.isArray(eff)) continue;
+          const f = eff as Record<string, unknown>;
+          const file = typeof f.file === 'string' ? f.file : undefined;
+          if (file && knownSfx.has(file)) {
+            const atVal = typeof f.at === 'number' ? f.at : undefined;
+            if (sceneDuration !== undefined && atVal !== undefined && Number.isFinite(atVal) && atVal > sceneDuration) {
+              f.at = sceneDuration;
+              warnings.push({ path: `${base}.sfx[${effIndex}].at`, message: `эффект "${file}" на ${atVal.toFixed(2)} с выходит за сцену (duration ${sceneDuration.toFixed(2)} с): приведён к концу сцены` });
+            }
+            kept.push(f);
+          } else if (file) {
+            warnings.push({ path: `${base}.sfx[${effIndex}].file`, message: `звуковой файл "${file}" не в наборе sfx/ (click, whoosh, hit, ding, pop, rise): эффект убран` });
+          }
+          effIndex++;
+        }
+        e.sfx = kept.length > 0 ? kept : undefined;
+      }
+    });
   const meta = json && typeof json === 'object' ? (json as Record<string, unknown>).meta : undefined;
   if (meta !== undefined) {
     if (!meta || typeof meta !== 'object' || Array.isArray(meta)) errors.push({ path: 'meta', message: 'meta должен быть объектом; пример: {"suggestions":[{"id":"dog","description":"собака сбоку"}]}' });

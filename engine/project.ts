@@ -35,6 +35,16 @@ export interface ProjectVoiceV1 {
   words?: VoiceWord[];
 }
 
+/** Звуковой эффект на таймлайне сцены: короткий звук (щелчок, удар, свист) в момент at от начала сцены. */
+export interface ProjectSfxV1 {
+  /** Путь относительно audio/ (те же правила, что у voice.file). */
+  file: string;
+  /** Секунды от начала сцены, >= 0. */
+  at: number;
+  /** 0..2, по умолчанию 1. */
+  gain?: number;
+}
+
 /** Музыка на весь ролик: повторяется, если короче ролика, и приглушается под голосом. */
 export interface ProjectMusicV1 {
   file: string;
@@ -54,6 +64,7 @@ export interface ProjectSceneV1 {
   scene: SceneV1;
   transition: Transition;
   voice?: ProjectVoiceV1;
+  sfx?: ProjectSfxV1[];
 }
 
 const HEX_RE = /^#(?:[\da-fA-F]{3}|[\da-fA-F]{6}|[\da-fA-F]{8})$/;
@@ -129,6 +140,21 @@ function validateVoice(value: unknown, path: string, err: (path: string, message
     else if (value.spokenText.length > VOICE_TEXT_MAX_CHARS) err(`${path}.spokenText`, `spokenText длиннее ${VOICE_TEXT_MAX_CHARS} символов (${value.spokenText.length}); сократите текст`);
   }
   if (value.words !== undefined) validateWords(value.words, path, err);
+}
+
+function validateSfx(value: unknown, path: string, err: (path: string, message: string) => void): void {
+  if (!Array.isArray(value)) { err(path, 'sfx должен быть массивом звуковых эффектов; пример: [{"file":"sfx/click.wav","at":0.5}]'); return; }
+  const maxSfx = 64;
+  if (value.length > maxSfx) err(path, `в сцене больше ${maxSfx} звуковых эффектов (${value.length}); сократите до ${maxSfx}`);
+  value.forEach((raw, index) => {
+    const base = `${path}[${index}]`;
+    if (!isRecord(raw)) { err(base, `эффект должен быть объектом; пример: {"file":"sfx/click.wav","at":0.5}`); return; }
+    if (typeof raw.file !== 'string' || !raw.file) err(`${base}.file`, 'file должен быть непустым путём к файлу эффекта; пример: "sfx/click.wav"');
+    else if (!isAudioFileRef(raw.file)) err(`${base}.file`, AUDIO_FILE_HINT);
+    if (raw.at === undefined) err(`${base}.at`, 'at должен быть числом >= 0 (секунды от начала сцены); пример: 0.5');
+    else if (!isFiniteNum(raw.at) || raw.at < 0) err(`${base}.at`, 'at должен быть конечным числом >= 0; пример: 0.5');
+    if (raw.gain !== undefined && (!isFiniteNum(raw.gain) || raw.gain < 0 || raw.gain > 2)) err(`${base}.gain`, 'gain должен быть числом от 0 до 2; пример: 1');
+  });
 }
 
 function validateAudio(value: unknown, err: (path: string, message: string) => void): void {
@@ -217,6 +243,7 @@ export function validateProject(json: unknown, opts: ValidateOpts = {}): { ok: b
       const sceneDuration = isRecord(entry.scene) && isFiniteNum(entry.scene.duration) ? entry.scene.duration : undefined;
       validateTransition(entry.transition, index, sceneDuration, previousDuration, `${base}.transition`, err);
       if (entry.voice !== undefined) validateVoice(entry.voice, `${base}.voice`, err);
+      if (entry.sfx !== undefined) validateSfx(entry.sfx, `${base}.sfx`, err);
       if (sceneDuration !== undefined) previousDuration = sceneDuration;
     });
   }

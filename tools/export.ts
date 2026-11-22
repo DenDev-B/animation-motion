@@ -101,7 +101,7 @@ function prepareAudio(project: ProjectV1, fps: number, audioDir: string, mode: '
       durationSec = audioDurationSec(filePath);
       durations.set(filePath, durationSec);
     }
-    const input: AudioInputItem = { ...item, filePath, durationSec, duck: item.kind === 'music' ? duck : undefined };
+    const input: AudioInputItem = { ...item, filePath, durationSec, duck: item.kind === 'music' ? duck : undefined, sfx: item.kind === 'sfx' };
     if (!isAudioItemAudible(input, audioPlan.totalSec)) continue;
     if (item.kind === 'voice' && item.sceneIndex !== undefined) {
       const entry = project.scenes[item.sceneIndex];
@@ -109,6 +109,12 @@ function prepareAudio(project: ProjectV1, fps: number, audioDir: string, mode: '
       const sceneEnd = starts[item.sceneIndex] / fps + entry.scene.duration;
       if (end > sceneEnd + 1e-6) log(`ПРЕДУПРЕЖДЕНИЕ: голос сцены ${item.sceneIndex + 1} («${entry.name}») заканчивается на ${end.toFixed(2)} с, сцена — на ${sceneEnd.toFixed(2)} с: выходит за сцену на ${(end - sceneEnd).toFixed(2)} с, не обрезаем`);
       if (end > videoEnd + 1e-6) log(`ПРЕДУПРЕЖДЕНИЕ: голос сцены ${item.sceneIndex + 1} («${entry.name}») выходит за конец ролика (${videoEnd.toFixed(2)} с) на ${(end - videoEnd).toFixed(2)} с, обрезаем по концу ролика`);
+    }
+    if (item.kind === 'sfx' && item.sceneIndex !== undefined) {
+      const entry = project.scenes[item.sceneIndex];
+      const end = item.startSec + from + durationSec;
+      const sceneEnd = starts[item.sceneIndex] / fps + entry.scene.duration;
+      if (end > sceneEnd + 1e-6) log(`ПРЕДУПРЕЖДЕНИЕ: эффект сцены ${item.sceneIndex + 1} («${entry.name}») звучит до ${end.toFixed(2)} с, сцена — на ${sceneEnd.toFixed(2)} с: выходит за сцену на ${(end - sceneEnd).toFixed(2)} с`);
     }
     items.push(input);
   }

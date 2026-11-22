@@ -1,6 +1,6 @@
 import { validateScene, validateAsset, validateObject } from './validate.ts';
 export { validateProject, migrateProject, projectFrameCount, locateFrame, sceneStartFrames } from './project.ts';
-export type { ProjectV1, ProjectSceneV1, Transition, TransitionType, TransitionDir, LocatedScene, FrameLocation, ProjectVoiceV1, ProjectMusicV1, ProjectAudioV1, ProjectSubtitlesV1, SubtitlePosition, VoiceWord } from './project.ts';
+export type { ProjectV1, ProjectSceneV1, Transition, TransitionType, TransitionDir, LocatedScene, FrameLocation, ProjectVoiceV1, ProjectMusicV1, ProjectAudioV1, ProjectSubtitlesV1, ProjectSfxV1, SubtitlePosition, VoiceWord } from './project.ts';
 export { buildAudioPlan } from './audio-plan.ts';
 export type { AudioPlan, AudioPlanItem, AudioWindow } from './audio-plan.ts';
 export { buildSubtitleCues, activeCueAt, formatSrt, drawSubtitle, defaultSubtitleSize } from './subtitles.ts';

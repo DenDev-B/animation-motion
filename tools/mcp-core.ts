@@ -137,7 +137,7 @@ export function createCore(root: string, options: CoreOptions = {}) {
     return args;
   }
 
-  /** Аудиофайлы audio/ (включая tts/) — их можно ставить в voice.file и audio.music.file. */
+  /** Аудиофайлы audio/ (включая tts/ и sfx/) — sfx/* можно ставить в scenes[].sfx[].file. */
   function listAudio(): string[] {
     return listAudioFiles(audioDir);
   }

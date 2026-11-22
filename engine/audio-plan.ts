@@ -1,6 +1,6 @@
 import { projectFrameCount, sceneStartFrames, type ProjectV1 } from './project.ts';
 
-export type AudioItemKind = 'voice' | 'music';
+export type AudioItemKind = 'voice' | 'music' | 'sfx';
 
 export interface AudioPlanItem {
   kind: AudioItemKind;
@@ -37,6 +37,15 @@ export function buildAudioPlan(project: ProjectV1, window?: AudioWindow): AudioP
     const startSec = starts[sceneIndex] / project.fps + (voice.offset ?? 0) - from;
     if (startSec >= to - from) return;
     items.push({ kind: 'voice', file: voice.file, startSec, gain: voice.gain ?? 1, sceneIndex });
+    // звуковые эффекты сцены: start = начало сцены + at - окно
+    const sfx = entry.sfx;
+    if (Array.isArray(sfx)) {
+      for (const e of sfx) {
+        const startSec = starts[sceneIndex] / project.fps + e.at - from;
+        if (startSec >= to - from) continue;
+        items.push({ kind: 'sfx', file: e.file, startSec, gain: e.gain ?? 1, sceneIndex });
+      }
+    }
   });
   const music = project.audio?.music;
   if (music) items.push({ kind: 'music', file: music.file, startSec: -from, gain: music.gain ?? 0.25 });

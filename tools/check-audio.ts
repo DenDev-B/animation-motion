@@ -135,6 +135,8 @@ try {
     ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${VOICE_HZ}:duration=0.6:sample_rate=48000`, '-ac', '2', '-c:a', 'libmp3lame', path.join(audioDir, 'v1.mp3')], 'v1.mp3');
     ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${VOICE_HZ}:duration=1.0:sample_rate=48000`, '-ac', '1', '-c:a', 'pcm_s16le', path.join(audioDir, 'v2.wav')], 'v2.wav');
     ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${MUSIC_HZ}:duration=2.0:sample_rate=48000`, '-ac', '1', '-c:a', 'aac', path.join(audioDir, 'music.m4a')], 'music.m4a');
+    fs.mkdirSync(path.join(audioDir, 'sfx'), { recursive: true });
+    ffmpegTo(['-f', 'lavfi', '-i', `sine=frequency=${VOICE_HZ}:duration=0.3:sample_rate=48000`, '-ac', '1', '-c:a', 'pcm_s16le', path.join(audioDir, 'sfx', 'click.wav')], 'sfx/click.wav');
     const mp3 = ffprobeJson(path.join(audioDir, 'v1.mp3'), 'stream=codec_name,channels,sample_rate', 'a:0').streams[0];
     const m4a = ffprobeJson(path.join(audioDir, 'music.m4a'), 'stream=codec_name,channels,sample_rate', 'a:0').streams[0];
     const wav = ffprobeJson(path.join(audioDir, 'v2.wav'), 'stream=codec_name,channels,sample_rate', 'a:0').streams[0];
@@ -169,6 +171,35 @@ try {
     ok(clip312Heard === 'v2.wav,music.m4a', `окно 3..12 слышно: ${clip312Heard} (v1 лёг целиком до окна)`);
     ok(JSON.stringify(clip312) === JSON.stringify(buildAudioPlan(mix, { startSec: 3, endSec: 12 })), 'окно детерминировано: одинаковый вход даёт одинаковый план');
     ok(JSON.stringify(mix) === JSON.stringify(makeProject({ music: { gain: 0.5 } })), 'plan не меняет проект');
+
+    console.log('--- б1) sfx в плане звука (смещение по сцене, окно пробы, отрицательный старт) ---');
+    const sfxDurations = { 'v1.mp3': 0.6, 'v2.wav': 1.0, 'music.m4a': 2.0, 'sfx/click.wav': 0.3 };
+    const sfxProject = {
+      ...structuredClone(mix),
+      scenes: [
+        { ...mix.scenes[0], sfx: [{ file: 'sfx/click.wav', at: 0.5, gain: 1 }] },
+        { ...mix.scenes[1], sfx: [{ file: 'sfx/click.wav', at: 2.5 }] },
+      ],
+    } as any;
+    const sfxPlan = buildAudioPlan(sfxProject);
+    const sfxLaid = sfxPlan.items.filter((i) => i.kind === 'sfx').map((i) => `sfx:${f2(i.startSec)}`).join(' ');
+    ok(sfxLaid === 'sfx:0.50 sfx:4.70', `план sfx: ${sfxLaid}, ожидалось sfx:0.50 sfx:4.70`);
+    // окно 1..3: первый эффект за окном (отброшен), второй начинается на 4.7 за концом окна (отброшен)
+    const sfxClip = buildAudioPlan(sfxProject, { startSec: 1, endSec: 3 });
+    const sfxClipLaid = sfxClip.items.filter((i) => i.kind === 'sfx').map((i) => `sfx:${f2(i.startSec)}`).join(' ');
+    ok(sfxClipLaid === 'sfx:-0.50', `окно 1..3: первый эффект с отрицательным стартом (оставляется), второй за концом (отброшен): ${sfxClipLaid}`);
+    const sfxClipHeard = sfxClip.items.filter((i) => i.kind === 'sfx' && isAudioItemAudible({ ...i as any, filePath: path.join(audioDir, i.file), durationSec: sfxDurations[i.file as keyof typeof sfxDurations] }, sfxClip.totalSec)).map((i) => i.file).join(',');
+    ok(sfxClipHeard === '', `окно 1..3: эффекты не слышны`);
+    // окно 0..4: первый эффект на 0.5 (внутри), второй на 4.7 за концом (отброшен)
+    const sfxClip2 = buildAudioPlan(sfxProject, { startSec: 0, endSec: 4 });
+    const sfxClip2Laid = sfxClip2.items.filter((i) => i.kind === 'sfx').map((i) => `sfx:${f2(i.startSec)}`).join(' ');
+    ok(sfxClip2Laid === 'sfx:0.50', `окно 0..4: эффект внутри окна, второй за концом: ${sfxClip2Laid}`);
+    // фильтр со sfx вне sidechain: голос + sfx без музыки не содержат sidechaincompress
+    const voiceSfxProject = { ...structuredClone(sfxProject), audio: undefined } as any;
+    const voiceSfxPlan = buildAudioPlan(voiceSfxProject);
+    const graphVoiceSfx = buildAudioFilter(voiceSfxPlan.items.map((i, idx) => ({ ...i, filePath: path.join(audioDir, i.file), durationSec: sfxDurations[i.file as keyof typeof sfxDurations] ?? 0.3, duck: i.kind === 'music' ? true : undefined, sfx: i.kind === 'sfx' })), voiceSfxPlan.totalSec, null);
+    ok(!graphVoiceSfx.includes('sidechaincompress'), 'фильтр голос+sfx не содержит sidechaincompress (sfx не приглушает музыку)');
+    ok(graphVoiceSfx.includes('sfx0') || graphVoiceSfx.includes('sfx1'), 'фильтр содержит ветки sfx');
 
     console.log('--- в) валидатор звука ---');
     const badPath: Array<[string, string]> = [['../секрет.wav', 'родительский каталог'], ['/tmp/x.wav', 'абсолютный путь'], ['C:/audio/x.wav', 'буква диска'], ['voice\\s1.wav', 'обратный слэш'], ['s1.txt', 'чужое расширение']];

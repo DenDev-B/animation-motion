@@ -109,6 +109,31 @@ export function lintProject(project: ProjectV1, ctx: LintCtx = {}): { ok: boolea
       }
     }
 
+    // sfx rules
+    const sfx = entry.sfx;
+    if (Array.isArray(sfx) && sfx.length > 0) {
+      const sPath = `${base}.sfx`;
+      if (ctx.audioFiles !== undefined) {
+        for (let i = 0; i < sfx.length; i++) {
+          const e = sfx[i];
+          if (typeof e.file === 'string' && e.file.length > 0 && !audioFiles.has(e.file)) {
+            issues.push(issue('warn', 'sfx-file-missing', `${sPath}[${i}].file`, `аудиофайл эффекта «${e.file}» не найден в audio/: положите файл в audio/ или укажите существующий путь`));
+          }
+        }
+      }
+      if (duration !== undefined) {
+        for (let i = 0; i < sfx.length; i++) {
+          const e = sfx[i];
+          if (typeof e.at === 'number' && Number.isFinite(e.at) && e.at > duration) {
+            issues.push(issue('warn', 'sfx-after-scene', `${sPath}[${i}].at`, `эффект времени ${e.at.toFixed(2)} с начинается после конца сцены (duration ${duration.toFixed(2)} с): перенесите эффект внутрь сцены или увеличьте duration`));
+          }
+        }
+      }
+      if (sfx.length > 20) {
+        issues.push(issue('info', 'sfx-many', `${sPath}`, `в сцене много звуковых эффектов (${sfx.length}): проверьте, что они не перекрывают друг друга`));
+      }
+    }
+
     // transition-long (использует поля/хелперы из project.ts)
     const transition = entry.transition;
     const prevDuration = index > 0 ? project.scenes[index - 1].scene.duration : undefined;
