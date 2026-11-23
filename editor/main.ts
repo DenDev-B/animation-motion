@@ -10,7 +10,7 @@ import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
 import catalogIndexRaw from '../catalog/index.json';
 import type { CameraShot, CameraShotName, CatalogAsset, Palette } from '../engine/schema.ts';
-import { EditorHistory } from './history.ts';
+import { EditorHistory, shouldHandleUndoKey } from './history.ts';
 import { applyTargetJson, targetJson, validateTargetJson, type JsonScope, type JsonTarget } from './json-patch.ts';
 
 const cv = document.getElementById('cv') as HTMLCanvasElement | null;
@@ -1881,10 +1881,6 @@ function sceneSfxBlock(entry: ProjectSceneV1): HTMLElement {
 
     const row = document.createElement('div');
     row.className = 'sfx-row';
-    row.style.display = 'flex';
-    row.style.gap = 'var(--space-2)';
-    row.style.alignItems = 'center';
-    row.style.flexWrap = 'wrap';
 
     const fileLabelEl = document.createElement('label');
     fileLabelEl.className = 'f';
@@ -1931,7 +1927,6 @@ function sceneSfxBlock(entry: ProjectSceneV1): HTMLElement {
     at.type = 'number';
     at.min = '0';
     at.step = '0.1';
-    at.style.width = '72px';
     at.value = String(effect.at ?? 0);
     at.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaAt(entry.name));
     at.title = EDITOR_STRINGS.sfx.atHint;
@@ -1968,7 +1963,6 @@ function sceneSfxBlock(entry: ProjectSceneV1): HTMLElement {
     gain.min = '0';
     gain.max = '2';
     gain.step = '0.1';
-    gain.style.width = '72px';
     gain.value = String(effect.gain ?? 1);
     gain.setAttribute('aria-label', EDITOR_STRINGS.sfx.ariaGain(entry.name));
     gain.addEventListener('change', () => {
@@ -2015,10 +2009,7 @@ function sceneSfxBlock(entry: ProjectSceneV1): HTMLElement {
   }
 
   const addBar = document.createElement('div');
-  addBar.style.display = 'flex';
-  addBar.style.gap = 'var(--space-2)';
-  addBar.style.alignItems = 'center';
-  addBar.style.flexWrap = 'wrap';
+  addBar.className = 'sfx-addbar';
   const add = document.createElement('button');
   add.type = 'button';
   add.className = 'sfx-add primary';
@@ -2749,10 +2740,10 @@ function undoChange() { const value = history.undo(); if (value) { restoreProjec
 function redoChange() { const value = history.redo(); if (value) { restoreProject(value); hasUnsavedChanges = true; updateSavedLabel(); saveAutosave(); } }
 
 document.addEventListener('keydown', (event) => {
-  const target = event.target as HTMLElement | null;
-  if (target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName ?? '')) return;
-  if (event.ctrlKey && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redoChange() : undoChange(); }
-  else if (event.ctrlKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redoChange(); }
+  const action = shouldHandleUndoKey({ key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, shiftKey: event.shiftKey, target: event.target as HTMLElement | null });
+  if (!action) return;
+  event.preventDefault();
+  if (action === 'redo') redoChange(); else undoChange();
 });
 window.addEventListener('beforeunload', (event) => { if (hasUnsavedChanges) { event.preventDefault(); event.returnValue = ''; } });
 
@@ -3168,8 +3159,12 @@ if (resetBtn) resetBtn.onclick = () => {
   });
 };
 
-document.getElementById('undo')?.addEventListener('click', undoChange);
-document.getElementById('redo')?.addEventListener('click', redoChange);
+const undoButton = document.getElementById('undo');
+const redoButton = document.getElementById('redo');
+undoButton?.addEventListener('click', undoChange);
+redoButton?.addEventListener('click', redoChange);
+if (undoButton) undoButton.title = EDITOR_STRINGS.common.undoTitle;
+if (redoButton) redoButton.title = EDITOR_STRINGS.common.redoTitle;
 
 // ---------- панель «Образ сцены» ----------
 const lookMoodLabels: Record<StyleMood, string> = {

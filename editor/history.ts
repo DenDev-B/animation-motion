@@ -1,5 +1,22 @@
 import type { ProjectV1 } from '../engine/project.ts';
 
+/** Что делает Ctrl/Cmd+Z, Ctrl+Y, Ctrl/Cmd+Shift+Z, если фокус не в поле ввода. null — клавиша не наша. */
+export type UndoKeyAction = 'undo' | 'redo';
+
+/** Горячие клавиши отмены/повтора: работают только вне полей ввода (у них своя отмена текста).
+ * target — event.target браузера; для проверок подходит любой объект с tagName/isContentEditable. */
+export function shouldHandleUndoKey(event: { key: string; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; target?: { tagName?: string; isContentEditable?: boolean } | null }): UndoKeyAction | null {
+  const target = event.target;
+  if (target?.isContentEditable) return null;
+  const tag = target?.tagName ?? '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return null;
+  if (!(event.ctrlKey || event.metaKey)) return null;
+  const key = event.key.toLowerCase();
+  if (key === 'z') return event.shiftKey ? 'redo' : 'undo';
+  if (key === 'y') return 'redo';
+  return null;
+}
+
 export class EditorHistory {
   private undoStack: ProjectV1[] = [];
   private redoStack: ProjectV1[] = [];

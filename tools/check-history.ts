@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { EditorHistory } from '../editor/history.ts';
+import { EditorHistory, shouldHandleUndoKey } from '../editor/history.ts';
 import { applyTargetJson, targetJson, validateTargetJson, type JsonTarget } from '../editor/json-patch.ts';
 import type { ProjectV1 } from '../engine/project.ts';
 
@@ -63,4 +63,19 @@ editedProject.title = 'Проект после ИИ';
 assert.equal(validateTargetJson(demo, projectTarget, editedProject, catalogIds).ok, true);
 assert.equal(applyTargetJson(demo, projectTarget, editedProject).title, 'Проект после ИИ');
 assert.notEqual(demo.title, 'Проект после ИИ');
+
+// --- горячие клавиши отмены/повтора (shouldHandleUndoKey) ---
+const key = (over: Partial<Parameters<typeof shouldHandleUndoKey>[0]>) => ({ key: 'z', ...over });
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, target: { tagName: 'DIV' } })), 'undo', 'Ctrl+Z вне поля — отмена');
+assert.equal(shouldHandleUndoKey(key({ metaKey: true, target: { tagName: 'DIV' } })), 'undo', 'Cmd+Z вне поля — отмена');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, shiftKey: true, target: { tagName: 'DIV' } })), 'redo', 'Ctrl+Shift+Z — повтор');
+assert.equal(shouldHandleUndoKey(key({ metaKey: true, shiftKey: true, target: { tagName: 'DIV' } })), 'redo', 'Cmd+Shift+Z — повтор');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, key: 'y', target: { tagName: 'DIV' } })), 'redo', 'Ctrl+Y — повтор');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, target: { tagName: 'INPUT' } })), null, 'Ctrl+Z в input не перехватывается');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, target: { tagName: 'TEXTAREA' } })), null, 'Ctrl+Z в textarea не перехватывается');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, target: { tagName: 'SELECT' } })), null, 'Ctrl+Z в select не перехватывается');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, target: { tagName: 'DIV', isContentEditable: true } })), null, 'Ctrl+Z в contenteditable не перехватывается');
+assert.equal(shouldHandleUndoKey(key({ target: { tagName: 'DIV' } })), null, 'без Ctrl/Cmd — не наша клавиша');
+assert.equal(shouldHandleUndoKey(key({ ctrlKey: true, key: 'a', target: { tagName: 'DIV' } })), null, 'Ctrl+A — не наша клавиша');
+
 console.log('check:history PASS');

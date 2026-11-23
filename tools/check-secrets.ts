@@ -27,8 +27,23 @@ for (const name of ['.env.local', '.env', '.env.production', '.env.local.bak']) 
   }
 }
 
-// Gemini: AIza + 35 символов; Groq: gsk_ + 20+ символов. В образце ключи пустые.
-const PATTERNS: Array<[string, RegExp]> = [['ключ Gemini', /AIza[0-9A-Za-z_-]{35}/], ['ключ Groq', /gsk_[0-9A-Za-z]{20,}/]];
+// Gemini: AIza + 35 символов или AQ. + 30+ символов; Groq: gsk_ + 20+ символов. В образце ключи пустые.
+const PATTERNS: Array<[string, RegExp]> = [
+  ['ключ Gemini', /AIza[0-9A-Za-z_-]{35}/],
+  ['ключ Gemini (AQ.)', /AQ\.[0-9A-Za-z_-]{30,}/],
+  ['ключ Groq', /gsk_[0-9A-Za-z]{20,}/],
+];
+
+// Самопроверка шаблонов: выдуманные строки собираются из частей, чтобы исходник не совпал с шаблоном.
+const fakeAq = 'AQ.' + 'x'.repeat(40);
+const selfTest: Array<[string, boolean, boolean]> = [
+  ['ключ Gemini (AQ.)', PATTERNS[1][1].test(fakeAq), true],
+  ['обычный текст', PATTERNS[1][1].test('обычный текст без ключа'), false],
+  ['короткое AQ.1', PATTERNS[1][1].test('AQ.1'), false],
+];
+for (const [label, got, want] of selfTest) {
+  if (got !== want) failures.push(`самопроверка шаблона не пройдена: ${label} (получено ${got}, ожидалось ${want})`);
+}
 for (const file of tracked) {
   const full = path.join(root, file);
   let text: string;

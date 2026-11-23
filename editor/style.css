@@ -79,6 +79,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: va
 .sfx-block summary::marker, .advanced summary::marker { color: var(--accent); }
 .sfx-row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .sfx-row .msg { margin: 0 0 var(--space-2) 0; }
+.sfx-row input[type="number"] { width: 72px; }
+.sfx-addbar { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .sfx-block audio { width: 100%; max-width: 100%; }
 .voicemusic, .voicesubs { display: flex; flex-direction: column; gap: var(--space-2); }
 .splicepreview { background: var(--stage); border-radius: var(--radius); padding: var(--space-2); display: flex; justify-content: center; }

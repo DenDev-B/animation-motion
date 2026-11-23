@@ -10,6 +10,8 @@ export const EDITOR_STRINGS = {
     saved: 'Сохранено',
     unsaved: 'Есть несохранённые изменения',
     applyUndo: 'Применено. Отмена — Ctrl+Z.',
+    undoTitle: 'Отменить (Ctrl+Z / Cmd+Z)',
+    redoTitle: 'Повторить (Ctrl+Y / Ctrl+Shift+Z / Cmd+Shift+Z)',
     objectNotSelected: 'Объект не выбран.',
     enterIdea: 'Введите идею.',
     copyNoBuffer: 'Буфер недоступен. Покажите промт в поле ниже.',
