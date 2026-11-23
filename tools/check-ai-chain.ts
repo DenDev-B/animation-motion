@@ -38,6 +38,18 @@ async function main() {
   const okQ = makeFetch(() => groq('ответ'));
   ok(await callProvider(Q, 'p', okQ.fn) === 'ответ', 'Groq: текст ответа извлечён');
   ok(okQ.calls[0].headers.authorization === 'Bearer KEY_GROQ_456' && JSON.parse(okQ.calls[0].body).model === 'groq-test', 'Groq: ключ в Authorization, модель в теле');
+  ok((JSON.parse(okQ.calls[0].body) as { max_tokens: number }).max_tokens === 12000, 'Groq: max_tokens 12000 по умолчанию');
+  ok(!('reasoning_effort' in JSON.parse(okQ.calls[0].body)), 'Groq не-gpt-oss: reasoning_effort не отправляется');
+  const okG2 = makeFetch(() => gemini('привет'));
+  await callProvider(G, 'p', okG2.fn);
+  ok((JSON.parse(okG2.calls[0].body) as { generationConfig: { maxOutputTokens: number } }).generationConfig.maxOutputTokens === 16384, 'Gemini: maxOutputTokens 16384 по умолчанию');
+  const qOss: ProviderSpec = { id: 'groq', apiKey: 'KEY_GROQ_456', model: 'openai/gpt-oss-120b' };
+  const okQOss = makeFetch(() => groq('ответ'));
+  await callProvider(qOss, 'p', okQOss.fn);
+  ok((JSON.parse(okQOss.calls[0].body) as { reasoning_effort: string }).reasoning_effort === 'low', 'Groq gpt-oss: reasoning_effort low по умолчанию');
+  const okQOssHigh = makeFetch(() => groq('ответ'));
+  await callProvider({ ...qOss, reasoningEffort: 'high' }, 'p', okQOssHigh.fn);
+  ok((JSON.parse(okQOssHigh.calls[0].body) as { reasoning_effort: string }).reasoning_effort === 'high', 'Groq gpt-oss: reasoning_effort high из настроек');
   const kinds: Array<[string, ProviderSpec, Mock | Error, string]> = [
     ['Gemini 429 → quota', G, reply(429, { error: { message: 'Quota exceeded' } }), 'quota'],
     ['Gemini 400 API key not valid → key', G, reply(400, { error: { message: 'API key not valid. Please pass a valid API key.' } }), 'key'],
@@ -86,6 +98,10 @@ async function main() {
   r = await generateWithChain({ prompt: 'p', providers: [G, Q], call: callWith(m.fn), check: goodCheck });
   ok(!r.ok && r.attempts.length === 2 && r.message.includes(MANUAL_HINT) && r.message.includes('Gemini') && r.message.includes('Groq'), 'оба не справились → сообщение про ручной путь');
   ok(!r.ok && !r.message.includes('KEY_'), 'в сообщении нет ключей');
+
+  m = dispatch({ gemini: () => reply(503, { error: { message: 'down' } }), groq: () => groq('{', 'length') });
+  r = await generateWithChain({ prompt: 'p', providers: [G, Q], call: callWith(m.fn), check: goodCheck });
+  ok(!r.ok && r.message.includes('GROQ_MAX_TOKENS') && r.message.includes('уменьшить число сцен'), 'обрезка по длине: подсказка про число сцен и GROQ_MAX_TOKENS в итоговом сообщении');
 
   r = await generateWithChain({ prompt: 'p', providers: [], call: noop, check: goodCheck });
   ok(!r.ok && r.message.includes('.env.local') && r.message.includes(MANUAL_HINT), 'нет ключей → сообщение про .env.local и ручной путь');
@@ -141,6 +157,44 @@ async function main() {
     ok((await call('POST', 'ai/generate', { prompt: 'x' }, { host: 'evil.example' })).status === 403, 'generate: чужой Host → 403');
     ok((await call('GET', 'ai/generate')).status === 405, 'generate: GET → 405');
     ok(loadProviders(tmp, {}).length === 2, 'loadProviders читает .env.local');
+
+    // --- настройки лимитов и рассуждения ---
+    const groqFrom = (extra: NodeJS.ProcessEnv): ProviderSpec => {
+      const spec = loadProviders(tmp, extra).find((s) => s.id === 'groq');
+      if (!spec) throw new Error('в тесте не найден провайдер Groq');
+      return spec;
+    };
+    const geminiFrom = (extra: NodeJS.ProcessEnv): ProviderSpec => {
+      const spec = loadProviders(tmp, extra).find((s) => s.id === 'gemini');
+      if (!spec) throw new Error('в тесте не найден провайдер Gemini');
+      return spec;
+    };
+    const s1 = groqFrom({ GROQ_MAX_TOKENS: '20000' });
+    ok(s1.maxTokens === 20000, 'loadProviders: GROQ_MAX_TOKENS применяется');
+    let mm = makeFetch(() => groq('ответ'));
+    await callProvider(s1, 'p', mm.fn);
+    ok((JSON.parse(mm.calls[0].body) as { max_tokens: number }).max_tokens === 20000, 'Groq: max_tokens из настроек в теле запроса');
+    const s2 = groqFrom({ GROQ_MAX_TOKENS: 'abc' });
+    ok(s2.maxTokens === undefined, 'loadProviders: мусорный GROQ_MAX_TOKENS игнорируется');
+    mm = makeFetch(() => groq('ответ'));
+    await callProvider(s2, 'p', mm.fn);
+    ok((JSON.parse(mm.calls[0].body) as { max_tokens: number }).max_tokens === 12000, 'Groq: мусорный лимит → значение по умолчанию 12000');
+    ok(groqFrom({ GROQ_MAX_TOKENS: '999' }).maxTokens === undefined && groqFrom({ GROQ_MAX_TOKENS: '65537' }).maxTokens === undefined, 'loadProviders: GROQ_MAX_TOKENS вне 1000–65536 игнорируется');
+    const s4 = groqFrom({ GROQ_MODEL: 'openai/gpt-oss-120b', GROQ_REASONING_EFFORT: 'medium' });
+    ok(s4.reasoningEffort === 'medium', 'loadProviders: GROQ_REASONING_EFFORT применяется');
+    mm = makeFetch(() => groq('ответ'));
+    await callProvider(s4, 'p', mm.fn);
+    ok((JSON.parse(mm.calls[0].body) as { reasoning_effort: string }).reasoning_effort === 'medium', 'Groq gpt-oss: reasoning_effort из настроек в теле запроса');
+    const s5 = groqFrom({ GROQ_REASONING_EFFORT: 'max' });
+    ok(s5.reasoningEffort === undefined, 'loadProviders: мусорный GROQ_REASONING_EFFORT игнорируется');
+    const m5 = makeFetch(() => groq('ответ'));
+    await callProvider({ ...s5, model: 'openai/gpt-oss-120b' }, 'p', m5.fn);
+    ok((JSON.parse(m5.calls[0].body) as { reasoning_effort: string }).reasoning_effort === 'low', 'Groq gpt-oss: мусорное усилие → low');
+    const s6 = geminiFrom({ GEMINI_MAX_TOKENS: '20000' });
+    const m6 = makeFetch(() => gemini('привет'));
+    await callProvider(s6, 'p', m6.fn);
+    ok((JSON.parse(m6.calls[0].body) as { generationConfig: { maxOutputTokens: number } }).generationConfig.maxOutputTokens === 20000, 'Gemini: maxOutputTokens из настроек');
+    ok(geminiFrom({ GEMINI_MAX_TOKENS: '12x' }).maxTokens === undefined, 'loadProviders: мусорный GEMINI_MAX_TOKENS игнорируется');
   } finally {
     server.close(); api.close(); fs.rmSync(tmp, { recursive: true, force: true });
   }

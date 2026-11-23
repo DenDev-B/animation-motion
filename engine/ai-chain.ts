@@ -6,9 +6,12 @@ export type ProviderId = 'gemini' | 'groq';
 export const PROVIDER_ORDER: readonly ProviderId[] = ['gemini', 'groq'];
 export const PROVIDER_LABELS: Record<ProviderId, string> = { gemini: 'Gemini', groq: 'Groq' };
 /** Названия моделей у бесплатных тарифов меняются: по умолчанию стоят эти, а менять их можно в .env.local. */
-export const DEFAULT_MODELS: Record<ProviderId, string> = { gemini: 'gemini-2.5-flash', groq: 'llama-3.3-70b-versatile' };
+export const DEFAULT_MODELS: Record<ProviderId, string> = { gemini: 'gemini-3.8-flash', groq: 'openai/gpt-oss-120b' };
 
-export interface ProviderSpec { id: ProviderId; apiKey: string; model: string }
+export type ReasoningEffort = 'low' | 'medium' | 'high';
+
+/** maxTokens и reasoningEffort необязательны: задаются в .env.local, иначе берутся значения по умолчанию. */
+export interface ProviderSpec { id: ProviderId; apiKey: string; model: string; maxTokens?: number; reasoningEffort?: ReasoningEffort }
 
 export type FailKind = 'key' | 'quota' | 'too_large' | 'model' | 'blocked' | 'request' | 'server' | 'network' | 'timeout' | 'empty' | 'truncated' | 'invalid';
 
@@ -26,7 +29,7 @@ export type FetchFn = (url: string, init: { method: string; headers: Record<stri
 
 export const REQUEST_TIMEOUT_MS = 120_000;
 /** У Groq на бесплатном тарифе потолок 6–12 тыс. токенов в минуту, и запрошенный размер ответа в него входит: просим меньше. */
-const MAX_TOKENS: Record<ProviderId, number> = { gemini: 16384, groq: 5000 };
+const MAX_TOKENS: Record<ProviderId, number> = { gemini: 16384, groq: 12000 };
 
 const KIND_TEXT: Record<FailKind, string> = {
   key: 'ключ не принят (проверьте ключ в .env.local)',
@@ -39,7 +42,7 @@ const KIND_TEXT: Record<FailKind, string> = {
   network: 'нет связи с провайдером',
   timeout: 'провайдер не ответил вовремя',
   empty: 'провайдер вернул пустой ответ',
-  truncated: 'ответ обрезан по длине',
+  truncated: 'ответ обрезан по длине (можно уменьшить число сцен или поднять GROQ_MAX_TOKENS в .env.local)',
   invalid: 'ответ не прошёл проверку проекта',
 };
 
@@ -124,9 +127,13 @@ export async function callProvider(spec: ProviderSpec, prompt: string, fetchFn: 
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (isGemini) headers['x-goog-api-key'] = spec.apiKey;
   else headers.authorization = `Bearer ${spec.apiKey}`;
+  const maxTokens = spec.maxTokens ?? MAX_TOKENS[spec.id];
+  const groqBody: Record<string, unknown> = { model: spec.model, messages: [{ role: 'user', content: prompt }], temperature: 0.6, max_tokens: maxTokens };
+  // Рассуждение у openai/gpt-oss расходует тот же лимит токенов: просим минимальное, если в настройках не задано другое.
+  if (spec.model.startsWith('openai/gpt-oss')) groqBody.reasoning_effort = spec.reasoningEffort ?? 'low';
   const body = isGemini
-    ? { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: MAX_TOKENS.gemini } }
-    : { model: spec.model, messages: [{ role: 'user', content: prompt }], temperature: 0.6, max_tokens: MAX_TOKENS.groq };
+    ? { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.6, maxOutputTokens: maxTokens } }
+    : groqBody;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response: Awaited<ReturnType<FetchFn>>;
