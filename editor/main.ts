@@ -5,6 +5,7 @@ import { buildBriefPrompt, extractBrief, validateBrief } from '../engine/ai-brie
 import { STYLE_MOODS, STYLE_PRESETS, type StyleMood } from '../engine/styles.ts';
 import { SAFE_ZONES } from '../engine/spec.ts';
 import { EDITOR_STRINGS } from './strings.ts';
+import { setLang, getLang } from './i18n/index.ts';
 import { filterCatalog, sizeTextM, allProjectIds, uniqueId, buildCatalogAssetObject, buildSvgModel, checkModelJsonText, buildPreviewScene, formatModelJson, previewAssetFor, catalogWithDraft, type CheckModelJsonResult, collectProjectCredits, formatCredits, type ImportResult } from './catalog.ts';
 import demoScene from '../scenes/whale-demo.json';
 import demoProject from '../projects/whale-demo.project.json';
@@ -44,6 +45,9 @@ const aiWarnings = document.getElementById('aiWarnings') as HTMLUListElement | n
 const templates = document.getElementById('templates') as HTMLElement | null;
 const topTabs = document.getElementById('topTabs') as HTMLElement | null;
 const appEl = document.getElementById('app') as HTMLElement | null;
+const langSwitch = document.getElementById('langSwitch') as HTMLElement | null;
+const langEn = document.getElementById('langEn') as HTMLButtonElement | null;
+const langRu = document.getElementById('langRu') as HTMLButtonElement | null;
 const stageCol = document.getElementById('stageCol') as HTMLElement | null;
 const panelProject = document.getElementById('panelProject') as HTMLElement | null;
 const panelScenes = document.getElementById('panelScenes') as HTMLElement | null;
@@ -285,6 +289,82 @@ let splicePlaying = true;
 function updateSavedLabel() {
   const el = document.getElementById('saveState');
   if (el) el.textContent = hasUnsavedChanges ? EDITOR_STRINGS.common.unsaved : EDITOR_STRINGS.common.saved;
+}
+
+function renderLanguageSwitcher() {
+  if (!langEn || !langRu) return;
+  langEn.classList.toggle('on', getLang() === 'en');
+  langRu.classList.toggle('on', getLang() === 'ru');
+}
+
+function applyHtmlStrings() {
+  const el = (id: string) => document.getElementById(id);
+  const setText = (id: string, value: string) => { const e = el(id); if (e) e.textContent = value; };
+  const setPlaceholder = (id: string, value: string) => { const e = el(id) as HTMLInputElement | HTMLTextAreaElement | null; if (e) e.placeholder = value; };
+
+  setText('undo', EDITOR_STRINGS.common.undo);
+  setText('redo', EDITOR_STRINGS.common.redo);
+  setText('newProject', EDITOR_STRINGS.project.newProject);
+  setText('openProjectButton', EDITOR_STRINGS.project.open);
+  setText('saveProject', EDITOR_STRINGS.project.save);
+  setPlaceholder('ideaText', EDITOR_STRINGS.project.storyPlaceholder);
+  setText('ideaAutoExportText', EDITOR_STRINGS.project.autoExportLabel);
+  setText('ideaCopyBrief', EDITOR_STRINGS.project.copyBrief);
+  setText('ideaCopyProjectPrompt', EDITOR_STRINGS.project.copyProjectPrompt);
+  setText('ideaAuto', EDITOR_STRINGS.project.createOneClick);
+  setText('ideaAiCheck', EDITOR_STRINGS.project.checkConnection);
+  setText('ideaCopyPrompt', EDITOR_STRINGS.project.copyPrompt);
+  setText('ideaPromptSelectAll', EDITOR_STRINGS.project.selectAll);
+  setText('ideaCreate', EDITOR_STRINGS.project.createProject);
+  setText('ideaFix', EDITOR_STRINGS.project.fixRequest);
+  setText('duplicateScene', EDITOR_STRINGS.scenes.duplicate);
+  setText('copyJson', EDITOR_STRINGS.scenes.copyJson);
+  setText('apply', EDITOR_STRINGS.scenes.applyJson);
+  setText('reset', EDITOR_STRINGS.scenes.resetDemo);
+  setText('copyAi', EDITOR_STRINGS.scenes.copyForAi);
+  setText('aiCheck', EDITOR_STRINGS.scenes.insertAiReply);
+  setText('aiApply', EDITOR_STRINGS.scenes.apply);
+  setText('aiFix', EDITOR_STRINGS.project.fixRequest);
+  setPlaceholder('aiTask', EDITOR_STRINGS.scenes.aiTaskPlaceholder);
+  setPlaceholder('aiResponse', EDITOR_STRINGS.scenes.aiReplyPlaceholder);
+  setText('exportCancel', EDITOR_STRINGS.common.undo);
+  setText('catalogCheckJson', EDITOR_STRINGS.catalog.check);
+  setText('catalogCopyFixJson', EDITOR_STRINGS.status.fixRequestTitle);
+  setText('catalogSaveJson', EDITOR_STRINGS.catalog.saveToCatalog);
+  setText('catalogImportSvg', EDITOR_STRINGS.catalog.import);
+  setText('catalogCopyFixSvg', EDITOR_STRINGS.status.fixRequestTitle);
+  setText('catalogUploadPick', EDITOR_STRINGS.catalog.selectFiles);
+  setText('catalogCopyModelPrompt', EDITOR_STRINGS.catalog.copyModelPrompt);
+  setText('catalogSaveModel', EDITOR_STRINGS.catalog.saveToCatalog);
+  setText('catalogShowCredits', EDITOR_STRINGS.catalog.showCredits);
+  setText('catalogPlay', EDITOR_STRINGS.common.play);
+  setText('catalogCodeReset', EDITOR_STRINGS.catalog.restoreOriginal);
+  setText('catalogCodeSave', EDITOR_STRINGS.catalog.saveToCatalog);
+}
+
+function setLangSwitcherHandlers() {
+  if (!langEn || !langRu || !langSwitch) return;
+  langEn.onclick = () => { if (getLang() !== 'en') { setLang('en'); renderLanguageSwitcher(); reRenderUi(); } };
+  langRu.onclick = () => { if (getLang() !== 'ru') { setLang('ru'); renderLanguageSwitcher(); reRenderUi(); } };
+}
+
+function reRenderUi(): void {
+  renderTopTabs();
+  renderTabs();
+  renderLayerList();
+  renderSceneOrder();
+  renderProjectPreview();
+  renderCatalogTabs('list');
+  renderCatalogList();
+  initSceneLookPanel();
+  updateExportUi();
+  updateSavedLabel();
+  setPlaying(playing);
+  if (projectPlay) projectPlay.textContent = splicePlaying ? EDITOR_STRINGS.common.pause : EDITOR_STRINGS.common.play;
+  renderVoicePanel();
+  renderTemplates();
+  applyHtmlStrings();
+  if (catalogViewEl) catalogViewEl.dispatchEvent(new Event('change'));
 }
 function saveAutosave() {
   try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ savedAt: Date.now(), project })); } catch {}
@@ -3353,6 +3433,9 @@ try {
 
 // boot
 const storedTab = storageGet(TAB_KEY);
+setLangSwitcherHandlers();
+renderLanguageSwitcher();
+applyHtmlStrings();
 setTopTab(TOP_TABS.some(([id]) => id === storedTab) ? storedTab as TopTab : 'project', false);
 setAspect('h');
 frame();

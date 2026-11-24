@@ -81,7 +81,7 @@ try {
   ok('страница открыта');
 
   const tabLabels = await page.$$eval('#topTabs button', (buttons) => buttons.map((b) => b.textContent));
-  if (tabLabels.join('|') !== 'Проект|Сцены|Склейка|Каталог') fail(`вкладки: ${tabLabels.join('|')}`);
+  if (tabLabels.join('|') !== 'Project|Scenes|Splice|Catalog') fail(`вкладки: ${tabLabels.join('|')}`);
 
   // 1. Пример 3-сценного проекта
   const fileInput = await page.$('#openProject');
@@ -103,7 +103,7 @@ try {
   const storyParent = await page.$eval('#ideaText', (el) => el.closest('#panelProject') !== null);
   if (!storyParent) fail('поле «Общий рассказ» (#ideaText) должно быть на вкладке «Проект»');
   const oneStepLabel = await page.$eval('#ideaCopyPrompt', (el) => el.textContent ?? '');
-  if (!oneStepLabel.includes('ТЗ + проект')) fail('кнопка #ideaCopyPrompt должна называться «1. Копировать промт (ТЗ + проект)»');
+  if (!oneStepLabel.includes('TZ + project')) fail('кнопка #ideaCopyPrompt должна называться «1. Копировать промт (ТЗ + проект)»');
   const advancedOpen = await page.$eval('#ideaAdvanced', (el) => el.open);
   if (advancedOpen) fail('блок «Расширенно: ТЗ отдельным шагом» (#ideaAdvanced) должен быть свёрнут по умолчанию');
   const advancedBtnParent = await page.$eval('#ideaCopyProjectPrompt', (el) => el.closest('#ideaAdvanced') !== null);
@@ -165,7 +165,7 @@ try {
     if (card.draggable !== false) fail(`карточка ${index}: draggable не false по умолчанию`);
     if (card.tabIndex !== 0) fail(`карточка ${index}: нет фокуса для Alt+←/→`);
     if (!card.name) fail(`карточка ${index}: нет названия`);
-    if (!/с$/.test(card.duration)) fail(`карточка ${index}: нет длительности (${card.duration})`);
+    if (!/s$/.test(card.duration)) fail(`карточка ${index}: нет длительности (${card.duration})`);
     if (!card.hasThumb) fail(`карточка ${index}: нет миниатюры canvas.order-thumb`);
     if (!card.hasHead) fail(`карточка ${index}: нет заголовка .order-head`);
   }
@@ -230,7 +230,7 @@ try {
   })));
   if (sfxBlocks.length !== 3) fail(`блоков эффектов: ${sfxBlocks.length}, ожидалось 3`);
   for (const [index, block] of sfxBlocks.entries()) {
-    if (!/^Эффекты \(\d\)$/.test(block.summary)) fail(`SFX блок ${index}: заголовок «${block.summary}»`);
+    if (!/^Effects \(\d\)$/.test(block.summary)) fail(`SFX блок ${index}: заголовок «${block.summary}»`);
     if (!block.addExists) fail(`SFX блок ${index}: нет кнопки «Добавить эффект»`);
     if (!block.addDisabled) fail(`SFX блок ${index}: «Добавить эффект» включён без локального сервиса`);
   }
@@ -285,7 +285,7 @@ try {
 
   const catalogTabs = await page.$$('#catalogTabBar button');
   const catalogTabLabels = await page.$$eval('#catalogTabBar button', (buttons) => buttons.map((b) => b.textContent));
-  if (!catalogTabLabels.includes('Загрузить')) fail(`в подвкладках каталога нет «Загрузить»: ${catalogTabLabels.join('|')}`);
+  if (!catalogTabLabels.includes('Upload')) fail(`в подвкладках каталога нет «Загрузить»: ${catalogTabLabels.join('|')}`);
   for (let index = 0; index < catalogTabs.length; index++) {
     const buttons = await page.$$('#catalogTabBar button');
     await buttons[index].click();
@@ -342,7 +342,7 @@ try {
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForSelector('#topTabs button.on', { timeout: 15000 });
   const restored = await page.$$eval('#topTabs button.on', (buttons) => buttons.map((b) => b.textContent));
-  if (restored.length !== 1 || restored[0] !== 'Склейка') fail(`после перезагрузки вкладка: ${restored.join(',')}`);
+  if (restored.length !== 1 || restored[0] !== 'Splice') fail(`после перезагрузки вкладка: ${restored.join(',')}`);
   else ok('sessionStorage: вкладка «Склейка» восстановлена после перезагрузки');
 
   // 7b. Real drag: порядок сцен не меняется за недраggable элементы, меняется за миниатюру

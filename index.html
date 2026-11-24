@@ -10,7 +10,7 @@
 <body>
   <header class="page-head">
     <h1>animation-motion</h1>
-    <div class="bar headbar"><button id="undo">Отмена</button><button id="redo">Повтор</button><span id="saveState" class="hint">Сохранено</span></div>
+    <div class="bar headbar"><button id="undo">Undo</button><button id="redo">Redo</button><span id="saveState" class="hint">Saved</span><div id="langSwitch" role="group" aria-label="Language"><button id="langEn" type="button">EN</button><button id="langRu" type="button">RU</button></div></div>
   </header>
   <div id="topTabs" class="tabs topbar" role="tablist"></div>
   <div class="app" id="app">
@@ -18,9 +18,9 @@
       <div class="stagewrap"><canvas id="cv" class="h" width="1280" height="720"></canvas></div>
       <div class="box">
         <div class="bar">
-          <button id="play" class="primary" style="min-width:84px">Пауза</button>
-          <input type="range" id="scrub" min="0" max="1" step="0.01" value="0" aria-label="Время">
-          <span class="time" id="time">0.0 / 12.0 с</span>
+          <button id="play" class="primary" style="min-width:84px">Pause</button>
+          <input type="range" id="scrub" min="0" max="1" step="0.01" value="0" aria-label="Time">
+          <span class="time" id="time">0.0 / 12.0 s</span>
         </div>
         <div class="bar" style="margin-top:8px">
           <span class="seg" id="aspect">
@@ -37,64 +37,64 @@
     <div class="col panels">
 
       <div id="panelProject" class="box">
-        <h2>Проект</h2>
-        <div class="bar"><button id="newProject">Новый проект</button><button id="openProjectButton">Открыть</button><button id="saveProject">Сохранить</button><input id="openProject" type="file" accept=".json,application/json" hidden></div>
-        <div class="bar" style="margin-top:8px"><label class="f">Название проекта<input id="projectTitle"></label><label class="f">Формат<select id="projectFormat"><option>16:9</option><option>9:16</option></select></label><label class="f">FPS<select id="projectFps"><option>24</option><option>30</option><option>60</option></select></label></div>
+        <h2>Project</h2>
+        <div class="bar"><button id="newProject">New project</button><button id="openProjectButton">Open</button><button id="saveProject">Save</button><input id="openProject" type="file" accept=".json,application/json" hidden></div>
+        <div class="bar" style="margin-top:8px"><label class="f">Project title<input id="projectTitle"></label><label class="f">Format<select id="projectFormat"><option>16:9</option><option>9:16</option></select></label><label class="f">FPS<select id="projectFps"><option>24</option><option>30</option><option>60</option></select></label></div>
         <div class="bar" style="margin-top:8px; align-items:flex-start">
-          <label class="f" style="flex:1 1 100%">Общий рассказ (идея ролика)<textarea id="ideaText" rows="4" placeholder="Например: Что если бы киты летали над городом"></textarea></label>
+          <label class="f" style="flex:1 1 100%">Overall story (idea of the video)<textarea id="ideaText" rows="4" placeholder="For example: What if whales flew over the city"></textarea></label>
         </div>
-        <h2 style="margin-top:12px">Создать проект с помощью ИИ</h2>
-        <div class="hint" style="margin-bottom:6px">1. Напишите рассказ выше. 2. Скопируйте промт и вставьте его в чат ИИ. 3. Вставьте ответ ИИ и нажмите «Создать проект».</div>
+        <h2 style="margin-top:12px">Create project with AI</h2>
+        <div class="hint" style="margin-bottom:6px">1. Write the story above. 2. Copy the prompt and paste it into the AI chat. 3. Paste the AI reply and click "Create project".</div>
         <div class="bar" style="margin-top:8px">
-          <label class="f">Сцен<input id="ideaScenes" type="number" value="5" min="2" max="12" style="width:70px"></label>
-          <label class="f">Секунд на сцену<input id="ideaSeconds" type="number" value="8" min="4" max="20" style="width:90px"></label>
-          <label class="f">Формат<select id="ideaFormat"><option>16:9</option><option>9:16</option></select></label>
-          <label class="f">Стиль<select id="ideaStyle"></select></label>
+          <label class="f">Scenes<input id="ideaScenes" type="number" value="5" min="2" max="12" style="width:70px"></label>
+          <label class="f">Seconds per scene<input id="ideaSeconds" type="number" value="8" min="4" max="20" style="width:90px"></label>
+          <label class="f">Format<select id="ideaFormat"><option>16:9</option><option>9:16</option></select></label>
+          <label class="f">Style<select id="ideaStyle"></select></label>
         </div>
         <details id="ideaAdvanced" class="advanced">
-          <summary>Расширенно: ТЗ отдельным шагом</summary>
-          <div class="hint" style="margin:6px 0">Прежний путь: сначала запрос на ТЗ, затем промт проекта с готовым ТЗ.</div>
+          <summary>Advanced: TZ as separate step</summary>
+          <div class="hint" style="margin:6px 0">Previous path: first request TZ, then project prompt with ready TZ.</div>
           <div class="btns">
-            <button id="ideaCopyBrief">Копировать запрос на ТЗ</button>
+            <button id="ideaCopyBrief">Copy TZ request</button>
           </div>
           <div id="ideaBriefStatus" class="msg"></div>
-          <div style="margin-top:10px" class="f">Вставьте ТЗ от ИИ (необязательно)</div>
-          <textarea id="ideaBrief" spellcheck="false" rows="8" placeholder="Вставьте сюда ответ ИИ с ТЗ режиссёра или оставьте поле пустым"></textarea>
+          <div style="margin-top:10px" class="f">Paste TZ from AI (optional)</div>
+          <textarea id="ideaBrief" spellcheck="false" rows="8" placeholder="Paste the AI reply with the director's TZ here or leave the field empty"></textarea>
           <ul id="briefErrors" class="errs"></ul>
           <ul id="briefWarnings" class="warns"></ul>
           <div class="btns">
-            <button id="ideaCopyProjectPrompt">Копировать промт проекта с ТЗ</button>
+            <button id="ideaCopyProjectPrompt">Copy project prompt with TZ</button>
           </div>
         </details>
         <div class="btns">
-          <button id="ideaAuto" class="primary">Создать одной кнопкой (Gemini → Groq)</button>
-          <button id="ideaAiCheck">Проверить подключение</button>
+          <button id="ideaAuto" class="primary">Create with one click (Gemini → Groq)</button>
+          <button id="ideaAiCheck">Check connection</button>
           <label class="f" style="flex-direction:row;align-items:center;gap:4px"><input type="checkbox" id="ideaAutoExport"><span id="ideaAutoExportText"></span></label>
         </div>
         <div id="ideaAutoStatus" class="msg"></div>
-        <div class="hint">Ключи лежат в файле .env.local рядом с проектом (образец — .env.example). Если оба ИИ не справятся, промт скопируется сам: вставьте его в любой браузерный ИИ и ответ в поле ниже.</div>
+        <div class="hint">Keys are in the .env.local file next to the project (sample — .env.example). If neither AI can handle it, the prompt will be copied automatically: paste it into any browser AI and paste the reply into the field below.</div>
         <div class="btns">
-          <button id="ideaCopyPrompt">1. Копировать промт (ТЗ + проект)</button>
+          <button id="ideaCopyPrompt">1. Copy prompt (TZ + project)</button>
         </div>
         <div id="ideaPromptFallback" hidden style="margin-top:6px">
           <textarea id="ideaPromptOut" spellcheck="false" rows="6" readonly style="width:100%"></textarea>
           <div class="btns" style="margin-top:6px">
-            <button id="ideaPromptSelectAll">Выделить всё</button>
+            <button id="ideaPromptSelectAll">Select all</button>
           </div>
-          <div class="hint">Буфер обмена недоступен. Скопируйте промт из поля выше.</div>
+          <div class="hint">Clipboard unavailable. Copy the prompt from the field above.</div>
         </div>
         <div id="ideaCopyStatus" class="msg"></div>
-        <div style="margin-top:10px" class="f">2. Вставьте ответ ИИ (ТЗ + JSON или только JSON)</div>
-        <textarea id="ideaResponse" spellcheck="false" rows="10" aria-label="Ответ ИИ для проекта" placeholder="Вставьте сюда ответ ИИ целиком: блок с ТЗ и блок с JSON проекта" style="border:2px solid #b8531f"></textarea>
+        <div style="margin-top:10px" class="f">2. Paste the AI reply (TZ + JSON or just JSON)</div>
+        <textarea id="ideaResponse" spellcheck="false" rows="10" aria-label="AI reply for project" placeholder="Paste the full AI reply here: TZ block and project JSON block" style="border:2px solid #b8531f"></textarea>
         <div class="btns">
-          <button id="ideaCreate" class="primary" disabled>Создать проект</button>
-          <button id="ideaFix" hidden>Копировать запрос на исправление</button>
+          <button id="ideaCreate" class="primary" disabled>Create project</button>
+          <button id="ideaFix" hidden>Copy fix request</button>
         </div>
         <div id="ideaStatus" class="msg"></div>
         <ul id="ideaErrors" class="errs"></ul>
         <ul id="ideaWarnings" class="warns"></ul>
         <div id="ideaSuggestions" hidden style="margin-top:10px;border:1px solid #ddd5ca;border-radius:6px;padding:8px">
-          <div style="font-weight:700;margin-bottom:4px">Предложено добавить в каталог:</div>
+          <div style="font-weight:700;margin-bottom:4px">Proposed to add to catalog:</div>
           <div class="btns" style="margin-bottom:6px">
             <button id="ideaSaveAll"></button>
             <span id="ideaSaveAllStatus" class="hint"></span>
@@ -105,9 +105,9 @@
       </div>
 
       <div id="panelScenes" class="box">
-        <h2>Сцены</h2>
+        <h2>Scenes</h2>
         <div id="sceneTabs" class="tabs" style="margin-bottom:8px"></div>
-        <div class="btns"><button id="duplicateScene">Дублировать</button></div>
+        <div class="btns"><button id="duplicateScene">Duplicate</button></div>
         <div id="projectDuration" class="hint"></div>
         <div id="sceneLookPanel">
           <h3 class="subhead"><span id="sceneLookTitleText"></span></h3>
@@ -132,52 +132,52 @@
           </div>
           <p id="lookNoteText" class="hint" style="margin:8px 0 0"></p>
         </div>
-        <div class="hint" style="margin-top:8px">Превью текущей сцены — слева.</div>
-        <h3 class="subhead">Слои и объекты</h3>
+        <div class="hint" style="margin-top:8px">Preview of the current scene — to the left.</div>
+        <h3 class="subhead">Layers and objects</h3>
         <div id="layerList" class="layerlist"></div>
-        <div class="hint">Выберите объект, чтобы править его параметры в JSON ниже.</div>
+        <div class="hint">Select an object to edit its parameters in JSON below.</div>
         <h2 style="margin-top:10px">JSON</h2>
         <div class="bar">
-          <label class="f">Область<select id="jsonScope"><option value="scene">Сцена</option><option value="project">Весь проект</option><option value="object">Выбранный объект</option></select></label>
-          <label class="f" id="objectRow" hidden>Объект<select id="objectSelect"></select></label>
+          <label class="f">Scope<select id="jsonScope"><option value="scene">Scene</option><option value="project">Whole project</option><option value="object">Selected object</option></select></label>
+          <label class="f" id="objectRow" hidden>Object<select id="objectSelect"></select></label>
         </div>
         <textarea id="json" spellcheck="false" rows="14" aria-label="JSON"></textarea>
         <div class="btns">
-          <button id="copyJson">Копировать JSON</button>
-          <button id="apply" class="primary">Применить JSON</button>
-          <button id="reset">Сбросить к демо</button>
+          <button id="copyJson">Copy JSON</button>
+          <button id="apply" class="primary">Apply JSON</button>
+          <button id="reset">Reset to demo</button>
         </div>
-        <h2 style="margin-top:10px">Править текущую сцену через ИИ</h2>
+        <h2 style="margin-top:10px">Edit current scene via AI</h2>
         <div class="bar" style="margin-top:8px">
-          <input id="aiTask" placeholder="Задача для ИИ (необязательно)" style="flex:1">
-          <button id="copyAi">Копировать для ИИ</button>
+          <input id="aiTask" placeholder="Task for AI (optional)" style="flex:1">
+          <button id="copyAi">Copy for AI</button>
         </div>
-        <h3 style="margin:10px 0 6px; font-size:12px">Ответ ИИ</h3>
-        <textarea id="aiResponse" spellcheck="false" rows="6" aria-label="Ответ ИИ" placeholder="Вставьте сюда ответ ИИ"></textarea>
+        <h3 style="margin:10px 0 6px; font-size:12px">AI reply</h3>
+        <textarea id="aiResponse" spellcheck="false" rows="6" aria-label="AI reply" placeholder="Paste the AI reply here"></textarea>
         <div class="btns">
-          <button id="aiCheck">Вставить ответ ИИ</button>
-          <button id="aiApply" class="primary" disabled>Применить</button>
-          <button id="aiFix" hidden>Копировать запрос на исправление</button>
+          <button id="aiCheck">Insert AI reply</button>
+          <button id="aiApply" class="primary" disabled>Apply</button>
+          <button id="aiFix" hidden>Copy fix request</button>
         </div>
         <div id="aiStatus" class="msg"></div>
         <ul id="aiErrors" class="errs"></ul>
         <ul id="aiWarnings" class="warns"></ul>
-        <h2 style="margin-top:10px">Шаблоны объектов</h2>
+        <h2 style="margin-top:10px">Object templates</h2>
         <div id="templates"></div>
-        <p class="hint">Правки JSON применяются через историю: Ctrl+Z отменяет, Ctrl+Y повторяет.</p>
+        <p class="hint">JSON edits are applied through history: Ctrl+Z undoes, Ctrl+Y redoes.</p>
       </div>
 
       <div id="panelSplice" class="box" hidden>
-        <h2>Склейка</h2>
-        <div class="hint">Карточки сцен в порядке ролика. Перетащите карточку мышью или нажмите Alt+←/→ на карточке в фокусе.</div>
+        <h2>Splice</h2>
+        <div class="hint">Scene cards in video order. Drag a card with the mouse or press Alt+←/→ on a card in focus.</div>
         <div id="sceneOrder" class="order"></div>
         <div id="voicePanel" class="voicepanel"></div>
-        <h2 style="margin-top:10px">Предпросмотр проекта</h2>
+        <h2 style="margin-top:10px">Project preview</h2>
         <div class="splicepreview"><canvas id="projectPreview" width="320" height="180"></canvas></div>
         <div class="bar" style="margin-top:8px">
-          <button id="projectPlay" class="primary" style="min-width:84px">Пауза</button>
-          <input type="range" id="projectScrub" min="0" max="1" step="0.01" value="0" aria-label="Время проекта">
-          <span class="time" id="projectTime">0.0 / 0.0 с</span>
+          <button id="projectPlay" class="primary" style="min-width:84px">Pause</button>
+          <input type="range" id="projectScrub" min="0" max="1" step="0.01" value="0" aria-label="Project time">
+          <span class="time" id="projectTime">0.0 / 0.0 s</span>
         </div>
         <div class="bar" id="exportControls" style="align-items:flex-end; gap:8px; margin-top:4px">
           <label class="f"><span id="exportModeText"></span><select id="exportMode"></select></label>
@@ -188,7 +188,7 @@
         </div>
         <div class="btns">
           <button id="exportMp4" disabled></button>
-          <button id="exportCancel" hidden>Отмена</button>
+          <button id="exportCancel" hidden>Cancel</button>
           <a id="exportDownload" hidden></a>
           <span id="exportStatus" class="hint"></span>
         </div>
@@ -196,36 +196,36 @@
       </div>
 
       <div id="panelCatalog" class="box" hidden>
-        <h2>Каталог</h2>
+        <h2>Catalog</h2>
         <div class="bar" id="catalogTabBar"></div>
 
         <div id="catalogPanelList">
           <div class="bar" style="margin-bottom:6px; align-items:flex-start; gap:8px; flex-wrap:wrap">
-            <label class="f" style="flex:1 1 240px">Поиск по названию, id, тегам<input id="catalogSearch" style="width:100%"></label>
-            <label class="f">Вид<select id="catalogView"><option>все</option><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
+            <label class="f" style="flex:1 1 240px">Search by name, id, tags<input id="catalogSearch" style="width:100%"></label>
+            <label class="f">View<select id="catalogView"><option>all</option><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
             <span id="catalogCount" class="hint"></span>
           </div>
           <div id="catalogList" style="display:flex;flex-direction:column;gap:6px"></div>
-          <div id="catalogEmpty" class="hint" hidden>Подходящих моделей нет.</div>
+          <div id="catalogEmpty" class="hint" hidden>No matching models.</div>
         </div>
 
         <div id="catalogPanelPreview" hidden>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:center">
-            <label class="f">Модель<select id="catalogPreviewModel"></select></label>
-            <label class="f">Движение<select id="catalogPreset"><option value="none">без</option><option value="walk">walk</option><option value="run">run</option><option value="fly">fly</option><option value="swim">swim</option><option value="hop">hop</option><option value="sway">sway</option></select></label>
-            <button id="catalogPlay" class="primary">Играть</button>
+            <label class="f">Model<select id="catalogPreviewModel"></select></label>
+            <label class="f">Motion<select id="catalogPreset"><option value="none">none</option><option value="walk">walk</option><option value="run">run</option><option value="fly">fly</option><option value="swim">swim</option><option value="hop">hop</option><option value="sway">sway</option></select></label>
+            <button id="catalogPlay" class="primary">Play</button>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start">
             <canvas id="catalogPreview" width="280" height="280" style="border:1px solid #ddd5ca;border-radius:4px;background:#000"></canvas>
             <div style="flex:1;min-width:0">
-              <label class="f">Время<input id="catalogTime" type="range" min="0" max="8" step="0.1" style="width:100%"></label>
-              <span id="catalogTimeText" class="hint">0.0 / 8.0 с</span>
-              <div class="hint" style="margin:8px 0 4px">Код модели: правьте JSON — превью обновляется само, когда ошибок нет.</div>
+              <label class="f">Time<input id="catalogTime" type="range" min="0" max="8" step="0.1" style="width:100%"></label>
+              <span id="catalogTimeText" class="hint">0.0 / 8.0 s</span>
+              <div class="hint" style="margin:8px 0 4px">Model code: edit JSON — preview updates automatically when there are no errors.</div>
               <textarea id="catalogCode" spellcheck="false" rows="16" style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre"></textarea>
               <div class="bar" style="margin-top:6px;gap:8px;flex-wrap:wrap;align-items:center">
-                <button id="catalogCodeReset">Вернуть исходный</button>
-                <button id="catalogCodeSave" class="primary" disabled>Сохранить в каталог</button>
-                <label class="f">Открыть файл модели<input id="catalogCodeFile" type="file" accept=".json,application/json"></label>
+                <button id="catalogCodeReset">Restore original</button>
+                <button id="catalogCodeSave" class="primary" disabled>Save to catalog</button>
+                <label class="f">Open model file<input id="catalogCodeFile" type="file" accept=".json,application/json"></label>
               </div>
               <div id="catalogCodeStatus" class="msg"></div>
               <ul id="catalogCodeErrors" class="errs"></ul>
@@ -234,12 +234,12 @@
         </div>
 
         <div id="catalogPanelNewJson" hidden>
-          <div class="hint" style="margin-bottom:6px">Вставьте JSON модели целиком и нажмите «Проверить». Сохранение скачивает файл `catalog/<id>.json` и добавляет модель в список сеанса без перезагрузки.</div>
+          <div class="hint" style="margin-bottom:6px">Paste the full model JSON and click "Check". Saving downloads the file `catalog/<id>.json` and adds the model to the session list without reloading.</div>
           <textarea id="catalogNewJson" spellcheck="false" rows="8" style="width:100%"></textarea>
           <div class="btns" style="margin-top:6px">
-            <button id="catalogCheckJson">Проверить</button>
-            <button id="catalogCopyFixJson" hidden>Копировать запрос на исправление</button>
-            <button id="catalogSaveJson" class="primary" disabled>Сохранить в каталог</button>
+            <button id="catalogCheckJson">Check</button>
+            <button id="catalogCopyFixJson" hidden>Copy fix request</button>
+            <button id="catalogSaveJson" class="primary" disabled>Save to catalog</button>
           </div>
           <div id="catalogNewJsonStatus" class="msg"></div>
           <ul id="catalogNewJsonErrors" class="errs"></ul>
@@ -248,64 +248,64 @@
 
         <div id="catalogPanelSvg" hidden>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:flex-start">
-            <label class="f" style="flex:1 1 220px">Файл SVG<input id="catalogSvgFile" type="file" accept=".svg,image/svg+xml"></label>
+            <label class="f" style="flex:1 1 220px">SVG file<input id="catalogSvgFile" type="file" accept=".svg,image/svg+xml"></label>
           </div>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap">
             <label class="f">id<input id="catalogSvgId"></label>
-            <label class="f">Название<input id="catalogSvgName"></label>
-            <label class="f">Вид<select id="catalogSvgView"><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
-            <label class="f">Размер, м<input id="catalogSvgSizeM" type="number" step="0.01"></label>
-            <label class="f">Ось размера<select id="catalogSvgAxis"><option>height</option><option>width</option></select></label>
+            <label class="f">Name<input id="catalogSvgName"></label>
+            <label class="f">View<select id="catalogSvgView"><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
+            <label class="f">Size, m<input id="catalogSvgSizeM" type="number" step="0.01"></label>
+            <label class="f">Size axis<select id="catalogSvgAxis"><option>height</option><option>width</option></select></label>
           </div>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap">
-            <label class="f">Теги<input id="catalogSvgTags" placeholder="через запятую"></label>
-            <label class="f">Лицензия<input id="catalogSvgLicense" value="own"></label>
-            <label class="f">Автор<input id="catalogSvgAuthor"></label>
-            <label class="f">Источник<input id="catalogSvgSource"></label>
-            <label class="f">Ссылка<input id="catalogSvgUrl"></label>
-            <label class="f" style="align-self:flex-end"><input type="checkbox" id="catalogSvgAttribution"> Указывать автора</label>
+            <label class="f">Tags<input id="catalogSvgTags" placeholder="comma-separated"></label>
+            <label class="f">License<input id="catalogSvgLicense" value="own"></label>
+            <label class="f">Author<input id="catalogSvgAuthor"></label>
+            <label class="f">Source<input id="catalogSvgSource"></label>
+            <label class="f">Link<input id="catalogSvgUrl"></label>
+            <label class="f" style="align-self:flex-end"><input type="checkbox" id="catalogSvgAttribution"> Indicate author</label>
           </div>
           <div class="btns" style="margin-top:6px">
-            <button id="catalogImportSvg">Импортировать</button>
-            <button id="catalogCopyFixSvg" hidden>Копировать запрос на исправление</button>
+            <button id="catalogImportSvg">Import</button>
+            <button id="catalogCopyFixSvg" hidden>Copy fix request</button>
           </div>
           <div id="catalogSvgStatus" class="msg"></div>
           <ul id="catalogSvgWarnings" class="warns"></ul>
         </div>
 
         <div id="catalogPanelUpload" hidden>
-          <div class="hint" style="margin-bottom:6px">Перетащите файлы в зону ниже или выберите их. Работает через локальный сервис dev-сервера: запуск через run.bat. Модели .json сохраняются как есть, .svg конвертируются так же, как во вкладке «Импорт SVG», с размером 1,5 м (потом поправите в JSON модели).</div>
-          <div id="catalogUploadDrop" class="dropzone">Перетащите сюда .json или .svg — можно несколько сразу</div>
+          <div class="hint" style="margin-bottom:6px">Drag files into the zone below or select them. Works through the local dev server service: launch via run.bat. .json models are saved as-is, .svg files are converted the same way as in the "Import SVG" tab, with size 1.5 m (you can fix it in the model JSON later).</div>
+          <div id="catalogUploadDrop" class="dropzone">Drag .json or .svg here — multiple files at once</div>
           <div class="btns" style="margin-top:6px">
-            <button id="catalogUploadPick">Выбрать файлы</button>
+            <button id="catalogUploadPick">Select files</button>
             <input id="catalogUploadFiles" type="file" accept=".json,.svg,application/json,image/svg+xml" multiple hidden>
           </div>
           <div class="bar" style="margin-top:8px; gap:8px; flex-wrap:wrap">
-            <label class="f">Лицензия<input id="catalogUploadLicense" value="own"></label>
-            <label class="f">Автор<input id="catalogUploadAuthor" value="project"></label>
-            <label class="f">Источник<input id="catalogUploadSource"></label>
+            <label class="f">License<input id="catalogUploadLicense" value="own"></label>
+            <label class="f">Author<input id="catalogUploadAuthor" value="project"></label>
+            <label class="f">Source<input id="catalogUploadSource"></label>
           </div>
-          <div class="hint" style="margin-top:6px">Одно поле лицензии на всю пачку: подставьте свою, если файлы чужие.</div>
+          <div class="hint" style="margin-top:6px">One license field for the whole batch: use your own if files are someone else's.</div>
           <ul id="catalogUploadResults" class="uploadlist"></ul>
           <div id="catalogUploadStatus" class="msg"></div>
         </div>
 
         <div id="catalogPanelModelPrompt" hidden>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap; align-items:flex-start">
-            <label class="f" style="flex:1 1 100%">Описание<textarea id="catalogModelDesc" rows="3" placeholder="Например: собака сбоку, смотрит вправо"></textarea></label>
+            <label class="f" style="flex:1 1 100%">Description<textarea id="catalogModelDesc" rows="3" placeholder="For example: dog from the side, looking right"></textarea></label>
           </div>
           <div class="bar" style="margin-bottom:6px; gap:8px; flex-wrap:wrap">
-            <label class="f">Вид<select id="catalogModelView"><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
-            <label class="f">Размер, м<input id="catalogModelSizeM" type="number" step="0.01"></label>
+            <label class="f">View<select id="catalogModelView"><option>side</option><option>bottom</option><option>front</option><option>top</option><option>three-quarter</option></select></label>
+            <label class="f">Size, m<input id="catalogModelSizeM" type="number" step="0.01"></label>
           </div>
           <div class="btns" style="margin-top:6px">
-            <button id="catalogCopyModelPrompt">Копировать промт</button>
+            <button id="catalogCopyModelPrompt">Copy prompt</button>
             <span id="catalogModelPromptStatus" class="hint"></span>
           </div>
-          <div class="hint" style="margin:10px 0 6px">Ответ ИИ (JSON модели)</div>
+          <div class="hint" style="margin:10px 0 6px">AI reply (model JSON)</div>
           <textarea id="catalogModelResponse" spellcheck="false" rows="8" style="width:100%"></textarea>
           <div class="btns" style="margin-top:6px">
-            <button id="catalogSaveModel" class="primary" disabled>Сохранить в каталог</button>
+            <button id="catalogSaveModel" class="primary" disabled>Save to catalog</button>
           </div>
           <div id="catalogModelStatus" class="msg"></div>
           <ul id="catalogModelErrors" class="errs"></ul>
@@ -313,7 +313,7 @@
         </div>
 
         <div id="catalogPanelCredits" hidden>
-          <div class="btns" style="margin-bottom:6px"><button id="catalogShowCredits">Показать/Копировать титры</button></div>
+          <div class="btns" style="margin-bottom:6px"><button id="catalogShowCredits">Show/Copy credits</button></div>
           <pre id="catalogCreditsOut" spellcheck="false" style="white-space:pre-wrap;font-family:inherit;font-size:12px;border:1px solid #ddd5ca;border-radius:6px;padding:8px;max-height:260px;overflow:auto" hidden></pre>
         </div>
       </div>
